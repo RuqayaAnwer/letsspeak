@@ -12,24 +12,65 @@ use App\Services\AuthService;
 use App\JsonStorage\Repositories\TrainerRepository;
 use App\JsonStorage\Repositories\CourseRepository;
 use App\JsonStorage\Repositories\LectureRepository;
+use App\Models\Student;
+use App\Models\Trainer;
+use App\Models\Course;
+use App\Models\CoursePackage;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class CustomerServiceController extends Controller
 {
-    protected CourseService $courseService;
-    protected AuthService $authService;
-    protected TrainerRepository $trainerRepo;
-    protected CourseRepository $courseRepo;
-    protected LectureRepository $lectureRepo;
+    protected ?CourseService $courseService = null;
+    protected ?AuthService $authService = null;
+    protected ?TrainerRepository $trainerRepo = null;
+    protected ?CourseRepository $courseRepo = null;
+    protected ?LectureRepository $lectureRepo = null;
 
     public function __construct()
     {
-        $this->courseService = new CourseService();
-        $this->authService = new AuthService();
-        $this->trainerRepo = new TrainerRepository();
-        $this->courseRepo = new CourseRepository();
-        $this->lectureRepo = new LectureRepository();
+        // Initialize services only if they exist
+        if (class_exists(CourseService::class)) {
+            $this->courseService = new CourseService();
+        }
+        if (class_exists(AuthService::class)) {
+            $this->authService = new AuthService();
+        }
+        if (class_exists(TrainerRepository::class)) {
+            $this->trainerRepo = new TrainerRepository();
+        }
+        if (class_exists(CourseRepository::class)) {
+            $this->courseRepo = new CourseRepository();
+        }
+        if (class_exists(LectureRepository::class)) {
+            $this->lectureRepo = new LectureRepository();
+        }
+    }
+
+    /**
+     * Get dashboard statistics for customer service
+     */
+    public function dashboardStats(Request $request): JsonResponse
+    {
+        try {
+            $stats = [
+                'students' => Student::count(),
+                'trainers' => Trainer::count(),
+                'courses' => Course::where('status', 'active')->count(),
+                'packages' => CoursePackage::count(),
+            ];
+
+            return response()->json($stats);
+        } catch (\Exception $e) {
+            \Log::error('Dashboard stats error: ' . $e->getMessage());
+            return response()->json([
+                'students' => 0,
+                'trainers' => 0,
+                'courses' => 0,
+                'packages' => 0,
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

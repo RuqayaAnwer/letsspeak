@@ -35,27 +35,40 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    const response = await api.post('/login', { email, password });
+    const response = await api.post('/auth/login', { email, password });
     const { token, user: userData } = response.data;
     
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
+    // Ensure role is included
+    const userWithRole = {
+      ...userData,
+      role: userData.role || 'trainer' // Default to trainer if role is missing
+    };
     
-    return userData;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userWithRole));
+    setUser(userWithRole);
+    
+    return userWithRole;
   };
 
   const devLogin = async (role) => {
     try {
-      const response = await api.post('/dev-login', { role });
+      const response = await api.post('/auth/dev-login', { role });
       const { token, user: userData } = response.data;
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
+      // Ensure role is included
+      const userWithRole = {
+        ...userData,
+        role: userData.role || role
+      };
       
-      return userData;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userWithRole));
+      setUser(userWithRole);
+      
+      return userWithRole;
     } catch (error) {
+      console.error('Dev login error:', error);
       // Fallback for demo mode
       const demoUsers = {
         customer_service: { id: 1, name: 'موظف خدمة العملاء', email: 'cs@letspeak.com', role: 'customer_service' },
@@ -65,7 +78,8 @@ export const AuthProvider = ({ children }) => {
       
       const userData = demoUsers[role];
       if (userData) {
-        localStorage.setItem('token', 'demo-token');
+        const token = 'dev-token-' + userData.id + '-' + Date.now();
+        localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
         return userData;

@@ -14,7 +14,7 @@ const FindTrainingTime = () => {
     { id: 5, name: 'الجمعة' },
   ];
 
-  // First filter state (3 days per week for a month)
+  // First filter state (multiple days per week for a month)
   const [selectedWeekDays, setSelectedWeekDays] = useState([]);
   const [time1, setTime1] = useState('');
   const [results1, setResults1] = useState([]);
@@ -33,10 +33,7 @@ const FindTrainingTime = () => {
       if (prev.includes(dayId)) {
         return prev.filter(d => d !== dayId);
       }
-      // Limit to 3 days
-      if (prev.length >= 3) {
-        return prev;
-      }
+      // No limit - allow any number of days
       return [...prev, dayId];
     });
   };
@@ -59,10 +56,10 @@ const FindTrainingTime = () => {
     return dates;
   };
 
-  // Handle first search (3 days per week)
+  // Handle first search (multiple days per week)
   const handleSearch1 = async () => {
-    if (selectedWeekDays.length !== 3) {
-      alert('الرجاء تحديد 3 أيام بالضبط');
+    if (selectedWeekDays.length === 0) {
+      alert('الرجاء تحديد يوم واحد على الأقل');
       return;
     }
     if (!time1) {
@@ -83,9 +80,10 @@ const FindTrainingTime = () => {
         time: time1,
       });
       
-      setResults1(response.data.data || []);
+      setResults1(response.data.data || response.data || []);
     } catch (error) {
       console.error('Error searching for available trainers:', error);
+      console.error('Error details:', error.response?.data || error.message);
       setResults1([]);
     } finally {
       setLoading1(false);
@@ -108,9 +106,10 @@ const FindTrainingTime = () => {
         time: time2,
       });
       
-      setResults2(response.data.data || []);
+      setResults2(response.data.data || response.data || []);
     } catch (error) {
       console.error('Error searching for available trainers:', error);
+      console.error('Error details:', error.response?.data || error.message);
       setResults2([]);
     } finally {
       setLoading2(false);
@@ -130,7 +129,7 @@ const FindTrainingTime = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] pr-20">
             البحث عن وقت تدريب
           </h1>
           <p className="text-[var(--color-text-muted)] mt-1">
@@ -142,17 +141,17 @@ const FindTrainingTime = () => {
       {/* Two Column Layout for Filters */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Filter 1: 3 Days per Week for a Month */}
+        {/* Filter 1: Multiple Days per Week for a Month */}
         <div className="card p-6">
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
             <CalendarDays className="w-5 h-5 text-emerald-500" />
-            البحث عن تفرغ 3 أيام أسبوعياً
+            البحث عن تفرغ أسبوعي
           </h2>
           
           <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
             <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
               <AlertCircle className="w-4 h-4" />
-              اختر 3 أيام من الأسبوع للبحث عن المدربين المتفرغين خلال الشهر القادم
+              اختر أيام الأسبوع المطلوبة للبحث عن المدربين المتفرغين خلال الشهر القادم
             </p>
           </div>
 
@@ -160,26 +159,20 @@ const FindTrainingTime = () => {
           <div className="grid grid-cols-7 gap-1 mb-4">
             {weekDaysOptions.map((day) => {
               const isSelected = selectedWeekDays.includes(day.id);
-              const isDisabled = !isSelected && selectedWeekDays.length >= 3;
               
               return (
                 <button
                   key={day.id}
                   onClick={() => toggleWeekDay(day.id)}
-                  disabled={isDisabled}
                   className={`p-3 rounded-lg border-2 transition-all text-center ${
                     isSelected
                       ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                      : isDisabled
-                      ? 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 opacity-50 cursor-not-allowed'
                       : 'border-[var(--color-border)] hover:border-emerald-300 hover:bg-[var(--color-bg-tertiary)]'
                   }`}
                 >
                   <p className={`text-xs font-bold ${
                     isSelected 
                       ? 'text-emerald-600 dark:text-emerald-400'
-                      : isDisabled
-                      ? 'text-gray-400 dark:text-gray-500'
                       : 'text-[var(--color-text-primary)]'
                   }`}>
                     {day.name}
@@ -209,23 +202,10 @@ const FindTrainingTime = () => {
 
             {/* Selected Info */}
             {selectedWeekDays.length > 0 && (
-              <div className={`p-3 rounded-lg border ${
-                selectedWeekDays.length === 3 
-                  ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
-                  : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
-              }`}>
-                <p className={`text-sm ${
-                  selectedWeekDays.length === 3 
-                    ? 'text-emerald-700 dark:text-emerald-400'
-                    : 'text-amber-700 dark:text-amber-400'
-                }`}>
-                  <span className="font-medium">الأيام المحددة:</span>{' '}
+              <div className="p-3 rounded-lg border bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800">
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                  <span className="font-medium">الأيام المحددة ({selectedWeekDays.length}):</span>{' '}
                   {getSelectedDayNames()}
-                  {selectedWeekDays.length < 3 && (
-                    <span className="block text-xs mt-1">
-                      (اختر {3 - selectedWeekDays.length} {selectedWeekDays.length === 2 ? 'يوم' : 'أيام'} إضافية)
-                    </span>
-                  )}
                 </p>
               </div>
             )}
@@ -233,7 +213,7 @@ const FindTrainingTime = () => {
             {/* Search Button */}
             <button
               onClick={handleSearch1}
-              disabled={loading1 || selectedWeekDays.length !== 3 || !time1}
+              disabled={loading1 || selectedWeekDays.length === 0 || !time1}
               className="btn btn-primary w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading1 ? (
@@ -259,7 +239,7 @@ const FindTrainingTime = () => {
             
             {!searched1 ? (
               <p className="text-sm text-[var(--color-text-muted)] text-center py-4">
-                حدد 3 أيام والوقت للبحث
+                حدد الأيام والوقت للبحث
               </p>
             ) : loading1 ? (
               <div className="text-center py-4">

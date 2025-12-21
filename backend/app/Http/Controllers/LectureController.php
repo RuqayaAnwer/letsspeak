@@ -13,17 +13,15 @@ class LectureController extends Controller
     /**
      * Check if a lecture can be modified based on its date/time.
      * - Future lectures: Cannot be modified
-     * - Today's lectures: Can be modified at or after their scheduled time
+     * - Today's lectures: Can be modified (regardless of time)
      * - Past lectures: Can be modified
      */
-    private function canModifyLecture(Lecture $lecture): array
+    protected function canModifyLecture(Lecture $lecture): array
     {
-        $now = Carbon::now();
-        $lectureDateTime = Carbon::parse($lecture->date->format('Y-m-d') . ' ' . ($lecture->time ?? '00:00'));
         $lectureDate = Carbon::parse($lecture->date)->startOfDay();
         $today = Carbon::today();
 
-        // Future lecture (date is after today)
+        // Future lecture (date is after today) - cannot be modified
         if ($lectureDate->gt($today)) {
             return [
                 'canModify' => false,
@@ -32,18 +30,7 @@ class LectureController extends Controller
             ];
         }
 
-        // Today's lecture - check if time has passed
-        if ($lectureDate->eq($today)) {
-            if ($now->lt($lectureDateTime)) {
-                return [
-                    'canModify' => false,
-                    'reason' => 'لا يمكن تعديل المحاضرة قبل وقتها المحدد',
-                    'type' => 'today_future'
-                ];
-            }
-        }
-
-        // Past lecture or today after time
+        // Today's lecture or past lecture - can be modified
         return [
             'canModify' => true,
             'reason' => null,
@@ -54,7 +41,7 @@ class LectureController extends Controller
     /**
      * Log lecture modification activity.
      */
-    private function logLectureModification(Lecture $lecture, array $oldData, array $newData, $user): void
+    protected function logLectureModification(Lecture $lecture, array $oldData, array $newData, $user): void
     {
         $changes = [];
         
@@ -131,6 +118,12 @@ class LectureController extends Controller
             'notes' => 'nullable|string',
         ];
 
+        // Trainers and customer_service can update date and time
+        if ($user->isTrainer() || $user->isCustomerService()) {
+            $rules['date'] = 'sometimes|date';
+            $rules['time'] = 'sometimes|date_format:H:i';
+        }
+
         // Only customer_service and accounting can update payment_status
         if ($user->isCustomerService() || $user->isAccounting()) {
             $rules['payment_status'] = 'sometimes|in:paid,unpaid';
@@ -139,9 +132,17 @@ class LectureController extends Controller
         $request->validate($rules);
 
         // Save old data for logging
-        $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'payment_status']);
+        $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'payment_status', 'date', 'time']);
 
         $updateData = $request->only(['attendance', 'activity', 'homework', 'notes']);
+        
+        // Allow trainers and customer_service to update date and time
+        if (($user->isTrainer() || $user->isCustomerService()) && $request->has('date')) {
+            $updateData['date'] = $request->date;
+        }
+        if (($user->isTrainer() || $user->isCustomerService()) && $request->has('time')) {
+            $updateData['time'] = $request->time;
+        }
         
         if (($user->isCustomerService() || $user->isAccounting()) && $request->has('payment_status')) {
             $updateData['payment_status'] = $request->payment_status;

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { formatTime12Hour } from '../../utils/timeFormat';
+import { formatDate } from '../../utils/dateFormat';
 import { ArrowRight, BookOpen, Calendar, Users, User, UserPlus } from 'lucide-react';
 
 const CreateCourse = () => {
@@ -18,7 +19,6 @@ const CreateCourse = () => {
     student_ids: ['', ''],
     trainer_id: '',
     course_package_id: '',
-    title: '',
     lectures_count: '',
     start_date: '',
     lecture_time: '',
@@ -84,14 +84,25 @@ const CreateCourse = () => {
         ? formData.student_ids.filter(id => id).map(id => parseInt(id))
         : [parseInt(formData.student_ids[0])];
       
+      // Convert days from 'Sunday' format to 'sun' format for backend
+      const dayMap = {
+        'Sunday': 'sun',
+        'Monday': 'mon',
+        'Tuesday': 'tue',
+        'Wednesday': 'wed',
+        'Thursday': 'thu',
+        'Friday': 'fri',
+        'Saturday': 'sat',
+      };
+      const lectureDays = formData.lecture_days.map(day => dayMap[day] || day);
+
       const data = {
-        title: formData.title,
         trainer_id: parseInt(formData.trainer_id),
-        course_type_id: formData.course_package_id ? parseInt(formData.course_package_id) : null,
+        course_package_id: parseInt(formData.course_package_id),
         lectures_count: parseInt(formData.lectures_count),
         start_date: formData.start_date,
         lecture_time: formData.lecture_time,
-        lecture_days: formData.lecture_days,
+        lecture_days: lectureDays,
         is_dual: isDual,
         student_ids: studentIds,
       };
@@ -116,7 +127,7 @@ const CreateCourse = () => {
       <div className="page-header flex items-center gap-4">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)]"
+          className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] relative z-10 mr-16 lg:mr-0"
         >
           <ArrowRight className="w-5 h-5" />
         </button>
@@ -252,18 +263,6 @@ const CreateCourse = () => {
             تفاصيل الكورس
           </h2>
           <div className="space-y-4">
-            <div>
-              <label className="label">اسم الكورس *</label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="input"
-                placeholder="مثال: كورس المحادثة الإنجليزية"
-                required
-              />
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="label">الباقة *</label>
@@ -366,7 +365,7 @@ const CreateCourse = () => {
             </h3>
             <p className="text-sm text-primary-700 dark:text-primary-400">
               سيحتوي هذا الكورس على {formData.lectures_count} محاضرة، تبدأ من{' '}
-              {new Date(formData.start_date).toLocaleDateString('ar-EG', {
+              {formatDate(formData.start_date, {
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',

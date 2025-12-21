@@ -53,8 +53,33 @@ class DatabaseSeeder extends Seeder
         // 2. Trainers
         // ========================================
         
+        // Create trainer users first
+        $trainerUser1 = User::create([
+            'name' => 'محمد أحمد',
+            'email' => 'mohammed@letspeak.com',
+            'password' => Hash::make('password'),
+            'role' => 'trainer',
+            'status' => 'active',
+        ]);
+
+        $trainerUser2 = User::create([
+            'name' => 'فاطمة علي',
+            'email' => 'fatima@letspeak.com',
+            'password' => Hash::make('password'),
+            'role' => 'trainer',
+            'status' => 'active',
+        ]);
+
+        $trainerUser3 = User::create([
+            'name' => 'علي حسن',
+            'email' => 'ali@letspeak.com',
+            'password' => Hash::make('password'),
+            'role' => 'trainer',
+            'status' => 'active',
+        ]);
+        
         $trainer1 = Trainer::create([
-            'user_id' => null,
+            'user_id' => $trainerUser1->id,
             'name' => 'محمد أحمد',
             'username' => 'mohammed',
             'password' => Hash::make('password'),
@@ -66,7 +91,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $trainer2 = Trainer::create([
-            'user_id' => null,
+            'user_id' => $trainerUser2->id,
             'name' => 'فاطمة علي',
             'username' => 'fatima',
             'password' => Hash::make('password'),
@@ -78,7 +103,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $trainer3 = Trainer::create([
-            'user_id' => null,
+            'user_id' => $trainerUser3->id,
             'name' => 'علي حسن',
             'username' => 'ali',
             'password' => Hash::make('password'),

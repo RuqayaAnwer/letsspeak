@@ -97,4 +97,20 @@ class User extends Authenticatable
     {
         return $this->role === 'finance';
     }
+
+    /**
+     * Check if user is accounting.
+     */
+    public function isAccounting(): bool
+    {
+        return $this->role === 'accounting';
+    }
+
+    /**
+     * Check if user is trainer.
+     */
+    public function isTrainer(): bool
+    {
+        return $this->role === 'trainer';
+    }
 }

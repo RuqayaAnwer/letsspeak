@@ -140,11 +140,16 @@
   }
 
   .page-title {
-    @apply text-2xl font-bold text-[var(--color-text-primary)];
+    @apply text-2xl font-bold text-[var(--color-text-primary)] pr-20;
   }
 
   .page-subtitle {
     @apply text-[var(--color-text-muted)] mt-1;
+  }
+
+  /* Add padding for main page titles to avoid burger menu overlap */
+  main h1.text-3xl {
+    padding-right: 5rem;
   }
 }
 

@@ -4,6 +4,7 @@ import api from '../../api/axios';
 import StatCard from '../../components/StatCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { DollarSign, CreditCard, Users, CheckCircle, BookOpen, TrendingUp } from 'lucide-react';
+import { formatDateSimple } from '../../utils/dateFormat';
 
 const AccountingDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -144,12 +145,12 @@ const AccountingDashboard = () => {
                 <tr key={payment.id}>
                   <td className="font-semibold">{payment.id}</td>
                   <td>
-                    {new Date(payment.date).toLocaleDateString('ar-EG')}
+                    {formatDateSimple(payment.date)}
                   </td>
                   <td className="font-semibold text-[var(--color-text-primary)]">
                     {payment.student?.name}
                   </td>
-                  <td>{payment.course?.title}</td>
+                  <td>{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</td>
                   <td className="font-bold text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(payment.amount)}
                   </td>

@@ -28,15 +28,27 @@ const Trainers = () => {
   }, [search, weeklyFilter]);
 
   const fetchTrainers = async () => {
+    setLoading(true);
     try {
       const params = {};
       if (search) params.search = search;
       if (weeklyFilter) params.weekly_lectures = weeklyFilter;
       
       const response = await api.get('/trainers', { params });
-      setTrainers(response.data.data || []);
+      
+      // Handle paginated response - API returns { data: [...], current_page, ... }
+      const trainersData = response.data?.data || response.data || [];
+      
+      if (!Array.isArray(trainersData)) {
+        console.error('Invalid trainers data format:', trainersData);
+        setTrainers([]);
+      } else {
+        setTrainers(trainersData);
+      }
     } catch (error) {
       console.error('Error fetching trainers:', error);
+      console.error('Error response:', error.response);
+      setTrainers([]);
     } finally {
       setLoading(false);
     }
@@ -84,8 +96,8 @@ const Trainers = () => {
     if (trainer) {
       setEditingTrainer(trainer);
       setFormData({
-        name: trainer.user?.name || '',
-        email: trainer.user?.email || '',
+        name: trainer.user?.name || trainer.name || '',
+        email: trainer.user?.email || trainer.email || '',
         phone: trainer.phone || '',
         min_level: trainer.min_level || '',
         max_level: trainer.max_level || '',
@@ -143,7 +155,6 @@ const Trainers = () => {
             >
               <option value="">كل المدربين</option>
               <option value="less_than_3">أقل من 3 محاضرات</option>
-              <option value="exactly_3">3 محاضرات بالضبط</option>
               <option value="more_than_3">أكثر من 3 محاضرات</option>
             </select>
           </div>
@@ -187,11 +198,11 @@ const Trainers = () => {
                       <div className="flex items-center justify-center gap-1.5">
                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
                           <span className="text-white font-bold text-[9px]">
-                            {trainer.user?.name?.charAt(0).toUpperCase()}
+                            {(trainer.user?.name || trainer.name)?.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <span className="font-medium text-[11px] text-[var(--color-text-primary)] whitespace-nowrap">
-                          {trainer.user?.name}
+                          {trainer.user?.name || trainer.name}
                         </span>
                       </div>
                     </td>
@@ -202,7 +213,7 @@ const Trainers = () => {
                       </div>
                     </td>
                     <td className="py-2 px-2 text-center">
-                      <span dir="ltr" className="text-[11px]">{trainer.user?.email || '-'}</span>
+                      <span dir="ltr" className="text-[11px]">{trainer.user?.email || trainer.email || '-'}</span>
                     </td>
                     <td className="py-2 px-2 text-center">
                       <span className="text-[10px] text-[var(--color-text-secondary)] whitespace-nowrap font-medium">
@@ -233,7 +244,7 @@ const Trainers = () => {
                           onClick={() => setNotesPopup({
                             open: true,
                             notes: trainer.notes,
-                            trainerName: trainer.user?.name || 'المدرب'
+                            trainerName: trainer.user?.name || trainer.name || 'المدرب'
                           })}
                           className="p-1 rounded-lg text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors"
                           title={trainer.notes}

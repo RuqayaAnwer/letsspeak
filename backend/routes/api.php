@@ -43,14 +43,19 @@ Route::get('/trainers/{trainer}', [TrainerController::class, 'show']);
 Route::put('/trainers/{trainer}', [TrainerController::class, 'update']);
 Route::delete('/trainers/{trainer}', [TrainerController::class, 'destroy']);
 Route::get('/trainers/{trainer}/available-times', [TrainerController::class, 'availableTimes']);
+Route::post('/trainers/available', [TrainerController::class, 'available']);
+Route::post('/trainers/available-monthly', [TrainerController::class, 'availableMonthly']);
 
-// Courses
-Route::get('/courses', [CourseController::class, 'index']);
-Route::post('/courses', [CourseController::class, 'store']);
-Route::get('/courses/{course}', [CourseController::class, 'show']);
-Route::put('/courses/{course}', [CourseController::class, 'update']);
-Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
-Route::put('/courses/{course}/lectures/bulk', [CourseController::class, 'bulkUpdateLectures']);
+// Courses - Protected routes (require authentication)
+Route::middleware('simple.auth')->group(function () {
+    Route::get('/courses', [CourseController::class, 'index']);
+    Route::post('/courses', [CourseController::class, 'store']);
+    Route::get('/courses/{course}', [CourseController::class, 'show']);
+    Route::put('/courses/{course}', [CourseController::class, 'update']);
+    Route::put('/courses/{course}/status', [CourseController::class, 'updateStatus']);
+    Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
+    Route::put('/courses/{course}/lectures/bulk', [CourseController::class, 'bulkUpdateLectures']);
+});
 
 // Lectures
 Route::get('/lectures', [LectureController::class, 'index']);
@@ -85,8 +90,10 @@ Route::post('/find-training-time', [CustomerServiceController::class, 'findTrain
 Route::get('/activity-logs', [ActivityLogController::class, 'index']);
 
 // Trainer Dashboard & Unavailability
-Route::prefix('trainer')->group(function () {
+Route::prefix('trainer')->middleware('simple.auth')->group(function () {
     Route::get('/dashboard', [TrainerController::class, 'dashboard']);
+    Route::get('/today-lectures', [TrainerController::class, 'todayLectures']);
+    Route::get('/next-week-lectures', [TrainerController::class, 'nextWeekLectures']);
     Route::get('/unavailability', [TrainerController::class, 'getUnavailability']);
     Route::post('/unavailability', [TrainerController::class, 'saveUnavailability']);
 });

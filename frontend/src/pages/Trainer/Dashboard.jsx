@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, BookOpen, CheckCircle } from 'lucide-react';
 import api from '../../api/axios';
+import { formatDateShort } from '../../utils/dateFormat';
 
 // Format time to 12-hour format
 const formatTime12Hour = (time24) => {
@@ -15,28 +16,61 @@ const formatTime12Hour = (time24) => {
 
 const Dashboard = () => {
   const [todayLectures, setTodayLectures] = useState([]);
+  const [nextWeekLectures, setNextWeekLectures] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchTodayLectures();
+    fetchNextWeekLectures();
   }, []);
 
   const fetchTodayLectures = async () => {
     try {
-      const response = await api.get('/trainer/today-lectures').catch(() => null);
-      if (response?.data) {
+      setError(null);
+      const token = localStorage.getItem('token');
+      console.log('Token:', token ? token.substring(0, 30) + '...' : 'No token');
+      
+      const response = await api.get('/trainer/today-lectures');
+      if (response?.data?.success) {
         setTodayLectures(response.data.data || []);
       } else {
-        // Demo data
-        setTodayLectures([
-          { id: 1, course: { id: 1, title: 'محادثة للمبتدئين', student: { name: 'أحمد محمد' }, lecture_time: '18:00' }, status: 'pending' },
-          { id: 2, course: { id: 2, title: 'كورس ثنائي', student: { name: 'نور الهدى' }, lecture_time: '20:00' }, status: 'pending' },
-        ]);
+        setTodayLectures([]);
       }
     } catch (error) {
-      console.error('Error fetching lectures:', error);
+      console.error('Error fetching today lectures:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      setTodayLectures([]);
+      
+      // Set error message with more details
+      if (error.response?.status === 401) {
+        const debugInfo = error.response?.data?.debug || '';
+        setError(`غير مصرح - يرجى تسجيل الدخول مرة أخرى. ${debugInfo}`);
+      } else if (error.response?.status === 403) {
+        setError('غير مصرح - ليس لديك صلاحية للوصول إلى هذه الصفحة');
+      } else if (error.response?.status === 404) {
+        setError('لم يتم العثور على ملف المدرب. يرجى الاتصال بالمسؤول.');
+      } else {
+        setError('حدث خطأ أثناء تحميل البيانات');
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchNextWeekLectures = async () => {
+    try {
+      const response = await api.get('/trainer/next-week-lectures');
+      if (response?.data?.success) {
+        setNextWeekLectures(response.data.data || []);
+      } else {
+        setNextWeekLectures([]);
+      }
+    } catch (error) {
+      console.error('Error fetching next week lectures:', error);
+      console.error('Error response:', error.response?.data);
+      setNextWeekLectures([]);
     }
   };
 
@@ -63,6 +97,18 @@ const Dashboard = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <p className="mr-4 text-gray-600 dark:text-gray-400">جاري التحميل...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8">
+        <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
+          <p className="font-semibold">خطأ</p>
+          <p>{error}</p>
+        </div>
       </div>
     );
   }
@@ -71,7 +117,7 @@ const Dashboard = () => {
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white pr-20">
           جدول اليوم
         </h1>
         <Link
@@ -84,6 +130,9 @@ const Dashboard = () => {
 
       {/* Today's Lectures */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">محاضرات اليوم</h2>
+        </div>
         {todayLectures.length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
@@ -103,17 +152,17 @@ const Dashboard = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-800 dark:text-white">
-                        {lecture.course?.title}
+                        {lecture.course?.course_package?.name || lecture.course?.coursePackage?.name || 'كورس بدون باقة'}
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        الطالب: {lecture.course?.student?.name}
+                        الطالب: {lecture.course?.student?.name || '-'}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <Clock className="w-4 h-4" />
-                      <span dir="ltr">{formatTime12Hour(lecture.course?.lecture_time)}</span>
+                      <span dir="ltr">{formatTime12Hour(lecture.time || lecture.course?.lecture_time)}</span>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(lecture.status)}`}>
                       {getStatusLabel(lecture.status)}
@@ -128,6 +177,65 @@ const Dashboard = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Next Week's Lectures */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">محاضرات الأسبوع القادم</h2>
+        </div>
+        {nextWeekLectures.length === 0 ? (
+          <div className="text-center py-12">
+            <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-500 dark:text-gray-400">لا توجد محاضرات للأسبوع القادم</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">التاريخ</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الوقت</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الباقة</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الطالب</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الحالة</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {nextWeekLectures.map((lecture) => (
+                  <tr key={lecture.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-4 py-3 text-sm text-gray-800 dark:text-white">
+                      {formatDateShort(lecture.date)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400" dir="ltr">
+                      {formatTime12Hour(lecture.time || lecture.course?.lecture_time)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-800 dark:text-white">
+                      {lecture.course?.course_package?.name || lecture.course?.coursePackage?.name || 'كورس بدون باقة'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                      {lecture.course?.student?.name || '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(lecture.status)}`}>
+                        {getStatusLabel(lecture.status)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        to={`/courses/${lecture.course?.id}`}
+                        className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                      >
+                        التفاصيل
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

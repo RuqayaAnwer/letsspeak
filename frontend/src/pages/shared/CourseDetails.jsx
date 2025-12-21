@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+// Updated: 2025-12-21 - Added trainer payment column in lectures table
+// Status change confirmation modal with logging
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { formatDateShort } from '../../utils/dateFormat';
 import {
   ArrowRight,
   User,
@@ -33,7 +36,7 @@ import {
 const CourseDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isCustomerService, isAccounting, user } = useAuth();
+  const { isCustomerService, isAccounting, isTrainer, user } = useAuth();
   const [course, setCourse] = useState(null);
   const [lectures, setLectures] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,22 +76,29 @@ const CourseDetails = () => {
   
   // Selected student for dual courses (to show their attendance data)
   const [selectedStudentId, setSelectedStudentId] = useState(null);
+  
+  // Status change confirmation modal
+  const [statusChangeModal, setStatusChangeModal] = useState({
+    open: false,
+    newStatus: null,
+    reason: '',
+  });
+  const statusSelectRef = useRef(null);
 
   /**
    * Check if a lecture can be modified based on its date/time.
    * - Future lectures: Cannot be modified
-   * - Today's lectures: Can only be modified at or after their scheduled time
+   * - Today's lectures: Can be modified (regardless of time)
    * - Past lectures: Can be modified
    */
   const canModifyLecture = (lecture) => {
-    const now = new Date();
     const lectureDate = new Date(lecture.date);
     lectureDate.setHours(0, 0, 0, 0);
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Future lecture
+    // Future lecture - cannot be modified
     if (lectureDate > today) {
       return {
         canModify: false,
@@ -97,33 +107,11 @@ const CourseDetails = () => {
       };
     }
     
-    // Today's lecture - check time
-    if (lectureDate.getTime() === today.getTime()) {
-      const lectureTime = lecture.time || course?.lecture_time || '00:00';
-      const [hours, minutes] = lectureTime.split(':').map(Number);
-      const lectureDateTime = new Date();
-      lectureDateTime.setHours(hours, minutes, 0, 0);
-      
-      if (now < lectureDateTime) {
-        return {
-          canModify: false,
-          reason: 'لم يحن وقت المحاضرة بعد',
-          type: 'today_future'
-        };
-      }
-      
-      return {
-        canModify: true,
-        reason: null,
-        type: 'today'
-      };
-    }
-    
-    // Past lecture
+    // Today's lecture or past lecture - can be modified
     return {
       canModify: true,
       reason: null,
-      type: 'past'
+      type: lectureDate.getTime() === today.getTime() ? 'today' : 'past'
     };
   };
 
@@ -143,7 +131,14 @@ const CourseDetails = () => {
       }
     } catch (error) {
       console.error('Error fetching course:', error);
-      navigate(-1);
+      
+      // If unauthorized (403), show error and redirect
+      if (error.response?.status === 403) {
+        alert('غير مصرح - هذا الكورس ليس من كورساتك');
+        navigate('/courses');
+      } else {
+        navigate(-1);
+      }
     } finally {
       setLoading(false);
     }
@@ -404,6 +399,22 @@ const CourseDetails = () => {
   };
 
   /**
+   * Handle trainer payment status change - saves automatically
+   */
+  const handleTrainerPaymentChange = async (value) => {
+    try {
+      setSaving(true);
+      await api.put(`/courses/${id}`, { trainer_payment_status: value });
+      setCourse(prev => ({ ...prev, trainer_payment_status: value }));
+    } catch (error) {
+      console.error('Error updating trainer payment status:', error);
+      alert('حدث خطأ أثناء تحديث حالة دفع المدرب');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /**
    * Handle course days change - saves when modal is closed
    */
   const handleCourseDaysChange = async () => {
@@ -489,40 +500,54 @@ const CourseDetails = () => {
   };
 
   /**
-   * Handle course status change - saves automatically
+   * Handle course status change - shows confirmation for paused/finished
    */
-  const handleCourseStatusChange = async (value) => {
-    try {
-      setSaving(true);
-      await api.put(`/courses/${id}`, {
-        status: value
+  const handleCourseStatusChange = (value) => {
+    // If changing to paused or finished, show confirmation modal
+    if (value === 'paused' || value === 'finished') {
+      setStatusChangeModal({
+        open: true,
+        newStatus: value,
+        reason: '',
       });
-      setCourse(prev => ({ ...prev, status: value }));
-      console.log(`✓ تم تغيير حالة الكورس إلى: ${value}`);
-    } catch (error) {
-      console.error('Error updating course status:', error);
-      alert('حدث خطأ أثناء تحديث حالة الكورس');
-    } finally {
-      setSaving(false);
+    } else {
+      // For other statuses, change directly
+      confirmStatusChange(value, '');
     }
   };
 
   /**
-   * Handle trainer payment status change - saves automatically
+   * Cancel status change and restore old value
    */
-  const handleTrainerPaymentChange = async (value) => {
+  const cancelStatusChange = () => {
+    setStatusChangeModal({ open: false, newStatus: null, reason: '' });
+    // Restore select to old value
+    if (statusSelectRef.current && course) {
+      statusSelectRef.current.value = course.status;
+    }
+  };
+
+  /**
+   * Confirm and apply status change
+   */
+  const confirmStatusChange = async (newStatus, reason) => {
     try {
       setSaving(true);
-      await api.put(`/courses/${id}`, {
-        trainer_payment_status: value
+      const response = await api.put(`/courses/${id}/status`, {
+        status: newStatus,
+        reason: reason || null,
       });
-      setCourse(prev => ({ ...prev, trainer_payment_status: value }));
-      // Show brief success indication
-      const label = value === 'paid' ? 'مدفوع' : 'غير مدفوع';
-      console.log(`✓ تم حفظ حالة دفع المدرب: ${label}`);
+      
+      if (response.data.success) {
+        setCourse(prev => ({ ...prev, status: newStatus }));
+        setStatusChangeModal({ open: false, newStatus: null, reason: '' });
+        console.log(`✓ تم تغيير حالة الكورس إلى: ${newStatus}`);
+      } else {
+        alert(response.data.message || 'حدث خطأ أثناء تحديث حالة الكورس');
+      }
     } catch (error) {
-      console.error('Error updating trainer payment:', error);
-      alert('حدث خطأ أثناء تحديث حالة الدفع');
+      console.error('Error updating course status:', error);
+      alert(error.response?.data?.message || 'حدث خطأ أثناء تحديث حالة الكورس');
     } finally {
       setSaving(false);
     }
@@ -635,8 +660,6 @@ const CourseDetails = () => {
     return labels[status] || status;
   };
 
-  const canEditPayment = isCustomerService || isAccounting;
-
   if (loading) {
     return <LoadingSpinner size="lg" />;
   }
@@ -650,17 +673,22 @@ const CourseDetails = () => {
         <div className="flex items-start gap-4">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] mt-1"
+            className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] mt-1 relative z-10 mr-16 lg:mr-0"
           >
             <ArrowRight className="w-5 h-5" />
           </button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="page-title">{course.title}</h1>
+              <h1 className="page-title">{course.course_package?.name || course.coursePackage?.name || 'كورس بدون باقة'}</h1>
               {isCustomerService ? (
                 <select
+                  ref={statusSelectRef}
                   value={course.status}
-                  onChange={(e) => handleCourseStatusChange(e.target.value)}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    if (newValue === course.status) return; // No change
+                    handleCourseStatusChange(newValue);
+                  }}
                   className="select text-sm py-1 px-3 font-semibold rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-primary)]"
                 >
                   <option value="active">🟢 نشط</option>
@@ -691,55 +719,6 @@ const CourseDetails = () => {
             <Save className="w-5 h-5" />
             {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
           </button>
-        )}
-      </div>
-
-      {/* Trainer Payment Status - Prominent at top */}
-      <div className={`p-4 rounded-xl shadow-lg flex items-center justify-between transition-all duration-300 ${
-        course.trainer_payment_status === 'paid'
-          ? 'bg-gradient-to-r from-green-100 to-green-50 dark:from-green-900/40 dark:to-green-800/20 border-2 border-green-400 dark:border-green-600'
-          : 'bg-gradient-to-r from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-amber-800/20 border-2 border-amber-400 dark:border-amber-600'
-      }`}>
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-full ${
-            course.trainer_payment_status === 'paid' 
-              ? 'bg-green-200 dark:bg-green-800' 
-              : 'bg-amber-200 dark:bg-amber-800'
-          }`}>
-            <GraduationCap className={`w-6 h-6 ${
-              course.trainer_payment_status === 'paid' 
-                ? 'text-green-700 dark:text-green-300' 
-                : 'text-amber-700 dark:text-amber-300'
-            }`} />
-          </div>
-          <div>
-            <p className="text-sm text-[var(--color-text-muted)]">حالة دفع المدرب</p>
-            <p className="font-bold text-lg text-[var(--color-text-primary)]">
-              {course.trainer?.user?.name || course.trainer?.name || 'غير محدد'}
-            </p>
-          </div>
-        </div>
-        {canEditPayment ? (
-          <select
-            value={course.trainer_payment_status || 'unpaid'}
-            onChange={(e) => handleTrainerPaymentChange(e.target.value)}
-            className={`select text-lg py-2 px-4 font-bold rounded-xl border-2 ${
-              course.trainer_payment_status === 'paid'
-                ? 'bg-green-500 text-white border-green-600'
-                : 'bg-amber-500 text-white border-amber-600'
-            }`}
-          >
-            <option value="unpaid">❌ غير مدفوع</option>
-            <option value="paid">✅ مدفوع</option>
-          </select>
-        ) : (
-          <span className={`text-lg font-bold px-4 py-2 rounded-xl ${
-            course.trainer_payment_status === 'paid' 
-              ? 'bg-green-500 text-white' 
-              : 'bg-amber-500 text-white'
-          }`}>
-            {course.trainer_payment_status === 'paid' ? '✅ مدفوع' : '❌ غير مدفوع'}
-          </span>
         )}
       </div>
 
@@ -841,7 +820,8 @@ const CourseDetails = () => {
                 <th>الحضور</th>
                 <th>النشاط</th>
                 <th>الواجب</th>
-                <th>الدفع</th>
+                {!isTrainer && <th>دفع الطالب</th>}
+                <th>دفع المدرب</th>
                 <th>ملاحظات</th>
               </tr>
             </thead>
@@ -904,7 +884,7 @@ const CourseDetails = () => {
                       </div>
                     </td>
                     <td>
-                      {isCustomerService && isSelected ? (
+                      {(isCustomerService || isTrainer) && isSelected ? (
                         <input
                           type="date"
                           value={editingLectureDateTime.date}
@@ -913,7 +893,7 @@ const CourseDetails = () => {
                           className="input py-1 px-2 text-sm w-32"
                           dir="ltr"
                         />
-                      ) : isCustomerService ? (
+                      ) : (isCustomerService || isTrainer) ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -923,11 +903,7 @@ const CourseDetails = () => {
                           title="انقر لتعديل التاريخ والوقت"
                         >
                           <p className="font-medium text-[var(--color-text-primary)]">
-                            {new Date(lecture.date).toLocaleDateString('ar-EG', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
+                            {formatDateShort(lecture.date)}
                           </p>
                           {isToday && (
                             <span className="text-xs text-primary-600 dark:text-primary-400 font-medium block">
@@ -938,11 +914,7 @@ const CourseDetails = () => {
                       ) : (
                         <div>
                           <p className="font-medium text-[var(--color-text-primary)]">
-                            {new Date(lecture.date).toLocaleDateString('ar-EG', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
+                            {formatDateShort(lecture.date)}
                           </p>
                           {isToday && (
                             <span className="text-xs text-primary-600 dark:text-primary-400 font-medium block">
@@ -953,7 +925,7 @@ const CourseDetails = () => {
                       )}
                     </td>
                     <td className="text-center" dir="ltr">
-                      {isCustomerService && isSelected ? (
+                      {(isCustomerService || isTrainer) && isSelected ? (
                         <div className="flex items-center gap-2">
                           <input
                             type="time"
@@ -985,7 +957,7 @@ const CourseDetails = () => {
                             <X className="w-4 h-4" />
                           </button>
                         </div>
-                      ) : isCustomerService ? (
+                      ) : (isCustomerService || isTrainer) ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1085,25 +1057,47 @@ const CourseDetails = () => {
                         </select>
                       )}
                     </td>
+                    {!isTrainer && (
+                      <td>
+                        {isLocked ? (
+                          <span className={`text-xs ${lecture.payment_status === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
+                            {lecture.payment_status === 'paid' ? 'مدفوع' : 'غير مدفوع'}
+                          </span>
+                        ) : (
+                          <select
+                            value={edited.payment_status ?? lecture.payment_status ?? 'unpaid'}
+                            onChange={(e) => handleLectureChange(lecture.id, 'payment_status', e.target.value)}
+                            className={`select text-xs py-1 px-1.5 w-20 ${
+                              (edited.payment_status ?? lecture.payment_status) === 'paid' 
+                                ? 'text-green-600 bg-green-50 dark:bg-green-900/20' 
+                                : 'text-red-500 bg-red-50 dark:bg-red-900/20'
+                            }`}
+                            disabled={isLocked}
+                          >
+                            <option value="unpaid">غير مدفوع</option>
+                            <option value="paid">مدفوع</option>
+                          </select>
+                        )}
+                      </td>
+                    )}
                     <td>
-                      {isLocked ? (
-                        <span className={`text-xs ${lecture.payment_status === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
-                          {lecture.payment_status === 'paid' ? 'مدفوع' : 'غير مدفوع'}
-                        </span>
-                      ) : (
+                      {isCustomerService && !isLocked ? (
                         <select
-                          value={edited.payment_status ?? lecture.payment_status ?? 'unpaid'}
-                          onChange={(e) => handleLectureChange(lecture.id, 'payment_status', e.target.value)}
+                          value={course.trainer_payment_status || 'unpaid'}
+                          onChange={(e) => handleTrainerPaymentChange(e.target.value)}
                           className={`select text-xs py-1 px-1.5 w-20 ${
-                            (edited.payment_status ?? lecture.payment_status) === 'paid' 
+                            course.trainer_payment_status === 'paid' 
                               ? 'text-green-600 bg-green-50 dark:bg-green-900/20' 
                               : 'text-red-500 bg-red-50 dark:bg-red-900/20'
                           }`}
-                          disabled={isLocked}
                         >
                           <option value="unpaid">غير مدفوع</option>
                           <option value="paid">مدفوع</option>
                         </select>
+                      ) : (
+                        <span className={`text-xs ${course.trainer_payment_status === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
+                          {course.trainer_payment_status === 'paid' ? 'مدفوع' : 'غير مدفوع'}
+                        </span>
                       )}
                     </td>
                     <td className="text-center">
@@ -1550,6 +1544,57 @@ const CourseDetails = () => {
                 className="flex-1 py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'جاري الحفظ...' : 'حفظ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Change Confirmation Modal */}
+      {statusChangeModal.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="w-6 h-6 text-yellow-500" />
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white">
+                تأكيد تغيير حالة الكورس
+              </h3>
+            </div>
+            
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              هل أنت متأكد من تغيير حالة الكورس إلى{' '}
+              <span className="font-semibold">
+                {statusChangeModal.newStatus === 'paused' ? 'متوقف' : 'منتهي'}
+              </span>؟
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                السبب (اختياري)
+              </label>
+              <textarea
+                value={statusChangeModal.reason}
+                onChange={(e) => setStatusChangeModal(prev => ({ ...prev, reason: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 text-sm"
+                rows="3"
+                placeholder="أدخل سبب تغيير الحالة..."
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={cancelStatusChange}
+                className="flex-1 py-2 rounded-lg border border-gray-300 dark:border-gray-600 font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+                disabled={saving}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={() => confirmStatusChange(statusChangeModal.newStatus, statusChangeModal.reason)}
+                disabled={saving}
+                className="flex-1 py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
               </button>
             </div>
           </div>

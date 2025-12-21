@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { ArrowRight, ArrowLeft, Clock, User, FileText } from 'lucide-react';
+import { formatDateForLogs } from '../../utils/dateFormat';
 
 const ActivityLogs = () => {
   const navigate = useNavigate();
@@ -46,16 +47,6 @@ const ActivityLogs = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ar-SA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   const getActionColor = (action) => {
     switch (action) {
@@ -98,7 +89,7 @@ const ActivityLogs = () => {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white pr-20">
           سجل التعديلات
         </h1>
         <button
@@ -170,7 +161,7 @@ const ActivityLogs = () => {
                   <div className="text-left">
                     <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
                       <Clock className="w-4 h-4" />
-                      {formatDate(log.created_at)}
+                      {formatDateForLogs(log.created_at)}
                     </div>
                     {log.user && (
                       <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mt-1">

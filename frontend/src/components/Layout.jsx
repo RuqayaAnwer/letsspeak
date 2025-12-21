@@ -58,7 +58,6 @@ const Layout = ({ children }) => {
           { path: '/customer-service/students', label: 'الطلاب', icon: '👥' },
           { path: '/customer-service/trainers', label: 'المدربين', icon: '🎓' },
           { path: '/courses', label: 'الكورسات', icon: '📚' },
-          { path: '/customer-service/create-course', label: 'كورس جديد', icon: '➕' },
           { path: '/customer-service/packages', label: 'الباقات', icon: '📦' },
           { path: '/customer-service/find-time', label: 'أوقات التدريب', icon: '🕐' },
           { path: '/customer-service/activity-logs', label: 'سجل التعديلات', icon: '📝' },
@@ -105,15 +104,20 @@ const Layout = ({ children }) => {
       {/* Toggle Button - Always visible */}
       <button
         onClick={toggleSidebar}
-        className={`fixed top-4 z-[60] p-2.5 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:scale-105 ${
+        className={`fixed top-4 p-3 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-xl hover:shadow-2xl border-2 border-blue-500/50 dark:border-blue-400/50 transition-all duration-300 hover:scale-110 active:scale-95 hover:bg-white/90 dark:hover:bg-gray-800/90 ${
           sidebarOpen ? 'right-[17rem]' : 'right-4'
         }`}
+        style={{ 
+          zIndex: 9999,
+          pointerEvents: 'auto',
+          position: 'fixed'
+        }}
         title={sidebarOpen ? 'إخفاء القائمة' : 'إظهار القائمة'}
       >
         {sidebarOpen ? (
-          <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+          <X className="w-6 h-6 text-blue-600 dark:text-blue-400" />
         ) : (
-          <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+          <Menu className="w-6 h-6 text-blue-600 dark:text-blue-400" />
         )}
       </button>
 
@@ -194,9 +198,10 @@ const Layout = ({ children }) => {
 
       {/* Main Content */}
       <main 
-        className={`transition-all duration-300 p-8 ${
+        className={`transition-all duration-300 p-8 relative ${
           sidebarOpen && !isMobile ? 'mr-64' : 'mr-0'
         }`}
+        style={{ zIndex: 1 }}
       >
         {children}
       </main>

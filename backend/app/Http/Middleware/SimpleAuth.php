@@ -17,20 +17,34 @@ class SimpleAuth
         $token = $request->bearerToken();
         
         if (!$token) {
-            return response()->json(['message' => 'غير مصرح - لا يوجد رمز'], 401);
+            return response()->json([
+                'success' => false,
+                'message' => 'غير مصرح - لا يوجد رمز',
+                'debug' => 'No token provided'
+            ], 401);
         }
 
         // Extract user id from token
+        // Token format: token-{id}-{timestamp} or dev-token-{id}-{timestamp}
         preg_match('/(?:dev-)?token-(\d+)-/', $token, $matches);
         
         if (empty($matches[1])) {
-            return response()->json(['message' => 'رمز غير صالح'], 401);
+            return response()->json([
+                'success' => false,
+                'message' => 'رمز غير صالح',
+                'debug' => 'Token format invalid. Token: ' . substr($token, 0, 50)
+            ], 401);
         }
 
-        $user = User::find($matches[1]);
+        $userId = $matches[1];
+        $user = User::find($userId);
         
         if (!$user) {
-            return response()->json(['message' => 'مستخدم غير موجود'], 401);
+            return response()->json([
+                'success' => false,
+                'message' => 'مستخدم غير موجود',
+                'debug' => 'User ID ' . $userId . ' not found'
+            ], 401);
         }
 
         // Set user on request

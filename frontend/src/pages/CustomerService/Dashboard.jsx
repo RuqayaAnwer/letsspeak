@@ -20,12 +20,31 @@ const Dashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get('/dashboard/stats').catch(() => null);
+      const response = await api.get('/dashboard/stats');
+      
       if (response?.data) {
-        setStats(response.data);
+        // Handle both direct data and nested data structure
+        const data = response.data.data || response.data;
+        const newStats = {
+          students: data.students ?? data.students_count ?? 0,
+          trainers: data.trainers ?? data.trainers_count ?? 0,
+          courses: data.courses ?? data.active_courses ?? data.active_courses_count ?? 0,
+          packages: data.packages ?? data.packages_count ?? 0,
+        };
+        console.log('Setting stats:', newStats);
+        setStats(newStats);
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
+      console.error('Error response:', error.response);
+      
+      // Set default values on error
+      setStats({
+        students: 0,
+        trainers: 0,
+        courses: 0,
+        packages: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -42,7 +61,7 @@ const Dashboard = () => {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white pr-20">
           لوحة التحكم - خدمة العملاء
         </h1>
       </div>

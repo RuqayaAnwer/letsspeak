@@ -4,6 +4,7 @@ import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { Plus, Search, Filter, Edit2, CreditCard } from 'lucide-react';
+import { formatDateSimple } from '../../utils/dateFormat';
 
 const Payments = () => {
   const [payments, setPayments] = useState([]);
@@ -210,7 +211,7 @@ const Payments = () => {
                   <tr key={payment.id}>
                     <td className="font-semibold">{payment.id}</td>
                     <td>
-                      {new Date(payment.date).toLocaleDateString('ar-EG')}
+                      {formatDateSimple(payment.date)}
                     </td>
                     <td>
                       <div className="flex items-center gap-2">
@@ -222,7 +223,7 @@ const Payments = () => {
                         <span className="font-semibold">{payment.student?.name}</span>
                       </div>
                     </td>
-                    <td>{payment.course?.title}</td>
+                    <td>{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</td>
                     <td className="font-bold text-emerald-600 dark:text-emerald-400">
                       {formatCurrency(payment.amount)}
                     </td>
@@ -287,7 +288,7 @@ const Payments = () => {
                 <option value="">اختر الكورس</option>
                 {getStudentCourses().map((course) => (
                   <option key={course.id} value={course.id}>
-                    {course.title}
+                    {course.course_package?.name || course.coursePackage?.name || `كورس #${course.id}`}
                   </option>
                 ))}
               </select>
