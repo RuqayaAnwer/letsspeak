@@ -1,0 +1,250 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Lecture;
+use App\Models\Course;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
+
+class LectureController extends Controller
+{
+    /**
+     * Check if a lecture can be modified based on its date/time.
+     * - Future lectures: Cannot be modified
+     * - Today's lectures: Can be modified at or after their scheduled time
+     * - Past lectures: Can be modified
+     */
+    private function canModifyLecture(Lecture $lecture): array
+    {
+        $now = Carbon::now();
+        $lectureDateTime = Carbon::parse($lecture->date->format('Y-m-d') . ' ' . ($lecture->time ?? '00:00'));
+        $lectureDate = Carbon::parse($lecture->date)->startOfDay();
+        $today = Carbon::today();
+
+        // Future lecture (date is after today)
+        if ($lectureDate->gt($today)) {
+            return [
+                'canModify' => false,
+                'reason' => 'لا يمكن تعديل محاضرة مستقبلية',
+                'type' => 'future'
+            ];
+        }
+
+        // Today's lecture - check if time has passed
+        if ($lectureDate->eq($today)) {
+            if ($now->lt($lectureDateTime)) {
+                return [
+                    'canModify' => false,
+                    'reason' => 'لا يمكن تعديل المحاضرة قبل وقتها المحدد',
+                    'type' => 'today_future'
+                ];
+            }
+        }
+
+        // Past lecture or today after time
+        return [
+            'canModify' => true,
+            'reason' => null,
+            'type' => $lectureDate->eq($today) ? 'today' : 'past'
+        ];
+    }
+
+    /**
+     * Log lecture modification activity.
+     */
+    private function logLectureModification(Lecture $lecture, array $oldData, array $newData, $user): void
+    {
+        $changes = [];
+        
+        foreach ($newData as $field => $newValue) {
+            $oldValue = $oldData[$field] ?? null;
+            if ($oldValue !== $newValue) {
+                $changes[$field] = [
+                    'old' => $oldValue,
+                    'new' => $newValue
+                ];
+            }
+        }
+
+        if (!empty($changes)) {
+            ActivityLog::create([
+                'user_id' => $user->id,
+                'action' => 'update',
+                'model_type' => 'Lecture',
+                'model_id' => $lecture->id,
+                'description' => "تعديل المحاضرة رقم {$lecture->lecture_number} للكورس #{$lecture->course_id}",
+                'old_values' => json_encode($oldData),
+                'new_values' => json_encode($newData),
+                'changes' => json_encode($changes),
+            ]);
+        }
+    }
+
+    /**
+     * Display a listing of lectures for a course.
+     */
+    public function index(Request $request, Course $course)
+    {
+        // Check authorization for trainers
+        if ($request->user()->isTrainer()) {
+            $trainerId = $request->user()->trainer->id;
+            if ($course->trainer_id !== $trainerId) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+        }
+
+        $lectures = $course->lectures()->orderBy('date')->orderBy('time')->get();
+
+        return response()->json($lectures);
+    }
+
+    /**
+     * Update the specified lecture.
+     */
+    public function update(Request $request, Lecture $lecture)
+    {
+        $user = $request->user();
+        
+        // Check authorization for trainers
+        if ($user->isTrainer()) {
+            $trainerId = $user->trainer->id;
+            if ($lecture->course->trainer_id !== $trainerId) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+        }
+
+        // Check if lecture can be modified
+        $canModify = $this->canModifyLecture($lecture);
+        if (!$canModify['canModify']) {
+            return response()->json([
+                'message' => $canModify['reason'],
+                'type' => $canModify['type']
+            ], 422);
+        }
+
+        $rules = [
+            'attendance' => 'sometimes|in:present,absent,excused,pending',
+            'activity' => 'nullable|string',
+            'homework' => 'nullable|string',
+            'notes' => 'nullable|string',
+        ];
+
+        // Only customer_service and accounting can update payment_status
+        if ($user->isCustomerService() || $user->isAccounting()) {
+            $rules['payment_status'] = 'sometimes|in:paid,unpaid';
+        }
+
+        $request->validate($rules);
+
+        // Save old data for logging
+        $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'payment_status']);
+
+        $updateData = $request->only(['attendance', 'activity', 'homework', 'notes']);
+        
+        if (($user->isCustomerService() || $user->isAccounting()) && $request->has('payment_status')) {
+            $updateData['payment_status'] = $request->payment_status;
+        }
+
+        $lecture->update($updateData);
+
+        // Log the modification
+        $this->logLectureModification($lecture, $oldData, $updateData, $user);
+
+        return response()->json($lecture);
+    }
+
+    /**
+     * Bulk update lectures.
+     */
+    public function bulkUpdate(Request $request, Course $course)
+    {
+        $user = $request->user();
+        
+        // Check authorization for trainers
+        if ($user->isTrainer()) {
+            $trainerId = $user->trainer->id;
+            if ($course->trainer_id !== $trainerId) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+        }
+
+        $request->validate([
+            'lectures' => 'required|array',
+            'lectures.*.id' => 'required|exists:lectures,id',
+            'lectures.*.attendance' => 'sometimes|in:present,absent,excused,pending',
+            'lectures.*.activity' => 'nullable|string',
+            'lectures.*.homework' => 'nullable|string',
+            'lectures.*.notes' => 'nullable|string',
+            'lectures.*.payment_status' => 'sometimes|in:paid,unpaid',
+        ]);
+
+        $skippedLectures = [];
+        $updatedCount = 0;
+
+        foreach ($request->lectures as $lectureData) {
+            $lecture = Lecture::find($lectureData['id']);
+            
+            if ($lecture->course_id !== $course->id) {
+                continue;
+            }
+
+            // Check if lecture can be modified
+            $canModify = $this->canModifyLecture($lecture);
+            if (!$canModify['canModify']) {
+                $skippedLectures[] = [
+                    'id' => $lecture->id,
+                    'lecture_number' => $lecture->lecture_number,
+                    'reason' => $canModify['reason']
+                ];
+                continue;
+            }
+
+            // Save old data for logging
+            $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'payment_status']);
+
+            $updateData = array_filter([
+                'attendance' => $lectureData['attendance'] ?? null,
+                'activity' => $lectureData['activity'] ?? null,
+                'homework' => $lectureData['homework'] ?? null,
+                'notes' => $lectureData['notes'] ?? null,
+            ], fn($v) => $v !== null);
+
+            if (($user->isCustomerService() || $user->isAccounting()) && isset($lectureData['payment_status'])) {
+                $updateData['payment_status'] = $lectureData['payment_status'];
+            }
+
+            if (!empty($updateData)) {
+                $lecture->update($updateData);
+                
+                // Log the modification
+                $this->logLectureModification($lecture, $oldData, $updateData, $user);
+                $updatedCount++;
+            }
+        }
+
+        return response()->json([
+            'lectures' => $course->lectures()->orderBy('date')->get(),
+            'updated_count' => $updatedCount,
+            'skipped' => $skippedLectures
+        ]);
+    }
+
+    /**
+     * Get lecture modification status (can it be edited?).
+     */
+    public function checkModifiable(Lecture $lecture)
+    {
+        $status = $this->canModifyLecture($lecture);
+        
+        return response()->json([
+            'lecture_id' => $lecture->id,
+            'can_modify' => $status['canModify'],
+            'reason' => $status['reason'],
+            'type' => $status['type']
+        ]);
+    }
+}
+
+

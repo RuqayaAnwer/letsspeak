@@ -1,0 +1,411 @@
+import { useState, useEffect } from 'react';
+import api from '../../api/axios';
+import Modal from '../../components/Modal';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import EmptyState from '../../components/EmptyState';
+import { Plus, Search, Edit2, Trash2, GraduationCap, Phone, Filter, MessageSquare, X } from 'lucide-react';
+
+const Trainers = () => {
+  const [trainers, setTrainers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [weeklyFilter, setWeeklyFilter] = useState('');
+  const [notesPopup, setNotesPopup] = useState({ open: false, notes: '', trainerName: '' });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTrainer, setEditingTrainer] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    min_level: '',
+    max_level: '',
+    notes: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchTrainers();
+  }, [search, weeklyFilter]);
+
+  const fetchTrainers = async () => {
+    try {
+      const params = {};
+      if (search) params.search = search;
+      if (weeklyFilter) params.weekly_lectures = weeklyFilter;
+      
+      const response = await api.get('/trainers', { params });
+      setTrainers(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching trainers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    try {
+      if (editingTrainer) {
+        await api.put(`/trainers/${editingTrainer.id}`, {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          min_level: formData.min_level,
+          max_level: formData.max_level,
+          notes: formData.notes,
+        });
+      } else {
+        await api.post('/trainers', formData);
+      }
+      fetchTrainers();
+      closeModal();
+    } catch (error) {
+      console.error('Error saving trainer:', error);
+      alert(error.response?.data?.message || 'حدث خطأ أثناء الحفظ');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('هل أنت متأكد من حذف هذا المدرب؟')) return;
+
+    try {
+      await api.delete(`/trainers/${id}`);
+      fetchTrainers();
+    } catch (error) {
+      console.error('Error deleting trainer:', error);
+    }
+  };
+
+  const openModal = (trainer = null) => {
+    if (trainer) {
+      setEditingTrainer(trainer);
+      setFormData({
+        name: trainer.user?.name || '',
+        email: trainer.user?.email || '',
+        phone: trainer.phone || '',
+        min_level: trainer.min_level || '',
+        max_level: trainer.max_level || '',
+        notes: trainer.notes || '',
+      });
+    } else {
+      setEditingTrainer(null);
+      setFormData({ name: '', email: '', phone: '', min_level: '', max_level: '', notes: '' });
+    }
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingTrainer(null);
+  };
+
+  if (loading) {
+    return <LoadingSpinner size="lg" />;
+  }
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="page-title">إدارة المدربين</h1>
+          <p className="page-subtitle">عرض وإدارة حسابات المدربين</p>
+        </div>
+        <button onClick={() => openModal()} className="btn-primary flex items-center gap-2">
+          <Plus className="w-5 h-5" />
+          إضافة مدرب
+        </button>
+      </div>
+
+      {/* Search & Filter */}
+      <div className="card p-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-text-muted)]" />
+            <input
+              type="text"
+              placeholder="البحث بالاسم..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input pr-10"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter className="w-5 h-5 text-[var(--color-text-muted)]" />
+            <select
+              value={weeklyFilter}
+              onChange={(e) => setWeeklyFilter(e.target.value)}
+              className="select w-48"
+            >
+              <option value="">كل المدربين</option>
+              <option value="less_than_3">أقل من 3 محاضرات</option>
+              <option value="exactly_3">3 محاضرات بالضبط</option>
+              <option value="more_than_3">أكثر من 3 محاضرات</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Trainers Table */}
+      {trainers.length === 0 ? (
+        <EmptyState
+          title="لا يوجد مدربين"
+          description="قم بإضافة أول مدرب للبدء"
+          icon={GraduationCap}
+          action={
+            <button onClick={() => openModal()} className="btn-primary">
+              إضافة مدرب
+            </button>
+          }
+        />
+      ) : (
+        <div className="card">
+          <div className="overflow-x-auto">
+            <table className="table text-xs">
+              <thead>
+                <tr>
+                  <th className="py-2 px-2 text-center">#</th>
+                  <th className="py-2 px-2 text-center">اسم المدرب</th>
+                  <th className="py-2 px-2 text-center">رقم الهاتف</th>
+                  <th className="py-2 px-2 text-center">البريد الإلكتروني</th>
+                  <th className="py-2 px-2 text-center">المستوى</th>
+                  <th className="py-2 px-2 text-center">الكورسات</th>
+                  <th className="py-2 px-2 text-center">محاضرات الأسبوع</th>
+                  <th className="py-2 px-2 text-center">ملاحظات</th>
+                  <th className="py-2 px-2 text-center">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trainers.map((trainer, index) => (
+                  <tr key={trainer.id}>
+                    <td className="py-2 px-2 text-center font-semibold">{index + 1}</td>
+                    <td className="py-2 px-2 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-bold text-[9px]">
+                            {trainer.user?.name?.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="font-medium text-[11px] text-[var(--color-text-primary)] whitespace-nowrap">
+                          {trainer.user?.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Phone className="w-3 h-3 text-[var(--color-text-muted)]" />
+                        <span dir="ltr" className="text-[11px]">{trainer.phone || '-'}</span>
+                      </div>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <span dir="ltr" className="text-[11px]">{trainer.user?.email || '-'}</span>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <span className="text-[10px] text-[var(--color-text-secondary)] whitespace-nowrap font-medium">
+                        {trainer.min_level && trainer.max_level 
+                          ? `${trainer.min_level} - ${trainer.max_level}` 
+                          : trainer.min_level || trainer.max_level || '-'}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <span className="badge badge-info text-[10px] px-1.5 py-0.5">
+                        {trainer.courses_count || 0}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <span className={`badge text-[10px] px-1.5 py-0.5 ${
+                        trainer.weekly_lectures_count >= 3 
+                          ? 'badge-success' 
+                          : trainer.weekly_lectures_count > 0 
+                            ? 'badge-warning' 
+                            : 'badge-gray'
+                      }`}>
+                        {trainer.weekly_lectures_count || 0}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      {trainer.notes ? (
+                        <button
+                          onClick={() => setNotesPopup({
+                            open: true,
+                            notes: trainer.notes,
+                            trainerName: trainer.user?.name || 'المدرب'
+                          })}
+                          className="p-1 rounded-lg text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors"
+                          title={trainer.notes}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <span className="text-gray-300 dark:text-gray-600">-</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <div className="flex items-center justify-center gap-0.5">
+                        <button
+                          onClick={() => openModal(trainer)}
+                          className="p-1.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
+                          title="تعديل"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(trainer.id)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[var(--color-text-muted)] hover:text-red-600"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title={editingTrainer ? 'تعديل بيانات المدرب' : 'إضافة مدرب جديد'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="label">اسم المدرب *</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="input"
+              placeholder="أدخل اسم المدرب"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="label">البريد الإلكتروني</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="input"
+              placeholder="trainer@example.com"
+              dir="ltr"
+            />
+          </div>
+
+          <div>
+            <label className="label">رقم الهاتف</label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="input"
+              placeholder="07xxxxxxxxx"
+              dir="ltr"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">أقل مستوى</label>
+              <select
+                value={formData.min_level}
+                onChange={(e) => setFormData({ ...formData, min_level: e.target.value })}
+                className="select w-full"
+              >
+                <option value="">اختر المستوى</option>
+                <option value="L1">L1</option>
+                <option value="L2">L2</option>
+                <option value="L3">L3</option>
+                <option value="L4">L4</option>
+                <option value="L5">L5</option>
+                <option value="L6">L6</option>
+                <option value="L7">L7</option>
+                <option value="L8">L8</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">أعلى مستوى</label>
+              <select
+                value={formData.max_level}
+                onChange={(e) => setFormData({ ...formData, max_level: e.target.value })}
+                className="select w-full"
+              >
+                <option value="">اختر المستوى</option>
+                <option value="L1">L1</option>
+                <option value="L2">L2</option>
+                <option value="L3">L3</option>
+                <option value="L4">L4</option>
+                <option value="L5">L5</option>
+                <option value="L6">L6</option>
+                <option value="L7">L7</option>
+                <option value="L8">L8</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="label">ملاحظات</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="input min-h-[100px]"
+              placeholder="أضف أي ملاحظات عن المدرب..."
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
+            <button type="button" onClick={closeModal} className="btn-secondary">
+              إلغاء
+            </button>
+            <button type="submit" disabled={submitting} className="btn-primary">
+              {submitting ? 'جاري الحفظ...' : editingTrainer ? 'تحديث' : 'إضافة'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Notes Popup */}
+      {notesPopup.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div 
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            onClick={() => setNotesPopup({ open: false, notes: '', trainerName: '' })}
+          />
+          <div className="relative bg-[var(--color-bg-primary)] rounded-xl p-5 max-w-md w-full mx-4 shadow-2xl animate-fade-in">
+            <button
+              onClick={() => setNotesPopup({ open: false, notes: '', trainerName: '' })}
+              className="absolute top-3 left-3 p-1 rounded-lg hover:bg-[var(--color-bg-tertiary)]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h4 className="font-bold text-[var(--color-text-primary)]">ملاحظات المدرب</h4>
+                <p className="text-xs text-[var(--color-text-muted)]">{notesPopup.trainerName}</p>
+              </div>
+            </div>
+            <div className="bg-[var(--color-bg-secondary)] p-4 rounded-lg">
+              <p className="text-[var(--color-text-secondary)] whitespace-pre-wrap">
+                {notesPopup.notes}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Trainers;

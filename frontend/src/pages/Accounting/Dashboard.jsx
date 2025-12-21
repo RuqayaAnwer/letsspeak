@@ -1,0 +1,178 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import api from '../../api/axios';
+import StatCard from '../../components/StatCard';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { DollarSign, CreditCard, Users, CheckCircle, BookOpen, TrendingUp } from 'lucide-react';
+
+const AccountingDashboard = () => {
+  const [stats, setStats] = useState(null);
+  const [paymentStats, setPaymentStats] = useState(null);
+  const [recentPayments, setRecentPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [statsRes, paymentStatsRes, paymentsRes] = await Promise.all([
+        api.get('/statistics'),
+        api.get('/payments-statistics'),
+        api.get('/payments?per_page=10'),
+      ]);
+      setStats(statsRes.data);
+      setPaymentStats(paymentStatsRes.data);
+      setRecentPayments(paymentsRes.data.data || []);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return `${Number(amount || 0).toLocaleString('en-US')} د.ع`;
+  };
+
+  const getStatusLabel = (status) => {
+    const labels = { completed: 'مكتمل', pending: 'معلق' };
+    return labels[status] || status;
+  };
+
+  const getStatusBadge = (status) => {
+    const badges = { completed: 'badge-success', pending: 'badge-warning' };
+    return badges[status] || 'badge-gray';
+  };
+
+  if (loading) {
+    return <LoadingSpinner size="lg" />;
+  }
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="page-title">لوحة تحكم المحاسبة</h1>
+          <p className="page-subtitle">متابعة المدفوعات والتقارير المالية</p>
+        </div>
+        <Link to="/accounting/payments" className="btn-primary flex items-center gap-2">
+          <CreditCard className="w-5 h-5" />
+          عرض كل المدفوعات
+        </Link>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-stagger">
+        <StatCard
+          title="إجمالي الإيرادات"
+          value={formatCurrency(paymentStats?.total_amount)}
+          icon={DollarSign}
+          color="success"
+        />
+        <StatCard
+          title="المبالغ المدفوعة"
+          value={formatCurrency(paymentStats?.paid_amount)}
+          icon={CheckCircle}
+          color="primary"
+        />
+        <StatCard
+          title="الكورسات النشطة"
+          value={paymentStats?.active_courses || stats?.active_courses_count || 0}
+          icon={BookOpen}
+          color="blue"
+        />
+        <StatCard
+          title="إيرادات الشهر"
+          value={formatCurrency(paymentStats?.monthly_revenue)}
+          icon={TrendingUp}
+          color="accent"
+        />
+      </div>
+
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          title="الكورسات المكتملة"
+          value={paymentStats?.finished_courses || stats?.finished_courses_count || 0}
+          icon={CheckCircle}
+          color="success"
+        />
+        <StatCard
+          title="عدد الطلاب"
+          value={paymentStats?.total_students || stats?.students_count || 0}
+          icon={Users}
+          color="primary"
+        />
+        <StatCard
+          title="المدفوعات المكتملة"
+          value={paymentStats?.completed_count || 0}
+          icon={CreditCard}
+          color="blue"
+        />
+      </div>
+
+      {/* Recent Payments Table */}
+      <div className="card">
+        <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
+          <h2 className="text-lg font-bold text-[var(--color-text-primary)]">
+            أحدث المدفوعات
+          </h2>
+          <Link
+            to="/accounting/payments"
+            className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium"
+          >
+            عرض الكل ←
+          </Link>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>التاريخ</th>
+                <th>الطالب</th>
+                <th>الكورس</th>
+                <th>المبلغ</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentPayments.map((payment) => (
+                <tr key={payment.id}>
+                  <td className="font-semibold">{payment.id}</td>
+                  <td>
+                    {new Date(payment.date).toLocaleDateString('ar-EG')}
+                  </td>
+                  <td className="font-semibold text-[var(--color-text-primary)]">
+                    {payment.student?.name}
+                  </td>
+                  <td>{payment.course?.title}</td>
+                  <td className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(payment.amount)}
+                  </td>
+                  <td>
+                    <span className={`badge ${getStatusBadge(payment.status)}`}>
+                      {getStatusLabel(payment.status)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {recentPayments.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="text-center py-8 text-[var(--color-text-muted)]">
+                    لا توجد مدفوعات
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AccountingDashboard;

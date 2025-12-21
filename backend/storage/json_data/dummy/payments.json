@@ -1,0 +1,137 @@
+[
+    {
+        "id": 1,
+        "course_id": 1,
+        "trainer_id": 1,
+        "student_name": "عبدالله كريم",
+        "amount": 50000,
+        "payment_method": "ZainCash",
+        "status": "paid",
+        "date": "2024-11-01",
+        "notes": "دفعة التسجيل",
+        "created_at": "2024-11-01 10:35:00",
+        "updated_at": "2024-11-01 10:35:00"
+    },
+    {
+        "id": 2,
+        "course_id": 2,
+        "trainer_id": 1,
+        "student_name": "نور الهدى",
+        "amount": 45000,
+        "payment_method": "نقد",
+        "status": "paid",
+        "date": "2024-10-15",
+        "notes": "دفعة أولى",
+        "created_at": "2024-10-15 09:15:00",
+        "updated_at": "2024-10-15 09:15:00"
+    },
+    {
+        "id": 3,
+        "course_id": 2,
+        "trainer_id": 1,
+        "student_name": "نور الهدى",
+        "amount": 45000,
+        "payment_method": "نقد",
+        "status": "paid",
+        "date": "2024-11-01",
+        "notes": "دفعة ثانية",
+        "created_at": "2024-11-01 12:00:00",
+        "updated_at": "2024-11-01 12:00:00"
+    },
+    {
+        "id": 4,
+        "course_id": 3,
+        "trainer_id": 2,
+        "student_name": "أمير العتابي",
+        "amount": 150000,
+        "payment_method": "تحويل بنكي",
+        "status": "paid",
+        "date": "2024-09-01",
+        "notes": "مدفوع بالكامل",
+        "created_at": "2024-09-01 11:30:00",
+        "updated_at": "2024-09-01 11:30:00"
+    },
+    {
+        "id": 5,
+        "course_id": 4,
+        "trainer_id": 2,
+        "student_name": "رقية حسين",
+        "amount": 25000,
+        "payment_method": "ZainCash",
+        "status": "paid",
+        "date": "2024-11-10",
+        "notes": "دفعة أولى - نصف المبلغ",
+        "created_at": "2024-11-10 14:15:00",
+        "updated_at": "2024-11-10 14:15:00"
+    },
+    {
+        "id": 6,
+        "course_id": 5,
+        "trainer_id": 3,
+        "student_name": "حسن العبيدي",
+        "amount": 100000,
+        "payment_method": "نقد",
+        "status": "paid",
+        "date": "2024-11-05",
+        "notes": "مدفوع بالكامل مقدماً",
+        "created_at": "2024-11-05 08:30:00",
+        "updated_at": "2024-11-05 08:30:00"
+    },
+    {
+        "id": 7,
+        "course_id": 6,
+        "trainer_id": 3,
+        "student_name": "سجاد كاظم",
+        "amount": 50000,
+        "payment_method": "تحويل بنكي",
+        "status": "paid",
+        "date": "2024-10-01",
+        "notes": "مدفوع قبل الإيقاف",
+        "created_at": "2024-10-01 13:20:00",
+        "updated_at": "2024-10-01 13:20:00"
+    },
+    {
+        "id": 8,
+        "course_id": 7,
+        "trainer_id": 1,
+        "student_name": "مريم الساعدي",
+        "amount": 100000,
+        "payment_method": "نقد",
+        "status": "paid",
+        "date": "2024-08-15",
+        "notes": "مدفوع بالكامل",
+        "created_at": "2024-08-15 10:30:00",
+        "updated_at": "2024-08-15 10:30:00"
+    },
+    {
+        "id": 9,
+        "course_id": 8,
+        "trainer_id": 1,
+        "student_name": "يوسف الخالدي",
+        "amount": 50000,
+        "payment_method": "ZainCash",
+        "status": "paid",
+        "date": "2024-11-25",
+        "notes": "مدفوع بالكامل",
+        "created_at": "2024-11-25 09:15:00",
+        "updated_at": "2024-11-25 09:15:00"
+    }
+]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
