@@ -14,7 +14,7 @@ class AuthController extends Controller
     public function devLogin(Request $request)
     {
         $request->validate([
-            'role' => 'required|in:customer_service,trainer,accounting',
+            'role' => 'required|in:customer_service,trainer,accounting,finance',
         ]);
 
         $user = User::where('role', $request->role)->first();
@@ -110,7 +110,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
-            'role' => 'required|in:customer_service,trainer,accounting',
+            'role' => 'required|in:customer_service,trainer,accounting,finance',
         ]);
 
         $user = User::create([

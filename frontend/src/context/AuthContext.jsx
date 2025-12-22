@@ -73,6 +73,7 @@ export const AuthProvider = ({ children }) => {
       const demoUsers = {
         customer_service: { id: 1, name: 'موظف خدمة العملاء', email: 'cs@letspeak.com', role: 'customer_service' },
         trainer: { id: 2, name: 'المدرب محمد', email: 'trainer@letspeak.com', role: 'trainer' },
+        finance: { id: 3, name: 'موظف المالية', email: 'finance@letspeak.com', role: 'finance' },
         accounting: { id: 3, name: 'موظف المالية', email: 'acc@letspeak.com', role: 'accounting' },
       };
       

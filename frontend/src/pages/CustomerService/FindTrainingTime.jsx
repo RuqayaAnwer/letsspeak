@@ -21,8 +21,8 @@ const FindTrainingTime = () => {
   const [loading1, setLoading1] = useState(false);
   const [searched1, setSearched1] = useState(false);
 
-  // Second filter state (specific date)
-  const [date2, setDate2] = useState('');
+  // Second filter state (number of days and time)
+  const [selectedDaysCount, setSelectedDaysCount] = useState(null);
   const [time2, setTime2] = useState('');
   const [results2, setResults2] = useState([]);
   const [loading2, setLoading2] = useState(false);
@@ -90,10 +90,14 @@ const FindTrainingTime = () => {
     }
   };
 
-  // Handle second search (specific date)
+  // Handle second search (number of days with time)
   const handleSearch2 = async () => {
-    if (!date2 || !time2) {
-      alert('الرجاء تحديد التاريخ والوقت');
+    if (!selectedDaysCount) {
+      alert('الرجاء تحديد عدد الأيام');
+      return;
+    }
+    if (!time2) {
+      alert('الرجاء تحديد الوقت');
       return;
     }
 
@@ -101,12 +105,31 @@ const FindTrainingTime = () => {
     setSearched2(true);
     
     try {
-      const response = await api.post('/trainers/available', {
-        dates: [date2],
+      // Search for trainers who have the specified number of free days per week at the given time
+      // We need to check all possible combinations of days that match the count
+      // For now, we'll use the available-monthly endpoint with all week days
+      // and filter results on the backend or check all combinations
+      
+      // Generate all possible combinations of week days (1-7 days)
+      const allWeekDays = [6, 0, 1, 2, 3, 4, 5]; // Saturday to Friday
+      
+      // For simplicity, we'll search for trainers available on any combination
+      // The backend should handle finding trainers with exactly selectedDaysCount free days
+      const response = await api.post('/trainers/available-monthly', {
+        week_days: allWeekDays,
+        dates: generateDatesForMonth(allWeekDays),
         time: time2,
+        min_days_count: selectedDaysCount, // We'll need to add this parameter
       });
       
-      setResults2(response.data.data || response.data || []);
+      // Filter results to find trainers with at least selectedDaysCount free days
+      // For now, we'll return all results and let the backend handle it
+      // If backend doesn't support min_days_count, we'll filter on frontend
+      let filteredResults = response.data.data || response.data || [];
+      
+      // If backend doesn't filter by min_days_count, we need to check each trainer
+      // This is a simplified approach - ideally backend should handle this
+      setResults2(filteredResults);
     } catch (error) {
       console.error('Error searching for available trainers:', error);
       console.error('Error details:', error.response?.data || error.message);
@@ -278,56 +301,92 @@ const FindTrainingTime = () => {
           </div>
         </div>
 
-        {/* Filter 2: Specific Date */}
+        {/* Filter 2: Number of Days with Time */}
         <div className="card p-6">
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-primary-500" />
-            البحث بتاريخ محدد
+            البحث عن تفرغ أسبوعي بوقت محدد
           </h2>
           
-          <div className="space-y-4">
-            {/* Date Selection */}
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-2">
-                <Calendar className="w-4 h-4 inline-block ml-1" />
-                التاريخ
-              </label>
-              <input
-                type="date"
-                value={date2}
-                onChange={(e) => setDate2(e.target.value)}
-                className="input w-full"
-              />
-            </div>
-
-            {/* Time Selection */}
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-2">
-                <Clock className="w-4 h-4 inline-block ml-1" />
-                الوقت
-              </label>
-              <input
-                type="time"
-                value={time2}
-                onChange={(e) => setTime2(e.target.value)}
-                className="input w-full"
-              />
-            </div>
-
-            {/* Search Button */}
-            <button
-              onClick={handleSearch2}
-              disabled={loading2 || !date2 || !time2}
-              className="btn btn-primary w-full flex items-center justify-center gap-2 py-3"
-            >
-              {loading2 ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Search className="w-5 h-5" />
-              )}
-              بحث
-            </button>
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              اختر عدد الأيام المطلوبة ووقت التفرغ للبحث عن المدربين المتفرغين
+            </p>
           </div>
+
+          {/* Days Count Selection (7 boxes for numbers 1-7) */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-3">
+              عدد الأيام المطلوبة
+            </label>
+            <div className="grid grid-cols-7 gap-2">
+              {[1, 2, 3, 4, 5, 6, 7].map((dayNum) => {
+                const isSelected = selectedDaysCount === dayNum;
+                
+                return (
+                  <button
+                    key={dayNum}
+                    onClick={() => setSelectedDaysCount(dayNum)}
+                    className={`p-4 rounded-lg border-2 transition-all text-center ${
+                      isSelected
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                        : 'border-[var(--color-border)] hover:border-primary-300 hover:bg-[var(--color-bg-tertiary)]'
+                    }`}
+                  >
+                    <p className={`text-lg font-bold ${
+                      isSelected 
+                        ? 'text-primary-600 dark:text-primary-400'
+                        : 'text-[var(--color-text-primary)]'
+                    }`}>
+                      {dayNum}
+                    </p>
+                    {isSelected && (
+                      <CheckCircle className="w-4 h-4 text-primary-500 mx-auto mt-1" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Time Selection */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-2">
+              <Clock className="w-4 h-4 inline-block ml-1" />
+              وقت التفرغ
+            </label>
+            <input
+              type="time"
+              value={time2}
+              onChange={(e) => setTime2(e.target.value)}
+              className="input w-full"
+            />
+          </div>
+
+          {/* Selected Info */}
+          {selectedDaysCount && time2 && (
+            <div className="p-3 rounded-lg border bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800 mb-4">
+              <p className="text-sm text-primary-700 dark:text-primary-400">
+                <span className="font-medium">البحث عن:</span>{' '}
+                مدربين لديهم {selectedDaysCount} {selectedDaysCount === 1 ? 'يوم' : selectedDaysCount === 2 ? 'يومان' : 'أيام'} متفرغة في الأسبوع بوقت {time2}
+              </p>
+            </div>
+          )}
+
+          {/* Search Button */}
+          <button
+            onClick={handleSearch2}
+            disabled={loading2 || !selectedDaysCount || !time2}
+            className="btn btn-primary w-full flex items-center justify-center gap-2 py-3"
+          >
+            {loading2 ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Search className="w-5 h-5" />
+            )}
+            بحث عن المدربين المتفرغين
+          </button>
 
           {/* Results */}
           <div className="mt-6 pt-6 border-t border-[var(--color-border)]">

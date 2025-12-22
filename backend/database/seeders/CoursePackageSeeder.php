@@ -15,21 +15,21 @@ class CoursePackageSeeder extends Seeder
             'name' => 'بمزاجي',
             'lectures_count' => 8,
             'description' => 'باقة مرنة مكونة من 8 محاضرات',
-            'price' => 0,
+            'price' => 100000,
         ]);
 
         CoursePackage::create([
             'name' => 'التوازن',
             'lectures_count' => 12,
             'description' => 'باقة متوازنة مكونة من 12 محاضرة',
-            'price' => 0,
+            'price' => 150000,
         ]);
 
         CoursePackage::create([
             'name' => 'السرعة',
             'lectures_count' => 20,
             'description' => 'باقة مكثفة مكونة من 20 محاضرة للتعلم السريع',
-            'price' => 0,
+            'price' => 250000,
         ]);
     }
 }

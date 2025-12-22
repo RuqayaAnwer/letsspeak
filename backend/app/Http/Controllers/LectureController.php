@@ -124,17 +124,12 @@ class LectureController extends Controller
             $rules['time'] = 'sometimes|date_format:H:i';
         }
 
-        // Only customer_service and accounting can update payment_status
-        if ($user->isCustomerService() || $user->isAccounting()) {
-            $rules['payment_status'] = 'sometimes|in:paid,unpaid';
-        }
-
         $request->validate($rules);
 
         // Save old data for logging
-        $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'payment_status', 'date', 'time']);
+        $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'date', 'time', 'is_completed']);
 
-        $updateData = $request->only(['attendance', 'activity', 'homework', 'notes']);
+        $updateData = $request->only(['attendance', 'activity', 'homework', 'notes', 'is_completed']);
         
         // Allow trainers and customer_service to update date and time
         if (($user->isTrainer() || $user->isCustomerService()) && $request->has('date')) {
@@ -143,9 +138,16 @@ class LectureController extends Controller
         if (($user->isTrainer() || $user->isCustomerService()) && $request->has('time')) {
             $updateData['time'] = $request->time;
         }
-        
-        if (($user->isCustomerService() || $user->isAccounting()) && $request->has('payment_status')) {
-            $updateData['payment_status'] = $request->payment_status;
+
+        // Auto-complete lecture when attendance is set to 'present' or 'absent'
+        if ($request->has('attendance')) {
+            $attendance = $request->input('attendance');
+            if ($attendance === 'present' || $attendance === 'absent') {
+                $updateData['is_completed'] = true;
+            } elseif ($attendance === 'pending') {
+                // If attendance is reset to pending, mark as not completed
+                $updateData['is_completed'] = false;
+            }
         }
 
         $lecture->update($updateData);
@@ -178,7 +180,6 @@ class LectureController extends Controller
             'lectures.*.activity' => 'nullable|string',
             'lectures.*.homework' => 'nullable|string',
             'lectures.*.notes' => 'nullable|string',
-            'lectures.*.payment_status' => 'sometimes|in:paid,unpaid',
         ]);
 
         $skippedLectures = [];
@@ -203,17 +204,25 @@ class LectureController extends Controller
             }
 
             // Save old data for logging
-            $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'payment_status']);
+            $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'is_completed']);
 
             $updateData = array_filter([
                 'attendance' => $lectureData['attendance'] ?? null,
                 'activity' => $lectureData['activity'] ?? null,
                 'homework' => $lectureData['homework'] ?? null,
                 'notes' => $lectureData['notes'] ?? null,
+                'is_completed' => $lectureData['is_completed'] ?? null,
             ], fn($v) => $v !== null);
 
-            if (($user->isCustomerService() || $user->isAccounting()) && isset($lectureData['payment_status'])) {
-                $updateData['payment_status'] = $lectureData['payment_status'];
+            // Auto-complete lecture when attendance is set to 'present' or 'absent'
+            if (isset($lectureData['attendance'])) {
+                $attendance = $lectureData['attendance'];
+                if ($attendance === 'present' || $attendance === 'absent') {
+                    $updateData['is_completed'] = true;
+                } elseif ($attendance === 'pending') {
+                    // If attendance is reset to pending, mark as not completed
+                    $updateData['is_completed'] = false;
+                }
             }
 
             if (!empty($updateData)) {

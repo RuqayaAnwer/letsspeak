@@ -38,9 +38,11 @@ class CourseController extends Controller
             $query->where('trainer_id', $request->trainer_id);
         }
 
-        // Filter by student
+        // Filter by student (using pivot table)
         if ($request->has('student_id')) {
-            $query->where('student_id', $request->student_id);
+            $query->whereHas('students', function ($q) use ($request) {
+                $q->where('students.id', $request->student_id);
+            });
         }
 
         // Search
@@ -62,9 +64,32 @@ class CourseController extends Controller
         // For trainers, get all courses (no pagination limit)
         // For other roles, use pagination
         if ($user && method_exists($user, 'isTrainer') && $user->isTrainer()) {
-            $courses = $query->withCount('lectures')
+            $courses = $query->with(['lectures', 'coursePackage'])
+                            ->withCount('lectures')
                             ->orderBy('id', 'asc')
-                            ->get();
+                            ->get()
+                            ->map(function ($course) {
+                                // Ensure coursePackage is loaded
+                                if (!$course->relationLoaded('coursePackage')) {
+                                    $course->load('coursePackage');
+                                }
+                                
+                                // Count completed lectures: either is_completed=true OR attendance is present/absent
+                                $completedCount = $course->lectures->filter(function ($lecture) {
+                                    return $lecture->is_completed || in_array($lecture->attendance, ['present', 'absent']);
+                                })->count();
+                                $totalCount = $course->lectures->count();
+                                $completionPercentage = $totalCount > 0 ? round(($completedCount / $totalCount) * 100) : 0;
+                                
+                                // Add attributes to the course model
+                                $course->completed_lectures_count = $completedCount;
+                                $course->completion_percentage = $completionPercentage;
+                                
+                                // Make coursePackage visible
+                                $course->makeVisible('coursePackage');
+                                
+                                return $course;
+                            });
             
             return response()->json([
                 'data' => $courses,
@@ -75,9 +100,34 @@ class CourseController extends Controller
             ]);
         }
 
-        $courses = $query->withCount('lectures')
+        $courses = $query->with(['lectures', 'coursePackage'])
+                        ->withCount('lectures')
                         ->orderBy('id', 'asc')
                         ->paginate(15);
+
+        // Add completion percentage to each course
+        $courses->getCollection()->transform(function ($course) {
+            // Ensure coursePackage is loaded
+            if (!$course->relationLoaded('coursePackage')) {
+                $course->load('coursePackage');
+            }
+            
+            // Count completed lectures: either is_completed=true OR attendance is present/absent
+            $completedCount = $course->lectures->filter(function ($lecture) {
+                return $lecture->is_completed || in_array($lecture->attendance, ['present', 'absent']);
+            })->count();
+            $totalCount = $course->lectures->count();
+            $completionPercentage = $totalCount > 0 ? round(($completedCount / $totalCount) * 100) : 0;
+            
+            // Add attributes to the course model
+            $course->completed_lectures_count = $completedCount;
+            $course->completion_percentage = $completionPercentage;
+            
+            // Make coursePackage visible and ensure it's serialized as course_package
+            $course->makeVisible('coursePackage');
+            
+            return $course;
+        });
 
         return response()->json($courses);
     }
@@ -93,6 +143,7 @@ class CourseController extends Controller
             'student_ids' => 'required_without:student_id|array|min:1',
             'student_ids.*' => 'exists:students,id',
             'course_package_id' => 'required|exists:course_packages,id',
+            'lectures_count' => 'sometimes|integer|min:1',
             'start_date' => 'required|date',
             'lecture_time' => 'required|date_format:H:i',
             'lecture_days' => 'required|array|min:1',
@@ -106,12 +157,14 @@ class CourseController extends Controller
 
         // Determine if dual course and get primary student
         $isDual = $request->is_dual ?? false;
-        $studentIds = $request->student_ids ?? [$request->student_id];
-        $primaryStudentId = $studentIds[0];
+        $studentIds = $request->student_ids ?? ($request->student_id ? [$request->student_id] : []);
+
+        if (empty($studentIds)) {
+            return response()->json(['message' => 'يجب تحديد طالب واحد على الأقل'], 422);
+        }
 
         $course = Course::create([
             'trainer_id' => $request->trainer_id,
-            'student_id' => $primaryStudentId,
             'course_package_id' => $request->course_package_id,
             'lectures_count' => $lecturesCount,
             'start_date' => $request->start_date,
@@ -131,9 +184,18 @@ class CourseController extends Controller
         // Generate lecture schedule
         $this->generateLectureSchedule($course);
 
-        $course->load(['trainer.user', 'student', 'students', 'coursePackage', 'lectures']);
+        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);
+        
+        // Make coursePackage visible and ensure it's serialized as course_package
+        $course->makeVisible('coursePackage');
+        
+        // Manually add course_package to ensure it's in the response
+        $courseArray = $course->toArray();
+        if ($course->coursePackage) {
+            $courseArray['course_package'] = $course->coursePackage->toArray();
+        }
 
-        return response()->json($course, 201);
+        return response()->json($courseArray, 201);
     }
 
     /**
@@ -150,9 +212,18 @@ class CourseController extends Controller
             }
         }
 
-        $course->load(['trainer.user', 'student', 'coursePackage', 'lectures', 'payments']);
+        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures', 'payments']);
         
-        return response()->json($course);
+        // Make coursePackage visible and ensure it's serialized as course_package
+        $course->makeVisible('coursePackage');
+        
+        // Manually add course_package to ensure it's in the response
+        $courseArray = $course->toArray();
+        if ($course->coursePackage) {
+            $courseArray['course_package'] = $course->coursePackage->toArray();
+        }
+        
+        return response()->json($courseArray);
     }
 
     /**
@@ -171,9 +242,18 @@ class CourseController extends Controller
 
         $course->update($request->only(['status', 'lecture_time', 'lecture_days', 'trainer_payment_status', 'renewal_status']));
 
-        $course->load(['trainer.user', 'student', 'coursePackage', 'lectures']);
+        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);
+        
+        // Make coursePackage visible and ensure it's serialized as course_package
+        $course->makeVisible('coursePackage');
+        
+        // Manually add course_package to ensure it's in the response
+        $courseArray = $course->toArray();
+        if ($course->coursePackage) {
+            $courseArray['course_package'] = $course->coursePackage->toArray();
+        }
 
-        return response()->json($course);
+        return response()->json($courseArray);
     }
 
     /**
@@ -219,7 +299,10 @@ class CourseController extends Controller
             \Log::warning('Failed to log activity: ' . $e->getMessage());
         }
 
-        $course->load(['trainer.user', 'student', 'coursePackage', 'lectures']);
+        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);
+        
+        // Make coursePackage visible
+        $course->makeVisible('coursePackage');
 
         return response()->json([
             'success' => true,
@@ -265,7 +348,6 @@ class CourseController extends Controller
                     'lecture_number' => $lecturesCreated + 1,
                     'date' => $currentDate->format('Y-m-d'),
                     'attendance' => 'pending',
-                    'payment_status' => 'unpaid',
                 ]);
                 $lecturesCreated++;
             }
@@ -389,6 +471,63 @@ class CourseController extends Controller
                 if (isset($lectureData['notes'])) {
                     $updateData['notes'] = $lectureData['notes'];
                 }
+                
+                // Handle student_attendance for dual courses
+                if (isset($lectureData['student_attendance']) && is_array($lectureData['student_attendance'])) {
+                    \Log::info('Processing student_attendance', [
+                        'lecture_id' => $lecture->id,
+                        'received_data' => $lectureData['student_attendance'],
+                        'existing_data' => $lecture->student_attendance
+                    ]);
+                    
+                    // Get existing student_attendance or initialize empty array
+                    $existingStudentAttendance = $lecture->student_attendance ?? [];
+                    
+                    // Convert existing to associative array if it's a numeric array
+                    if (!empty($existingStudentAttendance) && array_keys($existingStudentAttendance) === range(0, count($existingStudentAttendance) - 1)) {
+                        // It's a numeric array, convert to empty object (we'll rebuild from new data)
+                        $existingStudentAttendance = [];
+                    }
+                    
+                    // Merge new student attendance data with existing (preserve keys)
+                    // Use array_merge_recursive to properly merge nested arrays
+                    $mergedStudentAttendance = $existingStudentAttendance;
+                    foreach ($lectureData['student_attendance'] as $studentId => $studentData) {
+                        if (is_array($studentData)) {
+                            // Merge with existing data for this student, or create new
+                            $mergedStudentAttendance[$studentId] = array_merge(
+                                $mergedStudentAttendance[$studentId] ?? [],
+                                $studentData
+                            );
+                        }
+                    }
+                    
+                    // For each student in the merged data, handle auto-completion
+                    foreach ($mergedStudentAttendance as $studentId => $studentData) {
+                        if (is_array($studentData) && isset($studentData['attendance'])) {
+                            $studentAttendance = $studentData['attendance'];
+                            // Auto-complete if attendance is present or absent
+                            if ($studentAttendance === 'present' || $studentAttendance === 'absent') {
+                                $mergedStudentAttendance[$studentId]['is_completed'] = true;
+                            } elseif ($studentAttendance === 'pending') {
+                                $mergedStudentAttendance[$studentId]['is_completed'] = false;
+                            }
+                        }
+                    }
+                    
+                    \Log::info('Merged student_attendance', [
+                        'lecture_id' => $lecture->id,
+                        'merged_data' => $mergedStudentAttendance
+                    ]);
+                    
+                    // Ensure keys are strings (JSON requires string keys for objects)
+                    $finalStudentAttendance = [];
+                    foreach ($mergedStudentAttendance as $studentId => $studentData) {
+                        $finalStudentAttendance[(string)$studentId] = $studentData;
+                    }
+                    
+                    $updateData['student_attendance'] = $finalStudentAttendance;
+                }
 
                 // Trainers and customer_service can update date and time
                 if (($user->isTrainer() || $user->isCustomerService()) && isset($lectureData['date'])) {
@@ -398,24 +537,53 @@ class CourseController extends Controller
                     $updateData['time'] = $lectureData['time'];
                 }
 
-                // Only customer_service and accounting can update payment_status
-                if (($user->isCustomerService() || $user->isAccounting()) && isset($lectureData['payment_status'])) {
-                    $updateData['payment_status'] = $lectureData['payment_status'];
+                // Auto-complete lecture when attendance is set to 'present' or 'absent'
+                if (isset($lectureData['attendance'])) {
+                    $attendance = $lectureData['attendance'];
+                    if ($attendance === 'present' || $attendance === 'absent') {
+                        $updateData['is_completed'] = true;
+                    } elseif ($attendance === 'pending') {
+                        // If attendance is reset to pending, mark as not completed
+                        $updateData['is_completed'] = false;
+                    }
                 }
 
                 if (!empty($updateData)) {
-                    // Save old data for logging
-                    $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'payment_status', 'date', 'time']);
-                    
-                    $lecture->update($updateData);
-                    
-                    // Log the modification using reflection
-                    $logMethod = $reflection->getMethod('logLectureModification');
-                    $logMethod->setAccessible(true);
-                    $logMethod->invoke($lectureController, $lecture, $oldData, $updateData, $user);
-                    
-                    $updatedCount++;
+                    try {
+                        // Save old data for logging
+                        $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'date', 'time', 'is_completed', 'student_attendance']);
+                        
+                        $lecture->update($updateData);
+                        
+                        // Log the modification using reflection
+                        try {
+                            $logMethod = $reflection->getMethod('logLectureModification');
+                            $logMethod->setAccessible(true);
+                            $logMethod->invoke($lectureController, $lecture, $oldData, $updateData, $user);
+                        } catch (\Exception $logError) {
+                            // Log error but don't fail the update
+                            \Log::error('Failed to log lecture modification', [
+                                'lecture_id' => $lecture->id,
+                                'error' => $logError->getMessage()
+                            ]);
+                        }
+                        
+                        $updatedCount++;
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to update lecture', [
+                            'lecture_id' => $lecture->id,
+                            'update_data' => $updateData,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString()
+                        ]);
+                        // Continue with other lectures
+                    }
                 }
+            } else {
+                \Log::warning('Lecture not found or doesn\'t belong to course', [
+                    'lecture_id' => $lectureData['id'] ?? 'missing',
+                    'course_id' => $course->id
+                ]);
             }
         }
 
@@ -423,6 +591,7 @@ class CourseController extends Controller
 
         return response()->json([
             'success' => true,
+            'message' => "تم تحديث {$updatedCount} محاضرة بنجاح",
             'data' => $course,
             'updated_count' => $updatedCount
         ]);

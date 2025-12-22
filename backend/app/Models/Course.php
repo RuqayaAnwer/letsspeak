@@ -14,7 +14,6 @@ class Course extends Model
 
     protected $fillable = [
         'trainer_id',
-        'student_id',
         'course_type_id',
         'course_package_id',
         'title',

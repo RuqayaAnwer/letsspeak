@@ -101,25 +101,6 @@ const Layout = ({ children }) => {
         />
       )}
 
-      {/* Toggle Button - Always visible */}
-      <button
-        onClick={toggleSidebar}
-        className={`fixed top-4 p-3 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-xl hover:shadow-2xl border-2 border-blue-500/50 dark:border-blue-400/50 transition-all duration-300 hover:scale-110 active:scale-95 hover:bg-white/90 dark:hover:bg-gray-800/90 ${
-          sidebarOpen ? 'right-[17rem]' : 'right-4'
-        }`}
-        style={{ 
-          zIndex: 9999,
-          pointerEvents: 'auto',
-          position: 'fixed'
-        }}
-        title={sidebarOpen ? 'إخفاء القائمة' : 'إظهار القائمة'}
-      >
-        {sidebarOpen ? (
-          <X className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-        ) : (
-          <Menu className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-        )}
-      </button>
 
       {/* Sidebar */}
       <aside 
@@ -195,6 +176,25 @@ const Layout = ({ children }) => {
           </button>
         </div>
       )}
+
+      {/* Toggle Button - Fixed at top right, stays at top only */}
+      <button
+        onClick={toggleSidebar}
+        className={`fixed top-4 p-3 rounded-xl bg-white/30 dark:bg-gray-800/30 backdrop-blur-lg shadow-lg hover:shadow-xl border-2 border-blue-500/20 dark:border-blue-400/20 transition-all duration-300 hover:scale-110 active:scale-95 hover:bg-white/40 dark:hover:bg-gray-800/40 ${
+          sidebarOpen && !isMobile ? 'right-[17rem]' : 'right-4'
+        }`}
+        style={{ 
+          zIndex: 9999,
+          pointerEvents: 'auto'
+        }}
+        title={sidebarOpen ? 'إخفاء القائمة' : 'إظهار القائمة'}
+      >
+        {sidebarOpen ? (
+          <X className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        ) : (
+          <Menu className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        )}
+      </button>
 
       {/* Main Content */}
       <main 

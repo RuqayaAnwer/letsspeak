@@ -169,7 +169,22 @@ class TrainerController extends Controller
      */
     public function list()
     {
-        $trainers = Trainer::with('user:id,name')->get(['id', 'user_id', 'min_level', 'max_level']);
+        $trainers = Trainer::with('user:id,name,email')
+            ->get()
+            ->map(function ($trainer) {
+                return [
+                    'id' => $trainer->id,
+                    'name' => $trainer->name ?? $trainer->user->name ?? '',
+                    'user' => $trainer->user ? [
+                        'id' => $trainer->user->id,
+                        'name' => $trainer->user->name,
+                        'email' => $trainer->user->email,
+                    ] : null,
+                    'phone' => $trainer->phone ?? '',
+                    'min_level' => $trainer->min_level,
+                    'max_level' => $trainer->max_level,
+                ];
+            });
         
         return response()->json($trainers);
     }

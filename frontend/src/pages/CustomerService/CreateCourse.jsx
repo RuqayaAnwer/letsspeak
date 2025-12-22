@@ -46,11 +46,22 @@ const CreateCourse = () => {
         api.get('/trainers-list'),
         api.get('/course-packages'),
       ]);
-      setStudents(studentsRes.data.data || studentsRes.data || []);
-      setTrainers(trainersRes.data.data || trainersRes.data || []);
-      setPackages(packagesRes.data.data || packagesRes.data || []);
+      
+      // Handle paginated response for students
+      const studentsData = studentsRes.data?.data || studentsRes.data || [];
+      setStudents(Array.isArray(studentsData) ? studentsData : []);
+      
+      // Handle trainers response
+      const trainersData = trainersRes.data?.data || trainersRes.data || [];
+      setTrainers(Array.isArray(trainersData) ? trainersData : []);
+      
+      // Handle packages response
+      const packagesData = packagesRes.data?.data || packagesRes.data || [];
+      setPackages(Array.isArray(packagesData) ? packagesData : []);
     } catch (error) {
       console.error('Error fetching data:', error);
+      console.error('Error response:', error.response);
+      alert('حدث خطأ أثناء تحميل البيانات: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
@@ -96,10 +107,17 @@ const CreateCourse = () => {
       };
       const lectureDays = formData.lecture_days.map(day => dayMap[day] || day);
 
+      // Validate required fields
+      if (!formData.trainer_id || !formData.course_package_id || !formData.start_date || !formData.lecture_time || lectureDays.length === 0) {
+        alert('يرجى ملء جميع الحقول المطلوبة');
+        setSubmitting(false);
+        return;
+      }
+
       const data = {
         trainer_id: parseInt(formData.trainer_id),
         course_package_id: parseInt(formData.course_package_id),
-        lectures_count: parseInt(formData.lectures_count),
+        lectures_count: formData.lectures_count ? parseInt(formData.lectures_count) : undefined,
         start_date: formData.start_date,
         lecture_time: formData.lecture_time,
         lecture_days: lectureDays,
@@ -107,11 +125,27 @@ const CreateCourse = () => {
         student_ids: studentIds,
       };
 
+      console.log('Sending course data:', data);
       const response = await api.post('/courses', data);
-      navigate(`/customer-service/courses/${response.data.id || response.data.data?.id}`);
+      console.log('Course created successfully:', response.data);
+      navigate(`/courses/${response.data.id || response.data.data?.id}`);
     } catch (error) {
       console.error('Error creating course:', error);
-      alert(error.response?.data?.message || 'حدث خطأ أثناء إنشاء الكورس');
+      console.error('Error response:', error.response);
+      console.error('Error data:', error.response?.data);
+      
+      // Show detailed error message
+      let errorMessage = 'حدث خطأ أثناء إنشاء الكورس';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        const errors = Object.values(error.response.data.errors).flat();
+        errorMessage = errors.join('\n');
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
     } finally {
       setSubmitting(false);
     }

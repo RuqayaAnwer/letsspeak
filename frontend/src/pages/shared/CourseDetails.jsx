@@ -200,7 +200,28 @@ const CourseDetails = () => {
       setEditedLectures((prev) => {
         const existingLecture = prev[lectureId] || {};
         const existingStudentAttendance = existingLecture.student_attendance || {};
-        const existingStudentData = existingStudentAttendance[selectedStudentId] || {};
+        
+        // Convert studentId to string to ensure consistent key format
+        const studentIdKey = String(selectedStudentId);
+        const existingStudentData = existingStudentAttendance[studentIdKey] || {};
+        
+        const newStudentAttendance = {
+          ...existingStudentAttendance,
+          [studentIdKey]: {
+            ...existingStudentData,
+            [field]: value,
+          },
+        };
+        
+        console.log('Dual course - Updating student attendance:', {
+          lectureId,
+          selectedStudentId,
+          studentIdKey,
+          field,
+          value,
+          existingStudentAttendance,
+          newStudentAttendance
+        });
         
         return {
           ...prev,
@@ -209,13 +230,7 @@ const CourseDetails = () => {
             id: lectureId,
             // Auto-complete lecture when attendance is present or absent
             ...(shouldAutoComplete ? { is_completed: true } : {}),
-            student_attendance: {
-              ...existingStudentAttendance,
-              [selectedStudentId]: {
-                ...existingStudentData,
-                [field]: value,
-              },
-            },
+            student_attendance: newStudentAttendance,
           },
         };
       });
@@ -561,21 +576,49 @@ const CourseDetails = () => {
 
     setSaving(true);
     try {
-      const lecturesData = Object.values(editedLectures);
+      // Prepare lectures data - ensure each lecture has an id
+      const lecturesData = Object.values(editedLectures).map(lecture => {
+        // For dual courses, handle student_attendance separately
+        if (lecture.student_attendance) {
+          // This is a dual course lecture with student-specific data
+          // We need to send the main lecture data plus student attendance
+          const { student_attendance, ...mainData } = lecture;
+          return {
+            ...mainData,
+            student_attendance: student_attendance
+          };
+        }
+        return lecture;
+      }).filter(lecture => lecture.id); // Only include lectures with valid IDs
+      
+      if (lecturesData.length === 0) {
+        alert('لا توجد بيانات صحيحة للحفظ');
+        setSaving(false);
+        return;
+      }
+      
+      console.log('Saving lectures data:', JSON.stringify(lecturesData, null, 2));
       
       const response = await api.put(`/courses/${id}/lectures/bulk`, {
         lectures: lecturesData,
       });
       
+      console.log('Save response:', response.data);
+      
       if (response.data.success) {
         setEditedLectures({});
         fetchCourse();
+        console.log('Lectures saved successfully');
       } else {
-        alert('حدث خطأ أثناء الحفظ');
+        alert(response.data.message || 'حدث خطأ أثناء الحفظ');
       }
     } catch (error) {
       console.error('Error saving lectures:', error);
-      alert('حدث خطأ أثناء الحفظ');
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          'حدث خطأ أثناء الحفظ';
+      alert(`خطأ: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
@@ -626,7 +669,23 @@ const CourseDetails = () => {
     if (!studentId || !lecture.student_attendance) {
       return { attendance: lecture.attendance, activity: lecture.activity, homework: lecture.homework };
     }
-    const studentData = lecture.student_attendance[studentId];
+    
+    // Convert studentId to string to match JSON keys
+    const studentIdStr = String(studentId);
+    
+    // Handle both array and object formats
+    let studentData = null;
+    if (Array.isArray(lecture.student_attendance)) {
+      // If it's an array, find the student by index
+      const studentIndex = course?.students?.findIndex(s => s.id === studentId);
+      if (studentIndex !== -1 && lecture.student_attendance[studentIndex]) {
+        studentData = lecture.student_attendance[studentIndex];
+      }
+    } else {
+      // If it's an object, access by key
+      studentData = lecture.student_attendance[studentIdStr] || lecture.student_attendance[studentId];
+    }
+    
     if (studentData) {
       return {
         attendance: studentData.attendance || 'pending',
@@ -730,7 +789,10 @@ const CourseDetails = () => {
               جدول المحاضرات
             </h2>
             <span className="badge badge-info">
-              {lectures.filter((l) => l.is_completed).length} / {lectures.length} مكتمل
+              {lectures.filter((l) => {
+                // Check if lecture is completed based on is_completed flag or attendance
+                return l.is_completed || l.attendance === 'present' || l.attendance === 'absent';
+              }).length} / {lectures.length} مكتمل
             </span>
           </div>
           
@@ -820,7 +882,6 @@ const CourseDetails = () => {
                 <th>الحضور</th>
                 <th>النشاط</th>
                 <th>الواجب</th>
-                {!isTrainer && <th>دفع الطالب</th>}
                 <th>دفع المدرب</th>
                 <th>ملاحظات</th>
               </tr>
@@ -847,21 +908,88 @@ const CourseDetails = () => {
                   : { attendance: lecture.attendance, activity: lecture.activity, homework: lecture.homework };
                 
                 // Merge edited values with student-specific data for dual courses
-                const editedStudentData = course?.is_dual && selectedStudentId && rawEdited.student_attendance?.[selectedStudentId]
-                  ? rawEdited.student_attendance[selectedStudentId]
+                // Convert studentId to string to match key format
+                const studentIdKey = selectedStudentId ? String(selectedStudentId) : null;
+                const editedStudentData = course?.is_dual && studentIdKey && rawEdited.student_attendance?.[studentIdKey]
+                  ? rawEdited.student_attendance[studentIdKey]
                   : {};
                 
-                const edited = course?.is_dual && selectedStudentId 
-                  ? { ...rawEdited, ...editedStudentData }
-                  : rawEdited;
-                
-                // Use student-specific defaults for dual courses
-                const currentAttendance = edited.attendance ?? studentData.attendance ?? 'pending';
+                // For dual courses, use student-specific attendance from editedStudentData first
+                // For single courses, use edited.attendance
+                const currentAttendance = course?.is_dual && selectedStudentId
+                  ? (editedStudentData.attendance ?? studentData.attendance ?? 'pending')
+                  : (rawEdited.attendance ?? studentData.attendance ?? 'pending');
                 const currentActivity = edited.activity ?? studentData.activity;
                 const currentHomework = edited.homework ?? studentData.homework;
                 
                 // Lecture-level completed status (not student-specific)
-                const isCompleted = rawEdited.is_completed ?? lecture.is_completed ?? false;
+                // A lecture is completed if:
+                // 1. is_completed is explicitly set to true, OR
+                // 2. attendance is 'present' or 'absent' (for single courses), OR
+                // 3. For dual courses: if any student has attendance 'present' or 'absent'
+                let isCompleted = false;
+                
+                // First check if explicitly set in edited data
+                if (rawEdited.is_completed !== undefined && rawEdited.is_completed !== null) {
+                    isCompleted = rawEdited.is_completed;
+                }
+                // Then check lecture's is_completed
+                else if (lecture.is_completed !== undefined && lecture.is_completed !== null) {
+                    isCompleted = lecture.is_completed;
+                }
+                // For dual courses: check student_attendance
+                else if (course?.is_dual) {
+                    // Check edited student_attendance first (unsaved changes)
+                    if (rawEdited.student_attendance) {
+                        const editedStudentAttendance = rawEdited.student_attendance;
+                        const hasEditedCompletedAttendance = Object.values(editedStudentAttendance).some(
+                            (studentData) => studentData && 
+                            typeof studentData === 'object' &&
+                            (studentData.attendance === 'present' || studentData.attendance === 'absent')
+                        );
+                        if (hasEditedCompletedAttendance) {
+                            isCompleted = true;
+                        }
+                    }
+                    
+                    // Also check saved student_attendance from lecture
+                    if (!isCompleted && lecture.student_attendance) {
+                        const studentAttendanceObj = lecture.student_attendance;
+                        // Handle both array and object formats
+                        const attendanceValues = Array.isArray(studentAttendanceObj) 
+                            ? studentAttendanceObj 
+                            : Object.values(studentAttendanceObj);
+                        
+                        const hasCompletedAttendance = attendanceValues.some(
+                            (studentData) => studentData && 
+                            typeof studentData === 'object' &&
+                            (studentData.attendance === 'present' || studentData.attendance === 'absent')
+                        );
+                        isCompleted = hasCompletedAttendance;
+                    }
+                    
+                    // Also check current attendance for the selected student
+                    if (!isCompleted && (currentAttendance === 'present' || currentAttendance === 'absent')) {
+                        isCompleted = true;
+                    }
+                }
+                // Single course: check main attendance
+                else {
+                    isCompleted = currentAttendance === 'present' || currentAttendance === 'absent';
+                }
+                
+                // Debug log for dual courses
+                if (course?.is_dual) {
+                    console.log(`Lecture ${lecture.lecture_number} completion:`, {
+                        lectureId: lecture.id,
+                        isCompleted,
+                        currentAttendance,
+                        rawEdited_is_completed: rawEdited.is_completed,
+                        lecture_is_completed: lecture.is_completed,
+                        rawEdited_student_attendance: rawEdited.student_attendance,
+                        saved_student_attendance: lecture.student_attendance
+                    });
+                }
 
                 return (
                   <tr
@@ -1057,29 +1185,6 @@ const CourseDetails = () => {
                         </select>
                       )}
                     </td>
-                    {!isTrainer && (
-                      <td>
-                        {isLocked ? (
-                          <span className={`text-xs ${lecture.payment_status === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
-                            {lecture.payment_status === 'paid' ? 'مدفوع' : 'غير مدفوع'}
-                          </span>
-                        ) : (
-                          <select
-                            value={edited.payment_status ?? lecture.payment_status ?? 'unpaid'}
-                            onChange={(e) => handleLectureChange(lecture.id, 'payment_status', e.target.value)}
-                            className={`select text-xs py-1 px-1.5 w-20 ${
-                              (edited.payment_status ?? lecture.payment_status) === 'paid' 
-                                ? 'text-green-600 bg-green-50 dark:bg-green-900/20' 
-                                : 'text-red-500 bg-red-50 dark:bg-red-900/20'
-                            }`}
-                            disabled={isLocked}
-                          >
-                            <option value="unpaid">غير مدفوع</option>
-                            <option value="paid">مدفوع</option>
-                          </select>
-                        )}
-                      </td>
-                    )}
                     <td>
                       {isCustomerService && !isLocked ? (
                         <select
@@ -1118,11 +1223,14 @@ const CourseDetails = () => {
                         </span>
                       ) : (
                         <button
-                          onClick={() => setNotesModal({
-                            open: true,
-                            lectureId: lecture.id,
-                            notes: rawEdited.notes ?? lecture.notes ?? ''
-                          })}
+                          onClick={() => {
+                            const currentNotes = rawEdited.notes ?? lecture.notes ?? '';
+                            setNotesModal({
+                              open: true,
+                              lectureId: lecture.id,
+                              notes: currentNotes
+                            });
+                          }}
                           className={`p-1.5 rounded-lg transition-colors ${
                             (rawEdited.notes ?? lecture.notes)
                               ? 'text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50'
@@ -1468,10 +1576,13 @@ const CourseDetails = () => {
             <div className="flex gap-2 mt-4">
               <button
                 onClick={() => {
-                  handleLectureChange(notesModal.lectureId, 'notes', notesModal.notes);
+                  if (notesModal.lectureId) {
+                    handleLectureChange(notesModal.lectureId, 'notes', notesModal.notes);
+                  }
                   setNotesModal({ open: false, lectureId: null, notes: '' });
                 }}
                 className="btn-primary flex-1 flex items-center justify-center gap-2"
+                disabled={!notesModal.lectureId}
               >
                 <Save className="w-4 h-4" />
                 حفظ

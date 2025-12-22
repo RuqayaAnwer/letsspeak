@@ -65,17 +65,18 @@ class Lecture extends Model
         'attendance',
         'activity',
         'homework',
-        'payment_status',
         'is_makeup',
         'makeup_for',
         'notes',
         'is_completed',
+        'student_attendance',
     ];
 
     protected $casts = [
         'date' => 'date',
         'is_makeup' => 'boolean',
         'is_completed' => 'boolean',
+        'student_attendance' => 'array',
     ];
 
     /**

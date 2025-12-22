@@ -38,6 +38,7 @@ Route::delete('/students/{student}', [StudentController::class, 'destroy']);
 
 // Trainers
 Route::get('/trainers', [TrainerController::class, 'index']);
+Route::get('/trainers-list', [TrainerController::class, 'list']);
 Route::post('/trainers', [TrainerController::class, 'store']);
 Route::get('/trainers/{trainer}', [TrainerController::class, 'show']);
 Route::put('/trainers/{trainer}', [TrainerController::class, 'update']);

@@ -18,16 +18,43 @@ const AccountingDashboard = () => {
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const [statsRes, paymentStatsRes, paymentsRes] = await Promise.all([
         api.get('/statistics'),
         api.get('/payments-statistics'),
         api.get('/payments?per_page=10'),
       ]);
+      
+      console.log('Statistics response:', statsRes.data);
+      console.log('Payment statistics response:', paymentStatsRes.data);
+      console.log('Payments response:', paymentsRes.data);
+      
       setStats(statsRes.data);
       setPaymentStats(paymentStatsRes.data);
-      setRecentPayments(paymentsRes.data.data || []);
+      setRecentPayments(paymentsRes.data?.data || paymentsRes.data || []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
+      // Set default values on error
+      setStats({
+        active_courses_count: 0,
+        finished_courses_count: 0,
+        students_count: 0,
+        trainers_count: 0,
+      });
+      setPaymentStats({
+        total_amount: 0,
+        paid_amount: 0,
+        pending_amount: 0,
+        monthly_revenue: 0,
+        active_courses: 0,
+        finished_courses: 0,
+        total_students: 0,
+        completed_count: 0,
+      });
+      setRecentPayments([]);
     } finally {
       setLoading(false);
     }
@@ -69,13 +96,13 @@ const AccountingDashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-stagger">
         <StatCard
           title="إجمالي الإيرادات"
-          value={formatCurrency(paymentStats?.total_amount)}
+          value={formatCurrency(paymentStats?.total_amount || 0)}
           icon={DollarSign}
           color="success"
         />
         <StatCard
           title="المبالغ المدفوعة"
-          value={formatCurrency(paymentStats?.paid_amount)}
+          value={formatCurrency(paymentStats?.paid_amount || 0)}
           icon={CheckCircle}
           color="primary"
         />
@@ -87,7 +114,7 @@ const AccountingDashboard = () => {
         />
         <StatCard
           title="إيرادات الشهر"
-          value={formatCurrency(paymentStats?.monthly_revenue)}
+          value={formatCurrency(paymentStats?.monthly_revenue || 0)}
           icon={TrendingUp}
           color="accent"
         />
@@ -145,7 +172,7 @@ const AccountingDashboard = () => {
                 <tr key={payment.id}>
                   <td className="font-semibold">{payment.id}</td>
                   <td>
-                    {formatDateSimple(payment.date)}
+                    {formatDateSimple(payment.payment_date || payment.date)}
                   </td>
                   <td className="font-semibold text-[var(--color-text-primary)]">
                     {payment.student?.name}
