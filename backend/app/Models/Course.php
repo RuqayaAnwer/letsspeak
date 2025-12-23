@@ -33,6 +33,8 @@ class Course extends Model
         'is_dual',
         'trainer_payment_status',
         'renewal_status',
+        'renewal_alert_status',
+        'last_evaluation_milestone',
     ];
 
     protected $casts = [

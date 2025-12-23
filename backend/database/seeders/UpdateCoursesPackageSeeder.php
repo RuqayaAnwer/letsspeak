@@ -33,3 +33,4 @@ class UpdateCoursesPackageSeeder extends Seeder
 
 
 
+

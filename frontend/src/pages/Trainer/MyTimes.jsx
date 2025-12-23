@@ -8,12 +8,13 @@ const MyTimes = () => {
   const [unavailableDays, setUnavailableDays] = useState([]);
   const [unavailableTimes, setUnavailableTimes] = useState([]);
   const [notes, setNotes] = useState('');
-  const [workingHours, setWorkingHours] = useState({
-    completed: 0,
-    thisMonth: 0,
-    total: 0,
+  const [stats, setStats] = useState({
+    completedLectures: 0,
+    completedCoursesThisMonth: 0,
   });
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [restrictionInfo, setRestrictionInfo] = useState(null);
 
   const weekDays = [
     { key: 'Sunday', label: 'الأحد' },
@@ -42,39 +43,72 @@ const MyTimes = () => {
         setUnavailableDays(data.unavailable_days || []);
         setUnavailableTimes(data.unavailable_times || []);
         setNotes(data.notes || '');
+        
+        // Check restrictions
+        if (data.last_day_off_update) {
+          const lastUpdate = new Date(data.last_day_off_update);
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          
+          if (lastUpdate > weekAgo) {
+            const daysRemaining = Math.ceil((lastUpdate.getTime() + 7 * 24 * 60 * 60 * 1000 - new Date().getTime()) / (24 * 60 * 60 * 1000));
+            setRestrictionInfo({
+              type: 'weekly',
+              daysRemaining: daysRemaining,
+              message: `لا يمكن تعديل يوم الإجازة إلا بعد أسبوع من آخر تعديل. متبقي ${daysRemaining} يوم.`
+            });
+          }
+        }
       }
 
       if (dashboardRes.data.success) {
         const courses = dashboardRes.data.data.courses || [];
-        let completedHours = 0;
-        let thisMonthHours = 0;
-        let totalHours = 0;
+        let completedLectures = 0;
+        let completedCoursesThisMonth = 0;
 
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
 
         courses.forEach((course) => {
-          (course.lectures || []).forEach((lecture) => {
-            totalHours += 2;
-            if (lecture.is_completed) {
-              completedHours += 2;
-            }
+          // Count completed lectures
+          const completedLecturesInCourse = (course.lectures || []).filter((lecture) => {
+            return lecture.is_completed || lecture.attendance === 'present' || lecture.attendance === 'absent';
+          }).length;
+          completedLectures += completedLecturesInCourse;
+
+          // Check if course is completed this month
+          const hasLecturesThisMonth = (course.lectures || []).some((lecture) => {
             const lectureDate = new Date(lecture.date);
-            if (
+            return (
               lectureDate.getMonth() === currentMonth &&
-              lectureDate.getFullYear() === currentYear &&
-              lecture.is_completed
-            ) {
-              thisMonthHours += 2;
-            }
+              lectureDate.getFullYear() === currentYear
+            );
           });
+
+          if (hasLecturesThisMonth) {
+            // Check if all lectures this month are completed
+            const lecturesThisMonth = (course.lectures || []).filter((lecture) => {
+              const lectureDate = new Date(lecture.date);
+              return (
+                lectureDate.getMonth() === currentMonth &&
+                lectureDate.getFullYear() === currentYear
+              );
+            });
+
+            const allCompletedThisMonth = lecturesThisMonth.every((lecture) => {
+              return lecture.is_completed || lecture.attendance === 'present' || lecture.attendance === 'absent';
+            });
+
+            if (allCompletedThisMonth && lecturesThisMonth.length > 0) {
+              completedCoursesThisMonth += 1;
+            }
+          }
         });
 
-        setWorkingHours({
-          completed: completedHours,
-          thisMonth: thisMonthHours,
-          total: totalHours,
+        setStats({
+          completedLectures: completedLectures,
+          completedCoursesThisMonth: completedCoursesThisMonth,
         });
       }
     } catch (error) {
@@ -85,11 +119,14 @@ const MyTimes = () => {
   };
 
   const toggleDay = (dayKey) => {
-    setUnavailableDays((prev) =>
-      prev.includes(dayKey)
-        ? prev.filter((d) => d !== dayKey)
-        : [...prev, dayKey]
-    );
+    setUnavailableDays((prev) => {
+      // If clicking the same day, remove it (toggle off)
+      if (prev.includes(dayKey)) {
+        return [];
+      }
+      // Otherwise, set only this day (only one day allowed)
+      return [dayKey];
+    });
   };
 
   const addTimeSlot = () => {
@@ -112,6 +149,9 @@ const MyTimes = () => {
   const handleSave = async () => {
     try {
       setSaving(true);
+      setErrorMessage('');
+      setSuccessMessage('');
+      
       const response = await api.post('/trainer/unavailability', {
         unavailable_days: unavailableDays,
         unavailable_times: unavailableTimes,
@@ -121,9 +161,25 @@ const MyTimes = () => {
       if (response.data.success) {
         setSuccessMessage('تم حفظ أوقات عدم التوفر بنجاح');
         setTimeout(() => setSuccessMessage(''), 3000);
+        setRestrictionInfo(null);
+        // Refresh data to get updated restrictions
+        fetchData();
       }
     } catch (error) {
       console.error('Error saving unavailability:', error);
+      if (error.response?.data?.message) {
+        setErrorMessage(error.response.data.message);
+        if (error.response.data.error_code === 'WEEKLY_LIMIT_NOT_PASSED') {
+          setRestrictionInfo({
+            type: 'weekly',
+            daysRemaining: error.response.data.days_remaining,
+            message: error.response.data.message
+          });
+        }
+      } else {
+        setErrorMessage('حدث خطأ أثناء حفظ البيانات');
+      }
+      setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setSaving(false);
     }
@@ -151,35 +207,50 @@ const MyTimes = () => {
         </div>
       )}
 
-      {/* Working Hours Stats */}
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 p-4 rounded-lg flex items-center gap-2">
+          <X className="w-5 h-5" />
+          {errorMessage}
+        </div>
+      )}
+
+      {/* Restriction Info */}
+      {restrictionInfo && (
+        <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 p-4 rounded-lg flex items-center gap-2">
+          <Calendar className="w-5 h-5" />
+          <div>
+            <p className="font-semibold">{restrictionInfo.message}</p>
+            {restrictionInfo.daysRemaining !== undefined && (
+              <p className="text-sm mt-1">
+                يمكنك التعديل بعد {restrictionInfo.daysRemaining} يوم
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Statistics */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
         <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
           <Clock className="w-5 h-5 text-blue-500" />
-          ساعات العمل
+          الإحصائيات
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
             <div className="text-3xl font-bold text-green-600 dark:text-green-400">
-              {workingHours.completed}
+              {stats.completedLectures}
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              ساعات مكتملة
+              عدد المحاضرات المكتملة
             </div>
           </div>
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
             <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-              {workingHours.thisMonth}
+              {stats.completedCoursesThisMonth}
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              ساعات هذا الشهر
-            </div>
-          </div>
-          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 text-center">
-            <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
-              {workingHours.total}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              إجمالي الساعات
+              عدد الكورسات المكتملة خلال الشهر
             </div>
           </div>
         </div>
@@ -189,26 +260,54 @@ const MyTimes = () => {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
         <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
           <Calendar className="w-5 h-5 text-red-500" />
-          أيام الإجازة الأسبوعية
+          يوم الإجازة الأسبوعية
         </h2>
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-3 rounded mb-4">
+          <p className="text-sm text-blue-800 dark:text-blue-300 font-semibold">
+            ⚠️ تنبيه: يمكنك تحديد يوم الإجازة مرة واحدة فقط. بعد التحديد، لا يمكنك التعديل إلا بعد أسبوع من آخر تعديل.
+          </p>
+        </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          اختر الأيام التي لا يمكنك العمل بها
+          اختر يوم إجازة واحد فقط لا يمكنك العمل به
         </p>
         <div className="flex flex-wrap gap-3">
-          {weekDays.map((day) => (
-            <button
-              key={day.key}
-              onClick={() => toggleDay(day.key)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                unavailableDays.includes(day.key)
-                  ? 'bg-red-500 text-white shadow-lg'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              {day.label}
-            </button>
-          ))}
+          {weekDays.map((day) => {
+            const isSelected = unavailableDays.includes(day.key);
+            const isDisabled = unavailableDays.length > 0 && !isSelected;
+            const isRestricted = restrictionInfo && (restrictionInfo.type === 'hourly' || restrictionInfo.type === 'weekly');
+            
+            return (
+              <button
+                key={day.key}
+                onClick={() => toggleDay(day.key)}
+                disabled={isDisabled || isRestricted}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  isSelected
+                    ? 'bg-red-500 text-white shadow-lg'
+                    : (isDisabled || isRestricted)
+                    ? 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+                title={
+                  isRestricted 
+                    ? restrictionInfo.message
+                    : isDisabled 
+                    ? 'يمكن تحديد يوم إجازة واحد فقط' 
+                    : isSelected 
+                    ? 'إلغاء التحديد' 
+                    : 'تحديد يوم الإجازة'
+                }
+              >
+                {day.label}
+              </button>
+            );
+          })}
         </div>
+        {unavailableDays.length > 0 && (
+          <p className="text-sm text-green-600 dark:text-green-400 mt-3">
+            ✓ تم تحديد يوم الإجازة: {weekDays.find(d => d.key === unavailableDays[0])?.label}
+          </p>
+        )}
       </div>
 
       {/* Unavailable Time Slots */}

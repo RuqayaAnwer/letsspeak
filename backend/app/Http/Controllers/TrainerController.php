@@ -281,13 +281,54 @@ class TrainerController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
+        $unavailability = TrainerUnavailability::where('trainer_id', $trainerId)->first();
+        
+        // Check if unavailable_days is being changed
+        $newUnavailableDays = $request->input('unavailable_days', []);
+        $oldUnavailableDays = $unavailability ? ($unavailability->unavailable_days ?? []) : [];
+        $daysChanged = json_encode($newUnavailableDays) !== json_encode($oldUnavailableDays);
+        
+        $now = Carbon::now();
+        
+        if ($daysChanged && !empty($newUnavailableDays)) {
+            // Check if last update was less than a week ago
+            if ($unavailability && $unavailability->last_day_off_update) {
+                $lastUpdate = Carbon::parse($unavailability->last_day_off_update);
+                $weekAgo = $now->copy()->subWeek();
+                
+                if ($lastUpdate->gt($weekAgo)) {
+                    $daysRemaining = $lastUpdate->copy()->addWeek()->diffInDays($now);
+                    return response()->json([
+                        'success' => false,
+                        'message' => "لا يمكن تعديل يوم الإجازة إلا بعد أسبوع من آخر تعديل. متبقي {$daysRemaining} يوم.",
+                        'error_code' => 'WEEKLY_LIMIT_NOT_PASSED',
+                        'days_remaining' => $daysRemaining
+                    ], 400);
+                }
+            }
+            
+            // Update last_day_off_update (only if checks passed)
+            if (!$unavailability) {
+                $unavailability = new TrainerUnavailability();
+                $unavailability->trainer_id = $trainerId;
+            }
+            $unavailability->last_day_off_update = $now;
+        }
+
+        // Update or create unavailability
+        $updateData = [
+            'unavailable_days' => $request->input('unavailable_days'),
+            'unavailable_times' => $request->input('unavailable_times'),
+            'notes' => $request->input('notes'),
+        ];
+        
+        if ($daysChanged && !empty($newUnavailableDays)) {
+            $updateData['last_day_off_update'] = $now;
+        }
+        
         $unavailability = TrainerUnavailability::updateOrCreate(
             ['trainer_id' => $trainerId],
-            [
-                'unavailable_days' => $request->input('unavailable_days'),
-                'unavailable_times' => $request->input('unavailable_times'),
-                'notes' => $request->input('notes'),
-            ]
+            $updateData
         );
 
         return response()->json([

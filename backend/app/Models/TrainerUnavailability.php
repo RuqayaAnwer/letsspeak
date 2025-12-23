@@ -16,11 +16,16 @@ class TrainerUnavailability extends Model
         'unavailable_days',
         'unavailable_times',
         'notes',
+        'last_day_off_update',
+        'day_off_updates_count',
+        'day_off_updates_hour',
     ];
 
     protected $casts = [
         'unavailable_days' => 'array',
         'unavailable_times' => 'array',
+        'last_day_off_update' => 'datetime',
+        'day_off_updates_hour' => 'datetime',
     ];
 
     public function trainer()

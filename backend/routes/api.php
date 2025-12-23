@@ -54,6 +54,8 @@ Route::middleware('simple.auth')->group(function () {
     Route::get('/courses/{course}', [CourseController::class, 'show']);
     Route::put('/courses/{course}', [CourseController::class, 'update']);
     Route::put('/courses/{course}/status', [CourseController::class, 'updateStatus']);
+    Route::put('/courses/{course}/renewal-alert-status', [CourseController::class, 'updateRenewalAlertStatus']);
+    Route::post('/courses/{course}/confirm-evaluation', [CourseController::class, 'confirmEvaluationSent']);
     Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
     Route::put('/courses/{course}/lectures/bulk', [CourseController::class, 'bulkUpdateLectures']);
 });
@@ -82,6 +84,10 @@ Route::delete('/course-packages/{id}', [CoursePackageController::class, 'destroy
 
 // Trainer Payroll
 Route::get('/trainer-payroll', [FinanceController::class, 'trainerPayroll']);
+Route::put('/trainer-payroll/bonus-deduction', [FinanceController::class, 'updateBonusDeduction']);
+Route::put('/trainer-payroll/bonus-selection', [FinanceController::class, 'updateBonusSelection']);
+Route::put('/trainer-payroll/bonus-inclusion', [FinanceController::class, 'updateBonusInclusion']);
+Route::put('/trainer-payroll/payment-method', [FinanceController::class, 'updatePaymentMethod']);
 Route::post('/trainer-payroll/mark-paid', [FinanceController::class, 'markTrainerPaid']);
 
 // Find Available Training Times

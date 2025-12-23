@@ -312,6 +312,105 @@ class CourseController extends Controller
     }
 
     /**
+     * Update renewal alert status for a course.
+     */
+    public function updateRenewalAlertStatus(Request $request, Course $course)
+    {
+        $request->validate([
+            'renewal_alert_status' => 'required|in:none,alert,sent,renewed',
+        ]);
+
+        $oldStatus = $course->renewal_alert_status;
+        $course->renewal_alert_status = $request->renewal_alert_status;
+        $course->save();
+
+        // Log the change
+        try {
+            ActivityLog::create([
+                'user_id' => $request->user()->id ?? null,
+                'action' => 'update_renewal_alert_status',
+                'model_type' => Course::class,
+                'model_id' => $course->id,
+                'old_data' => ['renewal_alert_status' => $oldStatus],
+                'new_data' => ['renewal_alert_status' => $request->renewal_alert_status],
+                'description' => "تم تغيير حالة تنبيه التجديد من '{$oldStatus}' إلى '{$request->renewal_alert_status}'",
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to log renewal alert status change: ' . $e->getMessage());
+        }
+
+        $course->load(['trainer.user', 'students', 'coursePackage']);
+        $course->makeVisible('coursePackage');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث حالة تنبيه التجديد بنجاح',
+            'data' => $course,
+        ]);
+    }
+
+    /**
+     * Confirm evaluation sent for a milestone (every 5 completed lectures)
+     */
+    public function confirmEvaluationSent(Request $request, Course $course)
+    {
+        $user = $request->user();
+        
+        // Only trainers can confirm evaluation
+        if (!$user || !method_exists($user, 'isTrainer') || !$user->isTrainer()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        
+        // Verify trainer owns this course
+        $trainerId = $user->trainer->id ?? null;
+        if ($trainerId && $course->trainer_id !== $trainerId) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        
+        $request->validate([
+            'milestone' => 'required|integer|min:5',
+        ]);
+        
+        $milestone = $request->input('milestone');
+        
+        // Verify milestone is a multiple of 5
+        if ($milestone % 5 !== 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Milestone must be a multiple of 5'
+            ], 400);
+        }
+        
+        // Update last evaluation milestone
+        $course->last_evaluation_milestone = $milestone;
+        $course->save();
+        
+        // Log the action
+        try {
+            ActivityLog::create([
+                'user_id' => $user->id,
+                'action' => 'confirm_evaluation_sent',
+                'model_type' => Course::class,
+                'model_id' => $course->id,
+                'old_data' => ['last_evaluation_milestone' => $course->getOriginal('last_evaluation_milestone')],
+                'new_data' => ['last_evaluation_milestone' => $milestone],
+                'description' => "تم تأكيد إرسال التقييم عند milestone {$milestone} محاضرة",
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to log evaluation confirmation: ' . $e->getMessage());
+        }
+        
+        $course->load(['trainer.user', 'students', 'coursePackage']);
+        $course->makeVisible('coursePackage');
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تأكيد إرسال التقييم بنجاح',
+            'data' => $course,
+        ]);
+    }
+
+    /**
      * Remove the specified course.
      */
     public function destroy(Course $course)

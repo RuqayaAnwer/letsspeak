@@ -84,6 +84,13 @@ const CourseDetails = () => {
     reason: '',
   });
   const statusSelectRef = useRef(null);
+  
+  // Evaluation modal state (for trainer)
+  const [evaluationModal, setEvaluationModal] = useState({
+    open: false,
+    milestone: 0,
+    completedLectures: 0,
+  });
 
   /**
    * Check if a lecture can be modified based on its date/time.
@@ -128,6 +135,11 @@ const CourseDetails = () => {
       // Set default selected student for dual courses
       if (response.data.is_dual && response.data.students?.length > 0) {
         setSelectedStudentId(response.data.students[0]?.id);
+      }
+      
+      // Check for evaluation milestone (for trainers only)
+      if (isTrainer && response.data) {
+        checkEvaluationMilestone(response.data);
       }
     } catch (error) {
       console.error('Error fetching course:', error);
@@ -607,7 +619,19 @@ const CourseDetails = () => {
       
       if (response.data.success) {
         setEditedLectures({});
-        fetchCourse();
+        // Fetch course to get updated data
+        const courseResponse = await api.get(`/courses/${id}`);
+        if (courseResponse.data) {
+          setCourse(courseResponse.data);
+          setLectures(courseResponse.data.lectures || []);
+          
+          // Check for evaluation milestone after saving (for trainers only)
+          if (isTrainer) {
+            checkEvaluationMilestone(courseResponse.data);
+          }
+        } else {
+          fetchCourse();
+        }
         console.log('Lectures saved successfully');
       } else {
         alert(response.data.message || 'حدث خطأ أثناء الحفظ');
@@ -719,6 +743,96 @@ const CourseDetails = () => {
     return labels[status] || status;
   };
 
+  // Calculate completion percentage for the course
+  const calculateCompletionPercentage = () => {
+    if (course?.completion_percentage !== undefined && course?.completion_percentage !== null) {
+      return course.completion_percentage;
+    }
+    
+    if (lectures && lectures.length > 0) {
+      const completedCount = lectures.filter(l => 
+        l.is_completed || l.attendance === 'present' || l.attendance === 'absent'
+      ).length;
+      const totalCount = lectures.length;
+      return totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    }
+    
+    return 0;
+  };
+
+  // Check if course is at 75% completion
+  const isAt75Percent = () => {
+    const percentage = calculateCompletionPercentage();
+    return percentage >= 75 && percentage < 100;
+  };
+
+  // Check if evaluation milestone is reached (every 5 completed lectures)
+  const checkEvaluationMilestone = (courseData) => {
+    if (!courseData || !courseData.lectures) return;
+    
+    // Count completed lectures
+    const completedLectures = courseData.lectures.filter(l => 
+      l.is_completed || l.attendance === 'present' || l.attendance === 'absent'
+    ).length;
+    
+    // Calculate current milestone (round down to nearest multiple of 5)
+    const currentMilestone = Math.floor(completedLectures / 5) * 5;
+    
+    // Check if we've reached a new milestone that hasn't been confirmed
+    const lastMilestone = courseData.last_evaluation_milestone || 0;
+    
+    if (currentMilestone >= 5 && currentMilestone > lastMilestone) {
+      setEvaluationModal({
+        open: true,
+        milestone: currentMilestone,
+        completedLectures: completedLectures,
+      });
+    }
+  };
+  
+  // Handle evaluation confirmation
+  const handleConfirmEvaluation = async () => {
+    try {
+      const response = await api.post(`/courses/${id}/confirm-evaluation`, {
+        milestone: evaluationModal.milestone,
+      });
+      
+      if (response.data.success) {
+        setCourse(response.data.data);
+        setEvaluationModal({ open: false, milestone: 0, completedLectures: 0 });
+      }
+    } catch (error) {
+      console.error('Error confirming evaluation:', error);
+      alert('حدث خطأ أثناء تأكيد إرسال التقييم');
+    }
+  };
+  
+  // Handle renewal alert status change
+  const handleRenewalAlertStatusChange = async (newStatus) => {
+    if (!isCustomerService) return;
+    
+    try {
+      const response = await api.put(`/courses/${id}/renewal-alert-status`, {
+        renewal_alert_status: newStatus,
+      });
+      
+      if (response.data.success) {
+        setCourse(response.data.data);
+        
+        // Show alert message only for 'sent' and 'renewed' statuses
+        if (newStatus === 'sent') {
+          alert('⚠️ تم إرسال رسالة التنبيه للمتدرب');
+        } else if (newStatus === 'renewed') {
+          alert('✅ تم تأكيد تجديد الاشتراك');
+        }
+        // No alert for 'alert' or 'none' statuses
+      }
+    } catch (error) {
+      console.error('Error updating renewal alert status:', error);
+      alert('حدث خطأ أثناء تحديث حالة التنبيه');
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner size="lg" />;
   }
@@ -727,6 +841,42 @@ const CourseDetails = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Evaluation Modal - Blocks access until confirmed (for trainers only) */}
+      {evaluationModal.open && isTrainer && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[10000] p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full p-6 border-4 border-orange-500">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="w-8 h-8 text-orange-500" />
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white">
+                ⚠️ تنبيه: يرجى إرسال التقييم
+              </h3>
+            </div>
+            
+            <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded-lg mb-4">
+              <p className="text-gray-800 dark:text-gray-200 font-semibold mb-2">
+                تم اكتمال {evaluationModal.completedLectures} محاضرة في هذا الكورس
+              </p>
+              <p className="text-gray-700 dark:text-gray-300">
+                يرجى إرسال التقييم للطالب قبل المتابعة. لا يمكنك الوصول إلى لوحة المحاضرات حتى يتم تأكيد إرسال التقييم.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleConfirmEvaluation}
+                className="flex-1 py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <CheckCircle className="w-5 h-5" />
+                تم إرسال التقييم
+              </button>
+            </div>
+            
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
+              سيتم إظهار هذا التنبيه عند اكتمال كل 5 محاضرات (5, 10, 15, 20...)
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="page-header flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-4">
@@ -781,8 +931,74 @@ const CourseDetails = () => {
         )}
       </div>
 
-      {/* Lectures Table */}
-      <div className="card">
+      {/* Renewal Alert Status - Only show for courses at 75%+ completion and for customer service */}
+      {isCustomerService && isAt75Percent() && (
+        <div className="card bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 border-2 border-orange-300 dark:border-orange-700">
+          <div className="p-4">
+            <h3 className="text-lg font-bold text-orange-800 dark:text-orange-200 mb-3">
+              ⚠️ تنبيه: الكورس على وشك الانتهاء ({calculateCompletionPercentage()}% مكتمل)
+            </h3>
+            <p className="text-sm text-orange-700 dark:text-orange-300 mb-4">
+              يرجى إرسال رسالة للمتدرب لتجديد الاشتراك
+            </p>
+            
+            {/* Two-stage buttons: Sent and Renewed */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={() => handleRenewalAlertStatusChange('sent')}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                  course.renewal_alert_status === 'sent'
+                    ? 'bg-blue-500 text-white shadow-lg scale-105'
+                    : course.renewal_alert_status === 'sent' || course.renewal_alert_status === 'renewed'
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                    : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                }`}
+              >
+                📧 تم الإرسال
+              </button>
+              
+              <button
+                onClick={() => handleRenewalAlertStatusChange('renewed')}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                  course.renewal_alert_status === 'renewed'
+                    ? 'bg-green-500 text-white shadow-lg scale-105'
+                    : course.renewal_alert_status === 'sent' || course.renewal_alert_status === 'renewed'
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                }`}
+                disabled={course.renewal_alert_status === 'none' || course.renewal_alert_status === 'alert'}
+              >
+                ✅ تم الاشتراك
+              </button>
+              
+              {course.renewal_alert_status !== 'none' && course.renewal_alert_status !== 'alert' && (
+                <button
+                  onClick={() => handleRenewalAlertStatusChange('none')}
+                  className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
+                >
+                  إعادة تعيين
+                </button>
+              )}
+            </div>
+            
+            {/* Status indicator */}
+            {course.renewal_alert_status !== 'none' && course.renewal_alert_status !== 'alert' && (
+              <div className="mt-3 pt-3 border-t border-orange-300 dark:border-orange-700">
+                <p className="text-sm text-orange-600 dark:text-orange-400">
+                  الحالة الحالية: 
+                  <span className="font-bold ml-2">
+                    {course.renewal_alert_status === 'sent' && '📧 تم الإرسال'}
+                    {course.renewal_alert_status === 'renewed' && '✅ تم الاشتراك'}
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Lectures Table - Blocked if evaluation modal is open */}
+      <div className={`card ${evaluationModal.open && isTrainer ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="p-4 border-b border-[var(--color-border)]">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-[var(--color-text-primary)]">
@@ -915,12 +1131,16 @@ const CourseDetails = () => {
                   : {};
                 
                 // For dual courses, use student-specific attendance from editedStudentData first
-                // For single courses, use edited.attendance
+                // For single courses, use rawEdited.attendance
                 const currentAttendance = course?.is_dual && selectedStudentId
                   ? (editedStudentData.attendance ?? studentData.attendance ?? 'pending')
                   : (rawEdited.attendance ?? studentData.attendance ?? 'pending');
-                const currentActivity = edited.activity ?? studentData.activity;
-                const currentHomework = edited.homework ?? studentData.homework;
+                const currentActivity = course?.is_dual && selectedStudentId
+                  ? (editedStudentData.activity ?? studentData.activity)
+                  : (rawEdited.activity ?? studentData.activity);
+                const currentHomework = course?.is_dual && selectedStudentId
+                  ? (editedStudentData.homework ?? studentData.homework)
+                  : (rawEdited.homework ?? studentData.homework);
                 
                 // Lecture-level completed status (not student-specific)
                 // A lecture is completed if:
@@ -1108,12 +1328,19 @@ const CourseDetails = () => {
                           <span className={`badge ${getAttendanceBadge(currentAttendance)}`}>
                             {getAttendanceLabel(currentAttendance)}
                           </span>
-                          {(edited.notes || lecture.notes) && (
+                          {((course?.is_dual && selectedStudentId 
+                              ? (editedStudentData.notes ?? studentData.notes)
+                              : (rawEdited.notes ?? lecture.notes)) || lecture.notes) && (
                             <button
-                              onClick={() => setReasonPopup({ 
-                                open: true, 
-                                reason: edited.notes || lecture.notes 
-                              })}
+                              onClick={() => {
+                                const currentNotes = course?.is_dual && selectedStudentId
+                                  ? (editedStudentData.notes ?? studentData.notes ?? lecture.notes)
+                                  : (rawEdited.notes ?? lecture.notes);
+                                setReasonPopup({ 
+                                  open: true, 
+                                  reason: currentNotes
+                                });
+                              }}
                               className="text-amber-500 hover:text-amber-600 transition-colors"
                               title="عرض السبب"
                             >
