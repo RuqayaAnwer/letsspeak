@@ -7,6 +7,7 @@ use App\Models\Lecture;
 use App\Models\CoursePackage;
 use App\Models\CourseStatusHistory;
 use App\Models\ActivityLog;
+use App\Models\Payment;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -149,6 +150,9 @@ class CourseController extends Controller
             'lecture_days' => 'required|array|min:1',
             'lecture_days.*' => 'in:sun,mon,tue,wed,thu,fri,sat',
             'is_dual' => 'sometimes|boolean',
+            'renewed_with_trainer' => 'sometimes|boolean',
+            'paid_amount' => 'sometimes|numeric|min:0',
+            'remaining_amount' => 'sometimes|numeric|min:0',
         ]);
 
         // Get lectures count from package
@@ -171,6 +175,7 @@ class CourseController extends Controller
             'lecture_time' => $request->lecture_time,
             'lecture_days' => $request->lecture_days,
             'is_dual' => $isDual,
+            'renewed_with_trainer' => $request->boolean('renewed_with_trainer', false),
             'status' => 'active',
         ]);
 
@@ -183,6 +188,23 @@ class CourseController extends Controller
 
         // Generate lecture schedule
         $this->generateLectureSchedule($course);
+
+        // Create payment record if paid_amount is provided
+        $paidAmount = $request->paid_amount ?? 0;
+        if ($paidAmount > 0) {
+            $primaryStudentId = $studentIds[0] ?? null;
+            Payment::create([
+                'course_id' => $course->id,
+                'student_id' => $primaryStudentId,
+                'amount' => $paidAmount,
+                'payment_method' => null,
+                'status' => 'completed',
+                'payment_date' => $request->start_date ?? now()->toDateString(),
+                'receipt_number' => null,
+                'notes' => 'دفعة أولية عند إنشاء الكورس',
+                'recorded_by' => auth()->id(),
+            ]);
+        }
 
         $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);
         
@@ -628,6 +650,11 @@ class CourseController extends Controller
                     $updateData['student_attendance'] = $finalStudentAttendance;
                 }
 
+                // Finance and customer_service can update trainer_payment_status
+                if (($user->isFinance() || $user->isAccounting() || $user->isCustomerService()) && isset($lectureData['trainer_payment_status'])) {
+                    $updateData['trainer_payment_status'] = $lectureData['trainer_payment_status'];
+                }
+                
                 // Trainers and customer_service can update date and time
                 if (($user->isTrainer() || $user->isCustomerService()) && isset($lectureData['date'])) {
                     $updateData['date'] = $lectureData['date'];
@@ -650,9 +677,33 @@ class CourseController extends Controller
                 if (!empty($updateData)) {
                     try {
                         // Save old data for logging
-                        $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'date', 'time', 'is_completed', 'student_attendance']);
+                        $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'date', 'time', 'is_completed', 'student_attendance', 'trainer_payment_status']);
                         
                         $lecture->update($updateData);
+                        
+                        // Log trainer_payment_status change in ActivityLog if it was changed
+                        if (isset($updateData['trainer_payment_status']) && 
+                            ($oldData['trainer_payment_status'] ?? 'unpaid') !== $updateData['trainer_payment_status']) {
+                            try {
+                                ActivityLog::create([
+                                    'user_id' => $user->id,
+                                    'action' => 'lecture_trainer_payment_status_changed',
+                                    'model_type' => 'Lecture',
+                                    'model_id' => $lecture->id,
+                                    'old_values' => ['trainer_payment_status' => $oldData['trainer_payment_status'] ?? 'unpaid'],
+                                    'new_values' => ['trainer_payment_status' => $updateData['trainer_payment_status']],
+                                    'description' => "تم تغيير حالة دفع المدرب للمحاضرة رقم {$lecture->lecture_number} من " . 
+                                                   ($oldData['trainer_payment_status'] ?? 'unpaid') . " إلى {$updateData['trainer_payment_status']}",
+                                    'ip_address' => $request->ip(),
+                                ]);
+                            } catch (\Exception $logError) {
+                                // Log error but don't fail the update
+                                \Log::error('Failed to log trainer payment status change', [
+                                    'lecture_id' => $lecture->id,
+                                    'error' => $logError->getMessage()
+                                ]);
+                            }
+                        }
                         
                         // Log the modification using reflection
                         try {

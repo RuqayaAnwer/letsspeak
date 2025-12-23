@@ -22,6 +22,8 @@ import {
   Copy,
   Check,
   Receipt,
+  CreditCard,
+  Smartphone,
 } from 'lucide-react';
 
 const TrainerPayroll = () => {
@@ -309,12 +311,35 @@ const TrainerPayroll = () => {
       
       const totalBonuses = renewalBonus + competitionBonus + volumeBonus;
       
+      // تنسيق العملة
+      const formatCurrencyForPDF = (amount) => {
+        return new Intl.NumberFormat('ar-IQ', {
+          style: 'currency',
+          currency: 'IQD',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(amount || 0);
+      };
+      
+      // تنظيف اسم المدرب للملف
+      const cleanFileName = (name) => {
+        return name.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_');
+      };
+      
       // إنشاء HTML
+      const basePayFormatted = formatCurrencyForPDF(payroll.base_pay || 0);
+      const renewalBonusFormatted = formatCurrencyForPDF(renewalBonus);
+      const competitionBonusFormatted = formatCurrencyForPDF(competitionBonus);
+      const volumeBonusFormatted = formatCurrencyForPDF(volumeBonus);
+      const bonusDeductionFormatted = formatCurrencyForPDF(payroll.bonus_deduction || 0);
+      const totalPayFormatted = formatCurrencyForPDF(payroll.total_pay || 0);
+      
       const htmlContent = `
         <!DOCTYPE html>
         <html dir="rtl" lang="ar">
         <head>
           <meta charset="UTF-8">
+          <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -413,14 +438,14 @@ const TrainerPayroll = () => {
           <div class="payroll-container">
             <div class="header">
               <h1>كشف راتب المدرب</h1>
-              <h2>${payroll.trainer_name}</h2>
+              <h2>${payroll.trainer_name || 'غير محدد'}</h2>
               <p style="margin-top: 10px; color: #6b7280;">شهر ${monthName} ${selectedYear}</p>
             </div>
             
             <div class="info-section">
               <div class="info-row">
                 <span class="info-label">الراتب الأساسي:</span>
-                <span class="info-value">${formatCurrency(payroll.base_pay || 0)}</span>
+                <span class="info-value">${basePayFormatted}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">عدد المحاضرات المكتملة:</span>
@@ -433,19 +458,19 @@ const TrainerPayroll = () => {
               ${payroll.include_renewal_bonus ? `
                 <div class="bonus-item">
                   <span>مكافأة التجديد:</span>
-                  <span>${formatCurrency(renewalBonus)}</span>
+                  <span>${renewalBonusFormatted}</span>
                 </div>
               ` : ''}
               ${payroll.include_competition_bonus ? `
                 <div class="bonus-item">
                   <span>مكافأة المنافسة:</span>
-                  <span>${formatCurrency(competitionBonus)}</span>
+                  <span>${competitionBonusFormatted}</span>
                 </div>
               ` : ''}
               ${volumeBonus > 0 ? `
                 <div class="bonus-item">
                   <span>مكافأة الكمية ${volumeBonus === 30000 || volumeBonus === '30000' ? '(60+)' : '(80+)'}:</span>
-                  <span>${formatCurrency(volumeBonus)}</span>
+                  <span>${volumeBonusFormatted}</span>
                 </div>
               ` : ''}
               ${totalBonuses === 0 ? '<div class="no-bonuses">لا توجد مكافآت</div>' : ''}
@@ -456,75 +481,84 @@ const TrainerPayroll = () => {
                 <div class="info-row" style="border: none;">
                   <span class="info-label">${parseFloat(payroll.bonus_deduction) > 0 ? 'بونص إضافي' : 'خصم'}:</span>
                   <span class="info-value" style="color: ${parseFloat(payroll.bonus_deduction) > 0 ? '#059669' : '#dc2626'};">
-                    ${formatCurrency(payroll.bonus_deduction)}
+                    ${bonusDeductionFormatted}
                   </span>
                 </div>
                 ${payroll.bonus_deduction_notes ? `
-                  <p style="margin-top: 10px; font-size: 14px; color: #6b7280;">${payroll.bonus_deduction_notes}</p>
+                  <p style="margin-top: 10px; font-size: 14px; color: #6b7280;">${payroll.bonus_deduction_notes.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
                 ` : ''}
               </div>
             ` : ''}
             
             <div class="total-section">
               <div class="label">الإجمالي المستحق</div>
-              <div class="amount">${formatCurrency(payroll.total_pay || 0)}</div>
+              <div class="amount">${totalPayFormatted}</div>
             </div>
           </div>
         </body>
         </html>
       `;
       
-      // إنشاء نافذة جديدة وعرض HTML
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
+      // إنشاء عنصر مخفي في الصفحة الحالية بدلاً من نافذة جديدة
+      const hiddenDiv = document.createElement('div');
+      hiddenDiv.style.position = 'absolute';
+      hiddenDiv.style.left = '-9999px';
+      hiddenDiv.style.top = '-9999px';
+      hiddenDiv.style.width = '800px';
+      hiddenDiv.innerHTML = htmlContent;
+      document.body.appendChild(hiddenDiv);
       
-      // انتظار تحميل الصور والخطوط
-      setTimeout(async () => {
-        try {
-          // استخدام html2canvas لالتقاط الصورة
-          const canvas = await html2canvas(printWindow.document.body, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#ffffff',
-          });
-          
-          // تحويل Canvas إلى PDF
-          const imgData = canvas.toDataURL('image/png');
-          const pdf = new jsPDF('p', 'mm', 'a4');
-          const imgWidth = 210;
-          const pageHeight = 297;
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
-          let heightLeft = imgHeight;
-          let position = 0;
-          
+      // انتظار تحميل الخطوط
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      try {
+        // استخدام html2canvas لالتقاط الصورة
+        const canvas = await html2canvas(hiddenDiv, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          width: 800,
+          height: hiddenDiv.scrollHeight,
+        });
+        
+        // تحويل Canvas إلى PDF
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210;
+        const pageHeight = 297;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+        
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+        
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
           pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
           heightLeft -= pageHeight;
-          
-          while (heightLeft >= 0) {
-            position = heightLeft - imgHeight;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
-          }
-          
-          // تحميل PDF
-          const fileName = `راتب_${payroll.trainer_name}_${monthName}_${selectedYear}.pdf`;
-          pdf.save(fileName);
-          
-          // إغلاق النافذة
-          printWindow.close();
-        } catch (error) {
-          console.error('خطأ في تحويل الصورة:', error);
-          // في حالة الفشل، استخدم الطباعة العادية
-          printWindow.print();
         }
-      }, 1000);
+        
+        // تحميل PDF
+        const fileName = `راتب_${cleanFileName(payroll.trainer_name || 'غير_محدد')}_${monthName}_${selectedYear}.pdf`;
+        pdf.save(fileName);
+        
+        // إزالة العنصر المخفي
+        document.body.removeChild(hiddenDiv);
+      } catch (error) {
+        console.error('خطأ في تحويل الصورة:', error);
+        // إزالة العنصر المخفي في حالة الخطأ
+        if (document.body.contains(hiddenDiv)) {
+          document.body.removeChild(hiddenDiv);
+        }
+        throw error;
+      }
       
     } catch (error) {
       console.error('خطأ في تحميل صورة الراتب:', error);
-      alert('حدث خطأ أثناء تحميل صورة الراتب');
+      alert(`حدث خطأ أثناء تحميل صورة الراتب: ${error.message || 'خطأ غير معروف'}`);
     }
   };
 
@@ -563,16 +597,32 @@ const TrainerPayroll = () => {
             <DollarSign className="w-8 h-8 text-emerald-500" />
             رواتب المدربين
           </h1>
-          <p className="page-subtitle">عرض رواتب المدربين والبونصات الشهرية</p>
+          <p className="page-subtitle">
+            عرض رواتب المدربين والبونصات الشهرية - {months[selectedMonth - 1]?.label} {selectedYear}
+          </p>
         </div>
 
         {/* Period Selector */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">التاريخ الحالي:</span>
+            <span className="text-sm font-bold text-blue-700 dark:text-blue-300">
+              {new Date().toLocaleDateString('ar-IQ', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </span>
+          </div>
+          <div className="h-6 w-px bg-blue-300 dark:bg-blue-700 mx-2"></div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">الفترة المحددة:</span>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="input-field pl-10 pr-4 appearance-none cursor-pointer"
+              className="px-3 py-1 rounded-md border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-800 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 text-blue-700 dark:text-blue-300 font-medium text-sm cursor-pointer appearance-none"
             >
               {months.map((month) => (
                 <option key={month.value} value={month.value}>
@@ -580,14 +630,10 @@ const TrainerPayroll = () => {
                 </option>
               ))}
             </select>
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)] pointer-events-none" />
-          </div>
-
-          <div className="relative">
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="input-field pl-10 pr-4 appearance-none cursor-pointer"
+              className="px-3 py-1 rounded-md border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-800 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 text-blue-700 dark:text-blue-300 font-medium text-sm cursor-pointer appearance-none"
             >
               {years.map((year) => (
                 <option key={year} value={year}>
@@ -595,7 +641,6 @@ const TrainerPayroll = () => {
                 </option>
               ))}
             </select>
-            <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)] pointer-events-none" />
           </div>
         </div>
       </div>
@@ -726,22 +771,22 @@ const TrainerPayroll = () => {
         <div className="card overflow-hidden">
           <div className="p-4 border-b border-[var(--color-border)]">
             <h2 className="text-lg font-bold text-[var(--color-text-primary)]">
-              تفاصيل رواتب المدربين
+              تفاصيل رواتب المدربين - {months[selectedMonth - 1]?.label} {selectedYear}
             </h2>
           </div>
           <div className="overflow-x-auto">
             <table className="table text-sm">
               <thead>
                 <tr>
-                  <th className="text-xs py-2 px-2">#</th>
-                  <th className="text-xs py-2 px-2">المدرب</th>
-                  <th className="text-xs py-2 px-2">المحاضرات</th>
-                  <th className="text-xs py-2 px-2">الراتب الأساسي</th>
-                  <th className="text-xs py-2 px-2">طريقة التحويل</th>
-                  <th className="text-xs py-2 px-2">التجديدات</th>
-                  <th className="text-xs py-2 px-2">مكافأة</th>
-                  <th className="text-xs py-2 px-2">بونص/خصم</th>
-                  <th className="text-xs py-2 px-2">الإجمالي</th>
+                  <th className="text-xs py-2 px-2 text-center">#</th>
+                  <th className="text-xs py-2 px-2 text-center">المدرب</th>
+                  <th className="text-xs py-2 px-2 text-center">المحاضرات</th>
+                  <th className="text-xs py-2 px-2 text-center">الراتب الأساسي</th>
+                  <th className="text-xs py-2 px-2 text-center">طريقة التحويل</th>
+                  <th className="text-xs py-2 px-2 text-center">التجديدات</th>
+                  <th className="text-xs py-2 px-2 text-center">مكافأة</th>
+                  <th className="text-xs py-2 px-2 text-center">بونص/خصم</th>
+                  <th className="text-xs py-2 px-2 text-center">الإجمالي</th>
                 </tr>
               </thead>
               <tbody>
@@ -767,9 +812,9 @@ const TrainerPayroll = () => {
                         }
                       }}
                     >
-                      <td className="font-semibold py-2 px-2 text-xs">{index + 1}</td>
-                      <td className="py-2 px-2">
-                        <div className="flex items-center gap-1.5">
+                      <td className="font-semibold py-2 px-2 text-xs text-center">{index + 1}</td>
+                      <td className="py-2 px-2 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -799,15 +844,15 @@ const TrainerPayroll = () => {
                           )}
                         </div>
                       </td>
-                      <td className="py-2 px-2">
+                      <td className="py-2 px-2 text-center">
                         <span className="badge badge-info text-[10px] px-1.5 py-0.5">
                           {payroll.completed_lectures} محاضرة
                         </span>
                       </td>
-                      <td className="font-medium py-2 px-2 text-xs">{formatCurrency(payroll.base_pay)}</td>
-                      <td className="py-2 px-2 payment-method-cell">
+                      <td className="font-medium py-2 px-2 text-xs text-center">{formatCurrency(payroll.base_pay)}</td>
+                      <td className="py-2 px-2 payment-method-cell text-center">
                         {payroll.payment_method ? (
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex flex-col gap-1.5 items-center">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -819,13 +864,27 @@ const TrainerPayroll = () => {
                                   accountNumber: payroll.payment_account_number || '',
                                 });
                               }}
-                              className="px-2 py-1 rounded-md font-medium text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 transition-all hover:scale-105"
+                              className={`px-2 py-1 rounded-md font-medium text-[10px] transition-all hover:scale-105 w-fit flex items-center gap-1 ${
+                                payroll.payment_method === 'zain_cash'
+                                  ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
+                                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              }`}
                             >
-                              {payroll.payment_method === 'zain_cash' ? 'زين كاش' : 'كي كارد'}
+                              {payroll.payment_method === 'zain_cash' ? (
+                                <>
+                                  <Smartphone className="w-3 h-3" />
+                                  <span>زين كاش</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CreditCard className="w-3 h-3" />
+                                  <span>كي كارد</span>
+                                </>
+                              )}
                             </button>
                             {payroll.payment_account_number && (
                               <div className="relative group">
-                                <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-medium">
+                                <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-medium w-fit">
                                   <span>{payroll.payment_account_number}</span>
                                   <button
                                     onClick={(e) => {
@@ -870,10 +929,10 @@ const TrainerPayroll = () => {
                           </button>
                         )}
                       </td>
-                      <td className="py-2 px-2">
+                      <td className="py-2 px-2 text-center">
                         <span className="badge badge-purple text-[10px] px-1.5 py-0.5">{payroll.renewals_count} تجديد</span>
                       </td>
-                      <td className="py-2 px-2 bonus-cell">
+                      <td className="py-2 px-2 bonus-cell text-center">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -912,8 +971,8 @@ const TrainerPayroll = () => {
                           })()}
                         </button>
                       </td>
-                      <td className="bonus-deduction-cell py-2 px-2">
-                        <div className="flex items-center gap-1.5">
+                      <td className="bonus-deduction-cell py-2 px-2 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -967,7 +1026,7 @@ const TrainerPayroll = () => {
                           )}
                         </div>
                       </td>
-                      <td className="py-2 px-2">
+                      <td className="py-2 px-2 text-center">
                         <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
                           {formatCurrency(payroll.total_pay)}
                         </span>

@@ -338,6 +338,7 @@ class LectureController extends Controller
             'activity' => 'sometimes|nullable|in:engaged,normal,not_engaged',
             'homework' => 'sometimes|nullable|in:yes,partial,no',
             'payment_status' => 'sometimes|in:unpaid,paid,partial',
+            'trainer_payment_status' => 'sometimes|in:unpaid,paid',
             'notes' => 'sometimes|nullable|string|max:1000',
             'is_completed' => 'sometimes|boolean',
         ]);

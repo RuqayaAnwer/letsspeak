@@ -70,6 +70,7 @@ class Lecture extends Model
         'notes',
         'is_completed',
         'student_attendance',
+        'trainer_payment_status',
     ];
 
     protected $casts = [

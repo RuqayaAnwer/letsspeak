@@ -3,23 +3,24 @@ import api from '../../api/axios';
 import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
-import { Plus, Search, Filter, Edit2, CreditCard } from 'lucide-react';
+import { Plus, Search, Edit2, CreditCard } from 'lucide-react';
 import { formatDateSimple } from '../../utils/dateFormat';
 
 const Payments = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [students, setStudents] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [packages, setPackages] = useState([]);
   const [formData, setFormData] = useState({
     student_id: '',
     course_id: '',
+    course_package_id: '',
     amount: '',
-    status: 'paid',
+    remaining_amount: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
@@ -28,16 +29,24 @@ const Payments = () => {
   useEffect(() => {
     fetchPayments();
     fetchStudentsAndCourses();
-  }, [search, statusFilter]);
+  }, [search]);
 
   const fetchPayments = async () => {
     try {
       const params = {};
       if (search) params.search = search;
-      if (statusFilter) params.status = statusFilter;
 
       const response = await api.get('/payments', { params });
-      setPayments(response.data.data || []);
+      const paymentsData = response.data.data || response.data || [];
+      // Sort payments by student name alphabetically
+      const sortedPayments = Array.isArray(paymentsData) 
+        ? [...paymentsData].sort((a, b) => {
+            const nameA = (a.student?.name || '').toLowerCase();
+            const nameB = (b.student?.name || '').toLowerCase();
+            return nameA.localeCompare(nameB, 'ar');
+          })
+        : [];
+      setPayments(sortedPayments);
     } catch (error) {
       console.error('Error fetching payments:', error);
     } finally {
@@ -47,12 +56,14 @@ const Payments = () => {
 
   const fetchStudentsAndCourses = async () => {
     try {
-      const [studentsRes, coursesRes] = await Promise.all([
+      const [studentsRes, coursesRes, packagesRes] = await Promise.all([
         api.get('/students'),
         api.get('/courses'),
+        api.get('/course-packages'),
       ]);
-      setStudents(studentsRes.data.data || []);
-      setCourses(coursesRes.data.data || []);
+      setStudents(studentsRes.data.data || studentsRes.data || []);
+      setCourses(coursesRes.data.data || coursesRes.data || []);
+      setPackages(packagesRes.data.data || packagesRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -68,6 +79,7 @@ const Payments = () => {
         student_id: parseInt(formData.student_id),
         course_id: parseInt(formData.course_id),
         amount: parseFloat(formData.amount),
+        payment_date: formData.date,
       };
 
       if (editingPayment) {
@@ -88,12 +100,19 @@ const Payments = () => {
   const openModal = (payment = null) => {
     if (payment) {
       setEditingPayment(payment);
+      const course = payment.course;
+      const packageId = course?.course_package_id || course?.coursePackage?.id || '';
+      const packagePrice = course?.course_package?.price || course?.coursePackage?.price || 0;
+      const paidAmount = parseFloat(payment.amount) || 0;
+      const remainingAmount = packagePrice - paidAmount;
+      
       setFormData({
         student_id: payment.student_id?.toString() || '',
         course_id: payment.course_id?.toString() || '',
+        course_package_id: packageId.toString(),
         amount: payment.amount?.toString() || '',
-        status: payment.status || 'paid',
-        date: payment.date || new Date().toISOString().split('T')[0],
+        remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+        date: payment.payment_date || payment.date || new Date().toISOString().split('T')[0],
         notes: payment.notes || '',
       });
     } else {
@@ -101,8 +120,9 @@ const Payments = () => {
       setFormData({
         student_id: '',
         course_id: '',
+        course_package_id: '',
         amount: '',
-        status: 'paid',
+        remaining_amount: '',
         date: new Date().toISOString().split('T')[0],
         notes: '',
       });
@@ -125,6 +145,59 @@ const Payments = () => {
   const getStatusBadge = (status) => {
     const badges = { completed: 'badge-success', pending: 'badge-warning' };
     return badges[status] || 'badge-gray';
+  };
+
+  // Calculate remaining amount for a course (total paid vs package price)
+  const calculateRemainingAmount = (payment) => {
+    const course = payment.course;
+    if (!course) return 0;
+    
+    const packagePrice = course.course_package?.price || course.coursePackage?.price || 0;
+    if (packagePrice === 0) return 0; // No price set, consider as completed
+    
+    // Calculate total paid for this course from all payments
+    const totalPaid = payments
+      .filter(p => p.course_id === payment.course_id && p.status === 'completed')
+      .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    
+    const remaining = packagePrice - totalPaid;
+    
+    return remaining > 0 ? remaining : 0;
+  };
+
+  // Get payment status (completed or remaining)
+  const getPaymentStatus = (payment) => {
+    const remaining = calculateRemainingAmount(payment);
+    if (remaining > 0) {
+      return { label: '', badge: 'badge-warning', amount: remaining };
+    }
+    return { label: 'مكتمل', badge: 'badge-success', amount: 0 };
+  };
+
+  const handlePackageChange = (packageId) => {
+    const selectedPackage = packages.find((p) => p.id.toString() === packageId);
+    const packagePrice = selectedPackage ? (selectedPackage.price || 0) : 0;
+    const paidAmount = parseFloat(formData.amount) || 0;
+    const remainingAmount = packagePrice - paidAmount;
+    
+    setFormData({
+      ...formData,
+      course_package_id: packageId,
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+    });
+  };
+
+  const handleAmountChange = (value) => {
+    const paidAmount = parseFloat(value) || 0;
+    const selectedPackage = packages.find((p) => p.id.toString() === formData.course_package_id);
+    const packagePrice = selectedPackage ? (selectedPackage.price || 0) : 0;
+    const remainingAmount = packagePrice - paidAmount;
+    
+    setFormData({
+      ...formData,
+      amount: value,
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+    });
   };
 
   const getStudentCourses = () => {
@@ -163,18 +236,6 @@ const Payments = () => {
               className="input pr-10"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-[var(--color-text-muted)]" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="select w-40"
-            >
-              <option value="">كل الحالات</option>
-              <option value="completed">مكتمل</option>
-              <option value="pending">معلق</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -193,59 +254,67 @@ const Payments = () => {
       ) : (
         <div className="card">
           <div className="overflow-x-auto">
-            <table className="table">
+            <table className="table text-sm">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>التاريخ</th>
-                  <th>الطالب</th>
-                  <th>الكورس</th>
-                  <th>المبلغ</th>
-                  <th>الحالة</th>
-                  <th>ملاحظات</th>
-                  <th>الإجراءات</th>
+                  <th className="text-center text-xs py-2 px-2">#</th>
+                  <th className="text-center text-xs py-2 px-2">اسم الطالب</th>
+                  <th className="text-center text-xs py-2 px-2">رقم الهاتف</th>
+                  <th className="text-center text-xs py-2 px-2">الباقة</th>
+                  <th className="text-center text-xs py-2 px-2">تاريخ الدفع</th>
+                  <th className="text-center text-xs py-2 px-2">المبلغ المدفوع</th>
+                  <th className="text-center text-xs py-2 px-2">المتبقي</th>
+                  <th className="text-center text-xs py-2 px-2">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment) => (
-                  <tr key={payment.id}>
-                    <td className="font-semibold">{payment.id}</td>
-                    <td>
-                      {formatDateSimple(payment.date)}
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-accent-400 flex items-center justify-center">
-                          <span className="text-white text-sm font-bold">
-                            {payment.student?.name?.charAt(0).toUpperCase()}
+                {payments.map((payment) => {
+                  const paymentStatus = getPaymentStatus(payment);
+                  return (
+                    <tr key={payment.id}>
+                      <td className="font-semibold text-center text-xs py-2 px-2">{payment.id}</td>
+                      <td className="text-center text-xs py-2 px-2">
+                        <span className="font-semibold text-xs">{payment.student?.name || '-'}</span>
+                      </td>
+                      <td className="text-center text-xs py-2 px-2">
+                        <span className="text-[var(--color-text-primary)]">
+                          {payment.student?.phone || '-'}
+                        </span>
+                      </td>
+                      <td className="text-center text-xs py-2 px-2">
+                        <span className="font-medium text-[var(--color-text-primary)]">
+                          {payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}
+                        </span>
+                      </td>
+                      <td className="text-center text-xs py-2 px-2">
+                        {formatDateSimple(payment.payment_date || payment.date)}
+                      </td>
+                      <td className="font-bold text-emerald-600 dark:text-emerald-400 text-center text-xs py-2 px-2">
+                        {formatCurrency(payment.amount)}
+                      </td>
+                      <td className="text-center text-xs py-2 px-2">
+                        {paymentStatus.amount > 0 ? (
+                          <span className="text-amber-600 dark:text-amber-400 font-medium text-xs">
+                            {formatCurrency(paymentStatus.amount)}
                           </span>
-                        </div>
-                        <span className="font-semibold">{payment.student?.name}</span>
-                      </div>
-                    </td>
-                    <td>{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</td>
-                    <td className="font-bold text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(payment.amount)}
-                    </td>
-                    <td>
-                      <span className={`badge ${getStatusBadge(payment.status)}`}>
-                        {getStatusLabel(payment.status)}
-                      </span>
-                    </td>
-                    <td className="text-[var(--color-text-muted)] max-w-xs truncate">
-                      {payment.notes || '-'}
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => openModal(payment)}
-                        className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
-                        title="تعديل"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                        ) : (
+                          <span className={`badge ${paymentStatus.badge} text-xs`}>
+                            {paymentStatus.label}
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-center text-xs py-2 px-2">
+                        <button
+                          onClick={() => openModal(payment)}
+                          className="p-1.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
+                          title="تعديل"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -278,17 +347,17 @@ const Payments = () => {
             </div>
 
             <div>
-              <label className="label">الكورس *</label>
+              <label className="label">الباقة *</label>
               <select
-                value={formData.course_id}
-                onChange={(e) => setFormData({ ...formData, course_id: e.target.value })}
+                value={formData.course_package_id}
+                onChange={(e) => handlePackageChange(e.target.value)}
                 className="select"
                 required
               >
-                <option value="">اختر الكورس</option>
-                {getStudentCourses().map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.course_package?.name || course.coursePackage?.name || `كورس #${course.id}`}
+                <option value="">اختر الباقة</option>
+                {packages.map((pkg) => (
+                  <option key={pkg.id} value={pkg.id}>
+                    {pkg.name} {pkg.price > 0 ? `(${pkg.price} د.ع)` : ''}
                   </option>
                 ))}
               </select>
@@ -297,11 +366,11 @@ const Payments = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">المبلغ (د.ع) *</label>
+              <label className="label">المبلغ المدفوع (د.ع) *</label>
               <input
                 type="number"
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                onChange={(e) => handleAmountChange(e.target.value)}
                 className="input"
                 placeholder="0"
                 min="0"
@@ -311,16 +380,15 @@ const Payments = () => {
             </div>
 
             <div>
-              <label className="label">الحالة *</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="select"
-                required
-              >
-                <option value="completed">مكتمل</option>
-                <option value="pending">معلق</option>
-              </select>
+              <label className="label">المتبقي (د.ع)</label>
+              <input
+                type="number"
+                value={formData.remaining_amount}
+                className="input bg-[var(--color-bg-secondary)] cursor-not-allowed"
+                placeholder="0.00"
+                readOnly
+                disabled
+              />
             </div>
           </div>
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Payment;
 use App\Models\Course;
 use App\Models\Student;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 
 class PaymentController extends Controller
@@ -14,7 +15,7 @@ class PaymentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Payment::with(['course.trainer.user', 'student']);
+        $query = Payment::with(['course.trainer.user', 'course.coursePackage', 'student']);
 
         // Filter by status
         if ($request->has('status')) {
@@ -33,10 +34,10 @@ class PaymentController extends Controller
 
         // Filter by date range
         if ($request->has('from_date')) {
-            $query->whereDate('date', '>=', $request->from_date);
+            $query->whereDate('payment_date', '>=', $request->from_date);
         }
         if ($request->has('to_date')) {
-            $query->whereDate('date', '<=', $request->to_date);
+            $query->whereDate('payment_date', '<=', $request->to_date);
         }
 
         // Search
@@ -47,7 +48,7 @@ class PaymentController extends Controller
             });
         }
 
-        $payments = $query->latest('date')->paginate(15);
+        $payments = $query->latest('payment_date')->paginate(15);
 
         return response()->json($payments);
     }
@@ -92,12 +93,60 @@ class PaymentController extends Controller
     {
         $request->validate([
             'amount' => 'sometimes|required|numeric|min:0',
-            'status' => 'sometimes|required|in:paid,partial,unpaid',
+            'status' => 'sometimes|required|in:completed,pending,refunded,cancelled',
+            'payment_date' => 'sometimes|required|date',
             'date' => 'sometimes|required|date',
             'notes' => 'nullable|string',
+            'course_package_id' => 'sometimes|exists:course_packages,id',
         ]);
 
-        $payment->update($request->only(['amount', 'status', 'date', 'notes']));
+        // Save old data for logging
+        $oldData = $payment->only(['amount', 'status', 'payment_date', 'date', 'notes']);
+        
+        // Prepare update data
+        $updateData = $request->only(['amount', 'status', 'notes']);
+        
+        // Handle date field (payment_date or date)
+        if ($request->has('payment_date')) {
+            $updateData['payment_date'] = $request->payment_date;
+        } elseif ($request->has('date')) {
+            $updateData['payment_date'] = $request->date;
+        }
+
+        $payment->update($updateData);
+
+        // Log the modification in ActivityLog
+        try {
+            $changes = [];
+            if (isset($updateData['amount']) && $oldData['amount'] != $updateData['amount']) {
+                $changes['amount'] = ['old' => $oldData['amount'], 'new' => $updateData['amount']];
+            }
+            if (isset($updateData['status']) && $oldData['status'] != $updateData['status']) {
+                $changes['status'] = ['old' => $oldData['status'], 'new' => $updateData['status']];
+            }
+            if (isset($updateData['payment_date']) && $oldData['payment_date'] != $updateData['payment_date']) {
+                $changes['payment_date'] = ['old' => $oldData['payment_date'], 'new' => $updateData['payment_date']];
+            }
+            if (isset($updateData['notes']) && $oldData['notes'] != $updateData['notes']) {
+                $changes['notes'] = ['old' => $oldData['notes'] ?? '', 'new' => $updateData['notes'] ?? ''];
+            }
+
+            if (!empty($changes)) {
+                ActivityLog::create([
+                    'user_id' => auth()->id(),
+                    'action' => 'payment_updated',
+                    'model_type' => 'Payment',
+                    'model_id' => $payment->id,
+                    'old_values' => array_map(fn($c) => $c['old'], $changes),
+                    'new_values' => array_map(fn($c) => $c['new'], $changes),
+                    'description' => "تم تعديل الدفعة رقم {$payment->id} للطالب " . ($payment->student->name ?? 'غير معروف'),
+                    'ip_address' => $request->ip(),
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the request
+            \Log::warning('Failed to log payment update: ' . $e->getMessage());
+        }
 
         $payment->load(['course', 'student']);
 

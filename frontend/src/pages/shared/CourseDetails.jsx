@@ -426,19 +426,29 @@ const CourseDetails = () => {
   };
 
   /**
-   * Handle trainer payment status change - saves automatically
+   * Handle trainer payment status change for a specific lecture - adds to editedLectures
    */
-  const handleTrainerPaymentChange = async (value) => {
-    try {
-      setSaving(true);
-      await api.put(`/courses/${id}`, { trainer_payment_status: value });
-      setCourse(prev => ({ ...prev, trainer_payment_status: value }));
-    } catch (error) {
-      console.error('Error updating trainer payment status:', error);
-      alert('حدث خطأ أثناء تحديث حالة دفع المدرب');
-    } finally {
-      setSaving(false);
-    }
+  const handleTrainerPaymentChange = (lectureId, value) => {
+    // Find the lecture to get its data
+    const lecture = lectures.find(l => l.id === lectureId);
+    if (!lecture) return;
+    
+    // Add to editedLectures instead of saving immediately
+    setEditedLectures(prev => ({
+      ...prev,
+      [lectureId]: {
+        ...prev[lectureId],
+        id: lectureId, // Ensure id is included
+        trainer_payment_status: value
+      }
+    }));
+    
+    // Update the lecture in the lectures array for immediate UI feedback
+    setLectures(prev => prev.map(lecture => 
+      lecture.id === lectureId 
+        ? { ...lecture, trainer_payment_status: value }
+        : lecture
+    ));
   };
 
   /**
@@ -589,18 +599,24 @@ const CourseDetails = () => {
     setSaving(true);
     try {
       // Prepare lectures data - ensure each lecture has an id
-      const lecturesData = Object.values(editedLectures).map(lecture => {
+      const lecturesData = Object.entries(editedLectures).map(([lectureId, lecture]) => {
+        // Ensure the lecture has an id
+        const lectureWithId = {
+          ...lecture,
+          id: lecture.id || parseInt(lectureId)
+        };
+        
         // For dual courses, handle student_attendance separately
         if (lecture.student_attendance) {
           // This is a dual course lecture with student-specific data
           // We need to send the main lecture data plus student attendance
-          const { student_attendance, ...mainData } = lecture;
+          const { student_attendance, ...mainData } = lectureWithId;
           return {
             ...mainData,
             student_attendance: student_attendance
           };
         }
-        return lecture;
+        return lectureWithId;
       }).filter(lecture => lecture.id); // Only include lectures with valid IDs
       
       if (lecturesData.length === 0) {
@@ -1232,7 +1248,7 @@ const CourseDetails = () => {
                       </div>
                     </td>
                     <td>
-                      {(isCustomerService || isTrainer) && isSelected ? (
+                      {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
                         <input
                           type="date"
                           value={editingLectureDateTime.date}
@@ -1241,7 +1257,7 @@ const CourseDetails = () => {
                           className="input py-1 px-2 text-sm w-32"
                           dir="ltr"
                         />
-                      ) : (isCustomerService || isTrainer) ? (
+                      ) : (isCustomerService || isTrainer) && !isAccounting ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1273,7 +1289,7 @@ const CourseDetails = () => {
                       )}
                     </td>
                     <td className="text-center" dir="ltr">
-                      {(isCustomerService || isTrainer) && isSelected ? (
+                      {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
                         <div className="flex items-center gap-2">
                           <input
                             type="time"
@@ -1305,7 +1321,7 @@ const CourseDetails = () => {
                             <X className="w-4 h-4" />
                           </button>
                         </div>
-                      ) : (isCustomerService || isTrainer) ? (
+                      ) : (isCustomerService || isTrainer) && !isAccounting ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1347,7 +1363,7 @@ const CourseDetails = () => {
                               <AlertCircle className="w-4 h-4" />
                             </button>
                           )}
-                          {!isLocked && (
+                          {!isLocked && !isAccounting && (
                             <button
                               onClick={() => handleCancelPostponement(lecture.id)}
                               className="text-xs text-red-500 hover:text-red-700"
@@ -1358,7 +1374,7 @@ const CourseDetails = () => {
                             </button>
                           )}
                         </div>
-                      ) : isLocked ? (
+                      ) : isLocked || isAccounting ? (
                         <span className={`badge ${getAttendanceBadge(currentAttendance)}`}>
                           {getAttendanceLabel(currentAttendance)}
                         </span>
@@ -1379,7 +1395,7 @@ const CourseDetails = () => {
                       )}
                     </td>
                     <td>
-                      {isLocked ? (
+                      {isLocked || isAccounting ? (
                         <span className="text-xs text-gray-500">{getActivityLabel(currentActivity)}</span>
                       ) : (
                         <select
@@ -1396,7 +1412,7 @@ const CourseDetails = () => {
                       )}
                     </td>
                     <td>
-                      {isLocked ? (
+                      {isLocked || isAccounting ? (
                         <span className="text-xs text-gray-500">{getHomeworkLabel(currentHomework)}</span>
                       ) : (
                         <select
@@ -1413,12 +1429,12 @@ const CourseDetails = () => {
                       )}
                     </td>
                     <td>
-                      {isCustomerService && !isLocked ? (
+                      {(isCustomerService || isAccounting) ? (
                         <select
-                          value={course.trainer_payment_status || 'unpaid'}
-                          onChange={(e) => handleTrainerPaymentChange(e.target.value)}
+                          value={lecture.trainer_payment_status || 'unpaid'}
+                          onChange={(e) => handleTrainerPaymentChange(lecture.id, e.target.value)}
                           className={`select text-xs py-1 px-1.5 w-20 ${
-                            course.trainer_payment_status === 'paid' 
+                            lecture.trainer_payment_status === 'paid' 
                               ? 'text-green-600 bg-green-50 dark:bg-green-900/20' 
                               : 'text-red-500 bg-red-50 dark:bg-red-900/20'
                           }`}
@@ -1427,13 +1443,28 @@ const CourseDetails = () => {
                           <option value="paid">مدفوع</option>
                         </select>
                       ) : (
-                        <span className={`text-xs ${course.trainer_payment_status === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
-                          {course.trainer_payment_status === 'paid' ? 'مدفوع' : 'غير مدفوع'}
+                        <span className={`text-xs ${lecture.trainer_payment_status === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
+                          {lecture.trainer_payment_status === 'paid' ? 'مدفوع' : 'غير مدفوع'}
                         </span>
                       )}
                     </td>
                     <td className="text-center">
                       {isLocked ? (
+                        <span className="text-sm text-gray-500">
+                          {(rawEdited.notes ?? lecture.notes) ? (
+                            <button
+                              onClick={() => setReasonPopup({ 
+                                open: true, 
+                                reason: rawEdited.notes ?? lecture.notes 
+                              })}
+                              className="text-blue-500 hover:text-blue-600"
+                              title="عرض الملاحظة"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                            </button>
+                          ) : '-'}
+                        </span>
+                      ) : isAccounting ? (
                         <span className="text-sm text-gray-500">
                           {(rawEdited.notes ?? lecture.notes) ? (
                             <button

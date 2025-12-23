@@ -4,7 +4,7 @@ import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { formatTime12Hour } from '../../utils/timeFormat';
 import { formatDate } from '../../utils/dateFormat';
-import { ArrowRight, BookOpen, Calendar, Users, User, UserPlus } from 'lucide-react';
+import { ArrowRight, BookOpen, Calendar, Users, User, UserPlus, CreditCard } from 'lucide-react';
 
 const CreateCourse = () => {
   const navigate = useNavigate();
@@ -23,6 +23,9 @@ const CreateCourse = () => {
     start_date: '',
     lecture_time: '',
     lecture_days: [],
+    renewed_with_trainer: false,
+    paid_amount: '',
+    remaining_amount: '',
   });
 
   const daysOfWeek = [
@@ -71,10 +74,28 @@ const CreateCourse = () => {
     const selectedPackage = packages.find((p) => p.id.toString() === packageId);
     // يتم ملء عدد المحاضرات تلقائياً من الباقة المختارة
     const lecturesCount = selectedPackage ? selectedPackage.lectures_count.toString() : '';
+    const packagePrice = selectedPackage ? (selectedPackage.price || 0) : 0;
+    const paidAmount = parseFloat(formData.paid_amount) || 0;
+    const remainingAmount = packagePrice - paidAmount;
+    
     setFormData({
       ...formData,
       course_package_id: packageId,
       lectures_count: lecturesCount,
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+    });
+  };
+
+  const handlePaidAmountChange = (value) => {
+    const paidAmount = parseFloat(value) || 0;
+    const selectedPackage = packages.find((p) => p.id.toString() === formData.course_package_id);
+    const packagePrice = selectedPackage ? (selectedPackage.price || 0) : 0;
+    const remainingAmount = packagePrice - paidAmount;
+    
+    setFormData({
+      ...formData,
+      paid_amount: value,
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
     });
   };
 
@@ -123,6 +144,9 @@ const CreateCourse = () => {
         lecture_days: lectureDays,
         is_dual: isDual,
         student_ids: studentIds,
+        renewed_with_trainer: formData.renewed_with_trainer,
+        paid_amount: formData.paid_amount ? parseFloat(formData.paid_amount) : 0,
+        remaining_amount: formData.remaining_amount ? parseFloat(formData.remaining_amount) : 0,
       };
 
       console.log('Sending course data:', data);
@@ -287,6 +311,25 @@ const CreateCourse = () => {
                 ))}
               </select>
             </div>
+
+            {/* Renewal Checkbox */}
+            <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+              <input
+                type="checkbox"
+                id="renewed_with_trainer"
+                checked={formData.renewed_with_trainer}
+                onChange={(e) => setFormData({ ...formData, renewed_with_trainer: e.target.checked })}
+                className="w-5 h-5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+              />
+              <label htmlFor="renewed_with_trainer" className="flex-1 cursor-pointer">
+                <span className="font-semibold text-[var(--color-text-primary)] block">
+                  تجديد مع نفس المدرب
+                </span>
+                <span className="text-sm text-[var(--color-text-muted)]">
+                  حدد هذا الخيار إذا كان الطالب يجدد اشتراكه مع نفس المدرب (يؤهل للمكافأة)
+                </span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -319,15 +362,57 @@ const CreateCourse = () => {
                 <label className="label">عدد المحاضرات</label>
                 <input
                   type="number"
+                  min="1"
                   value={formData.lectures_count}
-                  className="input bg-[var(--color-bg-secondary)] cursor-not-allowed"
+                  onChange={(e) => setFormData({ ...formData, lectures_count: e.target.value })}
+                  className="input"
                   placeholder="يتم تحديده من الباقة"
+                />
+                {formData.course_package_id && (
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                    عدد المحاضرات الافتراضي من الباقة المختارة (يمكن تعديله)
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Information */}
+        <div className="card p-6">
+          <h2 className="text-lg font-bold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-primary-500" />
+            معلومات الدفع
+          </h2>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">المبلغ المدفوع (د.ع)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.paid_amount}
+                  onChange={(e) => handlePaidAmountChange(e.target.value)}
+                  className="input"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="label">المبلغ المتبقي (د.ع)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.remaining_amount}
+                  className="input bg-[var(--color-bg-secondary)] cursor-not-allowed"
+                  placeholder="0.00"
                   readOnly
                   disabled
                 />
                 {formData.course_package_id && (
                   <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                    عدد المحاضرات محدد تلقائياً من الباقة المختارة
+                    يتم حساب المتبقي تلقائياً من سعر الباقة
                   </p>
                 )}
               </div>

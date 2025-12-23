@@ -98,7 +98,8 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!user;
   const isCustomerService = user?.role === 'customer_service';
   const isTrainer = user?.role === 'trainer';
-  const isAccounting = user?.role === 'accounting';
+  const isFinance = user?.role === 'finance';
+  const isAccounting = user?.role === 'accounting' || user?.role === 'finance';
 
   return (
     <AuthContext.Provider value={{
@@ -107,6 +108,7 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated,
       isCustomerService,
       isTrainer,
+      isFinance,
       isAccounting,
       login,
       devLogin,
