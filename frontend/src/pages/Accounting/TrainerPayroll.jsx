@@ -50,17 +50,14 @@ const TrainerPayroll = () => {
     paymentMethod: '',
     accountNumber: '',
   });
-  const [copiedAccount, setCopiedAccount] = useState(null);
-  const [bonusSelectionModal, setBonusSelectionModal] = useState({
+  const [paymentStatusModal, setPaymentStatusModal] = useState({
     open: false,
     trainerId: null,
     trainerName: '',
-    includeRenewalBonus: false,
-    includeCompetitionBonus: false,
-    selectedVolumeBonus: null, // null, 'volume_60', or 'volume_80'
-    renewalTotal: 0,
-    competitionBonus: 0,
+    currentStatus: 'draft',
+    newStatus: 'paid',
   });
+  const [copiedAccount, setCopiedAccount] = useState(null);
 
   const months = [
     { value: 1, label: 'يناير' },
@@ -183,8 +180,6 @@ const TrainerPayroll = () => {
     try {
       await api.put('/trainer-payroll/payment-method', {
         trainer_id: paymentModal.trainerId,
-        month: selectedMonth,
-        year: selectedYear,
         payment_method: paymentModal.paymentMethod,
         payment_account_number: paymentModal.accountNumber,
       });
@@ -197,73 +192,52 @@ const TrainerPayroll = () => {
     }
   };
 
-  // حساب مجموع المكافآت المختارة
-  const calculateTotalBonus = (payroll) => {
-    let total = 0;
-    
-    // مكافأة التجديد: إذا كانت مختارة، أضف 5000 (أو القيمة المحسوبة إذا كانت أكبر)
-    if (payroll.include_renewal_bonus === true) {
-      total += (payroll.renewal_total > 0) ? payroll.renewal_total : 5000;
-    }
-    
-    // مكافأة المنافسة: إذا كانت مختارة، أضف 20000 (أو القيمة المحسوبة إذا كانت أكبر)
-    if (payroll.include_competition_bonus === true) {
-      total += (payroll.competition_bonus > 0) ? payroll.competition_bonus : 20000;
-    }
-    
-    // مكافأة الكمية: إذا كانت مختارة، أضف القيمة (30000 أو 80000)
-    if (payroll.selected_volume_bonus) {
-      const volumeAmount = Number(payroll.selected_volume_bonus);
-      if (volumeAmount > 0) {
-        total += volumeAmount;
-      }
-    }
-    
-    return total;
+  const handleMarkAsPaid = async (trainerId, trainerName, currentStatus) => {
+    const isPaid = currentStatus !== 'paid';
+    setPaymentStatusModal({
+      open: true,
+      trainerId: trainerId,
+      trainerName: trainerName,
+      currentStatus: currentStatus || 'draft',
+      newStatus: isPaid ? 'paid' : 'draft',
+    });
   };
 
-  const handleSaveBonusSelection = async () => {
+  const confirmPaymentStatusChange = async () => {
     try {
-      // تحديد قيمة مكافأة الكمية
-      let volumeBonusValue = null;
-      if (bonusSelectionModal.selectedVolumeBonus === 'volume_60') {
-        volumeBonusValue = 30000;
-      } else if (bonusSelectionModal.selectedVolumeBonus === 'volume_80') {
-        volumeBonusValue = 80000;
+      const { trainerId, newStatus } = paymentStatusModal;
+      
+      if (newStatus === 'paid') {
+        // Mark as paid
+        await api.post('/trainer-payroll/mark-paid', {
+          trainer_id: trainerId,
+          month: selectedMonth,
+          year: selectedYear,
+        });
+      } else {
+        // Mark as unpaid
+        await api.put('/trainer-payroll/mark-unpaid', {
+          trainer_id: trainerId,
+          month: selectedMonth,
+          year: selectedYear,
+        });
       }
       
-      const payload = {
-        trainer_id: bonusSelectionModal.trainerId,
-        month: selectedMonth,
-        year: selectedYear,
-        include_renewal_bonus: bonusSelectionModal.includeRenewalBonus,
-        include_competition_bonus: bonusSelectionModal.includeCompetitionBonus,
-        selected_volume_bonus: volumeBonusValue,
-      };
-      
-      console.log('حفظ المكافآت:', payload);
-      
-      await api.put('/trainer-payroll/bonus-selection', payload);
-      
-      // إغلاق Modal
-      setBonusSelectionModal({ 
-        open: false, 
-        trainerId: null, 
-        trainerName: '', 
-        includeRenewalBonus: false,
-        includeCompetitionBonus: false,
-        selectedVolumeBonus: null,
-        renewalTotal: 0,
-        competitionBonus: 0,
+      // Close modal and refresh data
+      setPaymentStatusModal({
+        open: false,
+        trainerId: null,
+        trainerName: '',
+        currentStatus: 'draft',
+        newStatus: 'paid',
       });
-      
-      // إعادة تحميل البيانات
       fetchPayrollData();
     } catch (error) {
-      console.error('خطأ في حفظ المكافآت:', error);
-      alert(error.response?.data?.message || 'حدث خطأ أثناء الحفظ');
+      console.error('خطأ في تحديث حالة الدفع:', error);
+      alert(`حدث خطأ أثناء تحديث حالة الدفع: ${error.response?.data?.message || error.message}`);
     }
   };
+
 
   const handleCopyAccountNumber = async (accountNumber, trainerId) => {
     try {
@@ -731,15 +705,15 @@ const TrainerPayroll = () => {
                 >
                   <div className="absolute -top-3 -right-3">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-lg ${
+                      className={`w-10 h-10 rounded-full flex items-start justify-start text-white font-bold shadow-lg p-1.5 ${
                         index === 0
-                          ? 'bg-gradient-to-br from-yellow-400 to-amber-500'
+                          ? 'bg-gradient-to-br from-yellow-500 to-yellow-600'
                           : index === 1
-                          ? 'bg-gradient-to-br from-slate-400 to-slate-500'
+                          ? 'bg-gradient-to-br from-blue-500 to-blue-600'
                           : 'bg-gradient-to-br from-orange-400 to-orange-500'
                       }`}
                     >
-                      {winner.rank}
+                      <span className="text-xs leading-none">{winner.rank}</span>
                     </div>
                   </div>
                   <div className="pt-2">
@@ -784,9 +758,10 @@ const TrainerPayroll = () => {
                   <th className="text-xs py-2 px-2 text-center">الراتب الأساسي</th>
                   <th className="text-xs py-2 px-2 text-center">طريقة التحويل</th>
                   <th className="text-xs py-2 px-2 text-center">التجديدات</th>
-                  <th className="text-xs py-2 px-2 text-center">مكافأة</th>
+                  <th className="text-xs py-2 px-2 text-center">المكافآت</th>
                   <th className="text-xs py-2 px-2 text-center">بونص/خصم</th>
                   <th className="text-xs py-2 px-2 text-center">الإجمالي</th>
+                  <th className="text-xs py-2 px-2 text-center">حالة الدفع</th>
                 </tr>
               </thead>
               <tbody>
@@ -802,10 +777,9 @@ const TrainerPayroll = () => {
                         isWinner ? 'bg-amber-50 dark:bg-amber-900/10' : ''
                       }`}
                       onClick={(e) => {
-                        // Don't expand if clicking on bonus/deduction, payment method, or bonus buttons
+                        // Don't expand if clicking on bonus/deduction or payment method
                         if (!e.target.closest('.bonus-deduction-cell') && 
-                            !e.target.closest('.payment-method-cell') && 
-                            !e.target.closest('.bonus-cell')) {
+                            !e.target.closest('.payment-method-cell')) {
                           setExpandedTrainer(
                             expandedTrainer === payroll.trainer_id ? null : payroll.trainer_id
                           );
@@ -932,44 +906,42 @@ const TrainerPayroll = () => {
                       <td className="py-2 px-2 text-center">
                         <span className="badge badge-purple text-[10px] px-1.5 py-0.5">{payroll.renewals_count} تجديد</span>
                       </td>
-                      <td className="py-2 px-2 bonus-cell text-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // تحديد المكافآت المختارة حالياً
-                            let includeRenewal = payroll.include_renewal_bonus === true;
-                            let includeCompetition = payroll.include_competition_bonus === true;
-                            let selectedVolume = null;
-                            
-                            // تحديد مكافأة الكمية
-                            if (payroll.selected_volume_bonus === 80000) {
-                              selectedVolume = 'volume_80';
-                            } else if (payroll.selected_volume_bonus === 30000) {
-                              selectedVolume = 'volume_60';
+                      <td className="py-2 px-2 text-center">
+                        {(() => {
+                          const bonusNames = [];
+                          // مكافأة التجديد: تظهر إذا كان include_renewal_bonus true و renewals_count > 0
+                          if (payroll.include_renewal_bonus && (payroll.renewals_count > 0 || (payroll.renewal_total && payroll.renewal_total > 0))) {
+                            bonusNames.push('التجديد');
+                          }
+                          // مكافأة الكمية: تظهر إذا كان include_volume_bonus true و volume_bonus > 0
+                          if (payroll.include_volume_bonus && payroll.volume_bonus > 0) {
+                            if (payroll.volume_bonus >= 80000) {
+                              bonusNames.push('الكمية (80+)');
+                            } else if (payroll.volume_bonus >= 30000) {
+                              bonusNames.push('الكمية (60+)');
                             }
-                            
-                            setBonusSelectionModal({
-                              open: true,
-                              trainerId: payroll.trainer_id,
-                              trainerName: payroll.trainer_name,
-                              includeRenewalBonus: includeRenewal,
-                              includeCompetitionBonus: includeCompetition,
-                              selectedVolumeBonus: selectedVolume,
-                              renewalTotal: payroll.renewal_total || 0,
-                              competitionBonus: payroll.competition_bonus || 0,
-                            });
-                          }}
-                          className={`px-2 py-1 rounded-md font-medium text-[10px] transition-all hover:scale-105 ${
-                            calculateTotalBonus(payroll) > 0
-                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                          }`}
-                        >
-                          {(() => {
-                            const bonus = calculateTotalBonus(payroll);
-                            return bonus > 0 ? `+${formatCurrency(bonus)}` : 'إضافة';
-                          })()}
-                        </button>
+                          }
+                          // مكافأة المنافسة: تظهر إذا كان include_competition_bonus true و competition_bonus > 0
+                          if (payroll.include_competition_bonus && payroll.competition_bonus > 0) {
+                            bonusNames.push('المنافسة');
+                          }
+                          
+                          if (bonusNames.length > 0) {
+                            return (
+                              <div className="flex flex-wrap gap-1.5 items-center justify-center px-2 py-1">
+                                {bonusNames.map((name, idx) => (
+                                  <span 
+                                    key={idx} 
+                                    className="text-[10px] font-medium text-yellow-600 dark:text-yellow-400 border border-yellow-400 dark:border-yellow-500 rounded-md px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30"
+                                  >
+                                    {name}
+                                  </span>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return <span className="text-[var(--color-text-muted)] text-[10px]">-</span>;
+                        })()}
                       </td>
                       <td className="bonus-deduction-cell py-2 px-2 text-center">
                         <div className="flex items-center justify-center gap-1.5">
@@ -1031,6 +1003,43 @@ const TrainerPayroll = () => {
                           {formatCurrency(payroll.total_pay)}
                         </span>
                       </td>
+                      <td className="py-2 px-2 text-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkAsPaid(payroll.trainer_id, payroll.trainer_name, payroll.status || 'draft');
+                          }}
+                          className={`px-3 py-1.5 rounded-md font-medium text-[10px] transition-all hover:scale-105 flex items-center gap-1.5 ${
+                            (payroll.status || 'draft') === 'paid'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
+                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                          }`}
+                          title={(payroll.status || 'draft') === 'paid' ? 'تم الدفع' : 'لم يتم الدفع'}
+                        >
+                          {(payroll.status || 'draft') === 'paid' ? (
+                            <>
+                              <Check className="w-3.5 h-3.5" />
+                              <span>تم الدفع</span>
+                            </>
+                          ) : (
+                            <>
+                              <X className="w-3.5 h-3.5" />
+                              <span>لم يدفع</span>
+                            </>
+                          )}
+                        </button>
+                        {payroll.paid_at && (
+                          <p className="text-[9px] text-[var(--color-text-muted)] mt-1">
+                            {new Date(payroll.paid_at).toLocaleDateString('ar-IQ', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -1045,15 +1054,14 @@ const TrainerPayroll = () => {
                   </td>
                   <td className="py-2 px-2"></td>
                   <td className="py-2 px-2"></td>
-                  <td className="font-bold text-purple-600 dark:text-purple-400 py-2 px-2 text-xs">
-                    {formatCurrency(payrolls.reduce((sum, p) => sum + calculateTotalBonus(p), 0))}
-                  </td>
+                  <td className="py-2 px-2"></td>
                   <td className="font-bold py-2 px-2 text-xs">
                     {formatCurrency(payrolls.reduce((sum, p) => sum + (p.bonus_deduction || 0), 0))}
                   </td>
                   <td className="font-bold text-base text-emerald-600 dark:text-emerald-400 py-2 px-2">
                     {formatCurrency(payrolls.reduce((sum, p) => sum + (p.total_pay || 0), 0))}
                   </td>
+                  <td className="py-2 px-2"></td>
                 </tr>
               </tfoot>
             </table>
@@ -1245,24 +1253,21 @@ const TrainerPayroll = () => {
         </div>
       )}
 
-      {/* Bonus Selection Modal */}
-      {bonusSelectionModal.open && (
+      {/* Payment Status Confirmation Modal */}
+      {paymentStatusModal.open && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
-                اختيار المكافأة - {bonusSelectionModal.trainerName}
+                تأكيد تغيير حالة الدفع
               </h3>
               <button
-                onClick={() => setBonusSelectionModal({ 
-                  open: false, 
-                  trainerId: null, 
-                  trainerName: '', 
-                  includeRenewalBonus: false,
-                  includeCompetitionBonus: false,
-                  selectedVolumeBonus: null,
-                  renewalTotal: 0,
-                  competitionBonus: 0,
+                onClick={() => setPaymentStatusModal({
+                  open: false,
+                  trainerId: null,
+                  trainerName: '',
+                  currentStatus: 'draft',
+                  newStatus: 'paid',
                 })}
                 className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]"
               >
@@ -1270,211 +1275,56 @@ const TrainerPayroll = () => {
               </button>
             </div>
 
-            <div className="space-y-3">
-              <p className="text-sm text-[var(--color-text-muted)] mb-4">
-                يمكنك اختيار أكثر من مكافأة (التجديد والمنافسة)، لكن مكافأة الكمية يجب أن تكون واحدة فقط:
-              </p>
-
-              {/* Renewal Bonus - Checkbox */}
-              <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] transition-colors">
-                <input
-                  type="checkbox"
-                  checked={bonusSelectionModal.includeRenewalBonus}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    setBonusSelectionModal({ 
-                      ...bonusSelectionModal, 
-                      includeRenewalBonus: e.target.checked
-                    });
-                  }}
-                  className="w-5 h-5 rounded text-amber-600 focus:ring-amber-500"
-                />
-                <div className="flex-1 flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-[var(--color-text-primary)] text-sm block">
-                      مكافأة التجديد
-                    </span>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                      5,000 د.ع لكل تجديد
-                      {bonusSelectionModal.renewalTotal > 0 && (
-                        <span className="block mt-0.5">
-                          ({Math.round(bonusSelectionModal.renewalTotal / 5000)} تجديد × 5,000 = {formatCurrency(bonusSelectionModal.renewalTotal)})
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <span className="text-amber-600 dark:text-amber-400 font-bold text-sm">
-                    {formatCurrency(bonusSelectionModal.renewalTotal > 0 ? bonusSelectionModal.renewalTotal : 5000)}
-                  </span>
-                </div>
-              </label>
-
-              {/* Competition Bonus - Checkbox */}
-              <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] transition-colors">
-                <input
-                  type="checkbox"
-                  checked={bonusSelectionModal.includeCompetitionBonus}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    setBonusSelectionModal({ 
-                      ...bonusSelectionModal, 
-                      includeCompetitionBonus: e.target.checked
-                    });
-                  }}
-                  className="w-5 h-5 rounded text-yellow-600 focus:ring-yellow-500"
-                />
-                <div className="flex-1 flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-[var(--color-text-primary)] text-sm block">
-                      مكافأة المنافسة
-                    </span>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                      20,000 د.ع لأفضل 3 مدربين
-                      {bonusSelectionModal.competitionBonus > 0 && (
-                        <span className="block mt-0.5 text-green-600 dark:text-green-400">
-                          (المدرب ضمن أفضل 3)
-                        </span>
-                      )}
-                      {bonusSelectionModal.competitionBonus === 0 && (
-                        <span className="block mt-0.5 text-gray-500">
-                          (المدرب ليس ضمن أفضل 3)
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <span className="text-yellow-600 dark:text-yellow-400 font-bold text-sm">
-                    {formatCurrency(bonusSelectionModal.competitionBonus > 0 ? bonusSelectionModal.competitionBonus : 20000)}
-                  </span>
-                </div>
-              </label>
-
-              {/* Volume Bonus Section */}
-              <div className="p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
-                <p className="text-xs text-[var(--color-text-muted)] mb-3 font-semibold">
-                  مكافأة الكمية (اختر واحدة فقط):
-                </p>
-                <div className="space-y-2">
-                  {/* No Volume Bonus */}
-                  <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] transition-colors">
-                    <input
-                      type="radio"
-                      name="volume_bonus"
-                      checked={bonusSelectionModal.selectedVolumeBonus === null}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setBonusSelectionModal({ 
-                          ...bonusSelectionModal, 
-                          selectedVolumeBonus: null
-                        });
-                      }}
-                      className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                    />
-                    <span className="text-sm text-[var(--color-text-primary)]">لا يوجد</span>
-                  </label>
-                  
-                  {/* Volume Bonus 60+ */}
-                  <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] transition-colors">
-                    <input
-                      type="radio"
-                      name="volume_bonus"
-                      checked={bonusSelectionModal.selectedVolumeBonus === 'volume_60'}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setBonusSelectionModal({ 
-                          ...bonusSelectionModal, 
-                          selectedVolumeBonus: 'volume_60'
-                        });
-                      }}
-                      className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                    />
-                    <div className="flex-1 flex items-center justify-between">
-                      <span className="text-sm text-[var(--color-text-primary)]">60+ محاضرة</span>
-                      <span className="text-purple-600 dark:text-purple-400 font-bold text-sm">
-                        30,000 د.ع
-                      </span>
-                    </div>
-                  </label>
-                  
-                  {/* Volume Bonus 80+ */}
-                  <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] transition-colors">
-                    <input
-                      type="radio"
-                      name="volume_bonus"
-                      checked={bonusSelectionModal.selectedVolumeBonus === 'volume_80'}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setBonusSelectionModal({ 
-                          ...bonusSelectionModal, 
-                          selectedVolumeBonus: 'volume_80'
-                        });
-                      }}
-                      className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                    />
-                    <div className="flex-1 flex items-center justify-between">
-                      <span className="text-sm text-[var(--color-text-primary)]">80+ محاضرة</span>
-                      <span className="text-purple-600 dark:text-purple-400 font-bold text-sm">
-                        80,000 د.ع
-                      </span>
-                    </div>
-                  </label>
-                </div>
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
+                <p className="text-sm text-[var(--color-text-muted)] mb-2">المدرب:</p>
+                <p className="font-bold text-[var(--color-text-primary)]">{paymentStatusModal.trainerName}</p>
               </div>
 
-              {/* Total */}
-              <div className="p-4 rounded-lg bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-2 border-purple-300 dark:border-purple-700 mt-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-lg text-[var(--color-text-primary)]">
-                    المكافأة المختارة:
-                  </span>
-                  <span className="font-bold text-xl text-purple-600 dark:text-purple-400">
-                    {(() => {
-                      let selectedAmount = 0;
-                      
-                      // مكافأة التجديد
-                      if (bonusSelectionModal.includeRenewalBonus) {
-                        selectedAmount += (bonusSelectionModal.renewalTotal > 0) ? bonusSelectionModal.renewalTotal : 5000;
-                      }
-                      
-                      // مكافأة المنافسة
-                      if (bonusSelectionModal.includeCompetitionBonus) {
-                        selectedAmount += (bonusSelectionModal.competitionBonus > 0) ? bonusSelectionModal.competitionBonus : 20000;
-                      }
-                      
-                      // مكافأة الكمية
-                      if (bonusSelectionModal.selectedVolumeBonus === 'volume_60') {
-                        selectedAmount += 30000;
-                      } else if (bonusSelectionModal.selectedVolumeBonus === 'volume_80') {
-                        selectedAmount += 80000;
-                      }
-                      
-                      return formatCurrency(selectedAmount);
-                    })()}
-                  </span>
-                </div>
+              <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
+                <p className="text-sm text-[var(--color-text-muted)] mb-2">الحالة الحالية:</p>
+                <p className="font-bold text-[var(--color-text-primary)]">
+                  {paymentStatusModal.currentStatus === 'paid' ? 'تم الدفع' : 'لم يتم الدفع'}
+                </p>
+              </div>
+
+              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-[var(--color-text-muted)] mb-2">الحالة الجديدة:</p>
+                <p className="font-bold text-blue-600 dark:text-blue-400">
+                  {paymentStatusModal.newStatus === 'paid' ? 'تم الدفع' : 'لم يتم الدفع'}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  سيتم حفظ التغييرات وتسجيلها في سجل التعديلات
+                </p>
               </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[var(--color-border)]">
               <button
-                onClick={() => setBonusSelectionModal({ 
-                  open: false, 
-                  trainerId: null, 
-                  trainerName: '', 
-                  includeRenewalBonus: false,
-                  includeCompetitionBonus: false,
-                  selectedVolumeBonus: null,
-                  renewalTotal: 0,
-                  competitionBonus: 0,
+                onClick={() => setPaymentStatusModal({
+                  open: false,
+                  trainerId: null,
+                  trainerName: '',
+                  currentStatus: 'draft',
+                  newStatus: 'paid',
                 })}
                 className="btn-secondary"
               >
                 إلغاء
               </button>
               <button
-                onClick={handleSaveBonusSelection}
-                className="btn-primary"
+                onClick={confirmPaymentStatusChange}
+                className={`btn-primary ${
+                  paymentStatusModal.newStatus === 'paid'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-gray-600 hover:bg-gray-700'
+                }`}
               >
-                حفظ
+                حفظ التغييرات
               </button>
             </div>
           </div>

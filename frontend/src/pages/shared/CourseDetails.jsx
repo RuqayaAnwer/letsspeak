@@ -769,7 +769,8 @@ const CourseDetails = () => {
       const completedCount = lectures.filter(l => 
         l.is_completed || l.attendance === 'present' || l.attendance === 'absent'
       ).length;
-      const totalCount = lectures.length;
+      // استخدام lectures_count من الكورس إذا كان متوفراً، وإلا استخدام عدد المحاضرات المحملة
+      const totalCount = course?.lectures_count || lectures.length;
       return totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
     }
     
@@ -1024,7 +1025,7 @@ const CourseDetails = () => {
               {lectures.filter((l) => {
                 // Check if lecture is completed based on is_completed flag or attendance
                 return l.is_completed || l.attendance === 'present' || l.attendance === 'absent';
-              }).length} / {lectures.length} مكتمل
+              }).length} / {course?.lectures_count || lectures.length} مكتمل
             </span>
           </div>
           

@@ -15,26 +15,62 @@ const Courses = () => {
     fetchCourses();
   }, []);
 
+  // إعادة تحميل الكورسات عند العودة للصفحة
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchCourses();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/courses');
+      // جلب جميع الكورسات بدون pagination
+      let allCourses = [];
+      let currentPage = 1;
+      let hasMorePages = true;
       
-      if (response?.data) {
-        // Handle paginated response
-        let coursesData = [];
-        if (response.data.data && Array.isArray(response.data.data)) {
-          // Paginated response: { data: [...], current_page, etc. }
-          coursesData = response.data.data;
-        } else if (Array.isArray(response.data)) {
-          // Direct array response
-          coursesData = response.data;
-        }
+      while (hasMorePages) {
+        const response = await api.get('/courses', {
+          params: { page: currentPage, per_page: 100 }
+        });
         
-        setCourses(coursesData);
+        console.log(`Fetching page ${currentPage}:`, response.data);
+        
+        if (response?.data) {
+          let coursesData = [];
+          if (response.data.data && Array.isArray(response.data.data)) {
+            // Paginated response
+            coursesData = response.data.data;
+            const totalPages = response.data.last_page || 1;
+            hasMorePages = currentPage < totalPages;
+            currentPage++;
+          } else if (Array.isArray(response.data)) {
+            // Direct array response
+            coursesData = response.data;
+            hasMorePages = false;
+          }
+          
+          allCourses = [...allCourses, ...coursesData];
+          
+          // إذا لم يكن هناك pagination، توقف
+          if (!response.data.last_page) {
+            hasMorePages = false;
+          }
+        } else {
+          hasMorePages = false;
+        }
       }
+      
+      console.log('All Courses Data:', allCourses);
+      console.log('Total courses:', allCourses.length);
+      
+      setCourses(allCourses);
     } catch (error) {
       console.error('Error fetching courses:', error);
+      console.error('Error response:', error.response?.data);
       setCourses([]);
     } finally {
       setLoading(false);
@@ -101,6 +137,11 @@ const Courses = () => {
   const activeCourses = coursesArray.filter(c => c.status === 'active');
   const pausedCourses = coursesArray.filter(c => c.status === 'paused');
   const finishedCourses = coursesArray.filter(c => c.status === 'finished');
+  // عرض الكورسات بحالات أخرى (paid, cancelled, إلخ)
+  const otherCourses = coursesArray.filter(c => 
+    c.status && 
+    !['active', 'paused', 'finished'].includes(c.status)
+  );
   
   // Get all courses at 75% completion (regardless of status)
   const coursesAt75 = coursesArray.filter(isAt75Percent);
@@ -144,7 +185,7 @@ const Courses = () => {
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="text-[10px] font-medium">{(course.course_package || course.coursePackage)?.name || '-'}</span>
                           <span className="text-[9px] text-gray-500 dark:text-gray-400">
-                            ({(course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
+                            ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
                           </span>
                         </div>
                       ) : (
@@ -210,7 +251,7 @@ const Courses = () => {
         )}
       </div>
 
-      {activeCourses.length === 0 && pausedCourses.length === 0 && finishedCourses.length === 0 && !loading && (
+      {activeCourses.length === 0 && pausedCourses.length === 0 && finishedCourses.length === 0 && otherCourses.length === 0 && !loading && (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-xs bg-white dark:bg-gray-800 rounded-xl shadow-lg">
           لا توجد كورسات
         </div>
@@ -307,6 +348,7 @@ const Courses = () => {
       {renderCourseTable(activeCourses, 'الكورسات النشطة', 'text-green-600 dark:text-green-400')}
       {renderCourseTable(pausedCourses, 'الكورسات المتوقفة', 'text-yellow-600 dark:text-yellow-400')}
       {renderCourseTable(finishedCourses, 'الكورسات المنتهية', 'text-blue-600 dark:text-blue-400')}
+      {renderCourseTable(otherCourses, 'كورسات أخرى', 'text-gray-600 dark:text-gray-400')}
     </div>
   );
 };
