@@ -218,7 +218,10 @@ class FinanceController extends Controller
             $volumeBonusToUse = $volumeBonus;
             
             // Use saved renewal_total and competition_bonus if they exist, otherwise use calculated values
-            $renewalTotalToUse = $existingPayroll && $existingPayroll->renewal_total !== null ? $existingPayroll->renewal_total : $renewalTotal;
+            // إذا كان هناك تجديدات، تأكد من أن renewal_total ليس 0
+            $renewalTotalToUse = $existingPayroll && $existingPayroll->renewal_total !== null && $existingPayroll->renewal_total > 0 
+                ? $existingPayroll->renewal_total 
+                : ($renewalsCount > 0 ? $renewalTotal : 0);
             $competitionBonusToUse = $existingPayroll && $existingPayroll->competition_bonus !== null ? $existingPayroll->competition_bonus : $trainerCompetitionBonus;
             
             // Calculate total pay based on selected bonus type
