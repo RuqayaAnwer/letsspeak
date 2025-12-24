@@ -7,6 +7,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Course;
 use App\Models\Lecture;
 use App\Models\Payment;
@@ -195,20 +196,26 @@ class FinanceController extends Controller
             
             $bonusDeduction = $existingPayroll ? ($existingPayroll->bonus_deduction ?? 0) : 0;
             $bonusDeductionNotes = $existingPayroll ? ($existingPayroll->bonus_deduction_notes ?? null) : null;
-            $paymentMethod = $existingPayroll ? ($existingPayroll->payment_method ?? null) : null;
-            $paymentAccountNumber = $existingPayroll ? ($existingPayroll->payment_account_number ?? null) : null;
+            // استخدام طريقة التحويل من المدرب (ثابتة لكل الأشهر)
+            $paymentMethod = $trainer->payment_method ?? ($existingPayroll ? ($existingPayroll->payment_method ?? null) : null);
+            $paymentAccountNumber = $trainer->payment_account_number ?? ($existingPayroll ? ($existingPayroll->payment_account_number ?? null) : null);
+            $status = $existingPayroll ? ($existingPayroll->status ?? 'draft') : 'draft';
+            $paidAt = $existingPayroll ? ($existingPayroll->paid_at ? $existingPayroll->paid_at->format('Y-m-d H:i:s') : null) : null;
             
             // Get selected bonus type
             $selectedBonusType = $existingPayroll ? ($existingPayroll->selected_bonus_type ?? null) : null;
             
-            // Get bonus inclusion flags (for backward compatibility)
-            $includeRenewalBonus = $existingPayroll ? ($existingPayroll->include_renewal_bonus ?? true) : true;
-            $includeVolumeBonus = $existingPayroll ? ($existingPayroll->include_volume_bonus ?? true) : true;
-            $includeCompetitionBonus = $existingPayroll ? ($existingPayroll->include_competition_bonus ?? true) : true;
+            // المكافآت تلقائية: تطبق تلقائياً إذا استحق المدرب
+            // مكافأة التجديد: تلقائية إذا كان هناك تجديدات
+            $includeRenewalBonus = $renewalsCount > 0;
+            // مكافأة الكمية: تلقائية بناءً على عدد المحاضرات
+            $includeVolumeBonus = $volumeBonus > 0;
+            // مكافأة المنافسة: سيتم حسابها لاحقاً (لأكثر 3 مدربين)
+            $includeCompetitionBonus = false; // سيتم تحديثها بعد حساب أفضل 3
             
-            // Get selected volume bonus (if manually set) or use calculated
-            $selectedVolumeBonus = $existingPayroll ? ($existingPayroll->selected_volume_bonus ?? null) : null;
-            $volumeBonusToUse = $selectedVolumeBonus !== null ? $selectedVolumeBonus : $volumeBonus;
+            // استخدام مكافأة الكمية المحسوبة تلقائياً
+            $selectedVolumeBonus = $volumeBonus > 0 ? $volumeBonus : null;
+            $volumeBonusToUse = $volumeBonus;
             
             // Use saved renewal_total and competition_bonus if they exist, otherwise use calculated values
             $renewalTotalToUse = $existingPayroll && $existingPayroll->renewal_total !== null ? $existingPayroll->renewal_total : $renewalTotal;
@@ -232,18 +239,20 @@ class FinanceController extends Controller
                         break;
                 }
             } else {
-                // New system: use inclusion flags with default values
+                // New system: use inclusion flags - المكافآت مربوطة بالقيم الفعلية فقط
+                // مكافأة التجديد: مربوطة بعدد التجديدات
                 if ($includeRenewalBonus === true) {
-                    $calculatedTotalPay += ($renewalTotalToUse > 0) ? $renewalTotalToUse : 5000;
+                    $calculatedTotalPay += (float) $renewalTotalToUse;
                 }
-                // Volume bonus: check selected_volume_bonus directly (not include_volume_bonus flag)
+                // مكافأة الكمية: مربوطة بعدد المحاضرات (60+ = 30,000، 80+ = 80,000)
                 if ($selectedVolumeBonus !== null && $selectedVolumeBonus > 0) {
                     $calculatedTotalPay += $selectedVolumeBonus;
                 } elseif ($includeVolumeBonus === true && $volumeBonusToUse > 0) {
                     $calculatedTotalPay += $volumeBonusToUse;
                 }
+                // مكافأة المنافسة: لأكثر 3 مدربين لديهم تجديدات
                 if ($includeCompetitionBonus === true) {
-                    $calculatedTotalPay += ($competitionBonusToUse > 0) ? $competitionBonusToUse : 20000;
+                    $calculatedTotalPay += (float) $competitionBonusToUse;
                 }
             }
             $calculatedTotalPay += $bonusDeduction;
@@ -267,6 +276,8 @@ class FinanceController extends Controller
                 'payment_method' => $paymentMethod,
                 'payment_account_number' => $paymentAccountNumber,
                 'total_pay' => $calculatedTotalPay,
+                'status' => $status,
+                'paid_at' => $paidAt,
             ];
         }
 
@@ -281,14 +292,17 @@ class FinanceController extends Controller
         // Add competition bonus to top 3 trainers and recalculate total
         foreach ($payrolls as &$payroll) {
             if (in_array($payroll['trainer_id'], $top3TrainerIds) && $payroll['renewals_count'] > 0) {
+                // تطبيق مكافأة المنافسة تلقائياً لأفضل 3 مدربين
                 $payroll['competition_bonus'] = $competitionBonus;
+                $payroll['include_competition_bonus'] = true;
                 
-                // Recalculate total pay based on included bonuses with default values
+                // Recalculate total pay - المكافآت تلقائية ومربوطة بالقيم الفعلية
                 $recalculatedTotal = $payroll['base_pay'];
+                // مكافأة التجديد: تلقائية إذا كان هناك تجديدات
                 if ($payroll['include_renewal_bonus'] === true) {
-                    $recalculatedTotal += ($payroll['renewal_total'] > 0) ? $payroll['renewal_total'] : 5000;
+                    $recalculatedTotal += (float) ($payroll['renewal_total'] ?? 0);
                 }
-                // Volume bonus: check selected_volume_bonus directly (not include_volume_bonus flag)
+                // مكافأة الكمية: تلقائية بناءً على عدد المحاضرات
                 if (isset($payroll['selected_volume_bonus']) && $payroll['selected_volume_bonus'] !== null && $payroll['selected_volume_bonus'] > 0) {
                     $recalculatedTotal += $payroll['selected_volume_bonus'];
                 } elseif ($payroll['include_volume_bonus'] === true) {
@@ -297,9 +311,8 @@ class FinanceController extends Controller
                         $recalculatedTotal += $volumeBonusToAdd;
                     }
                 }
-                if ($payroll['include_competition_bonus'] === true) {
-                    $recalculatedTotal += ($payroll['competition_bonus'] > 0) ? $payroll['competition_bonus'] : 20000;
-                }
+                // مكافأة المنافسة: تلقائية لأكثر 3 مدربين
+                $recalculatedTotal += (float) ($payroll['competition_bonus'] ?? 0);
                 $recalculatedTotal += ($payroll['bonus_deduction'] ?? 0);
                 $payroll['total_pay'] = $recalculatedTotal;
             }
@@ -1047,41 +1060,53 @@ class FinanceController extends Controller
 
         $request->validate([
             'trainer_id' => 'required|exists:trainers,id',
-            'month' => 'required|integer|min:1|max:12',
-            'year' => 'required|integer|min:2020',
             'payment_method' => 'required|in:zain_cash,qi_card',
             'payment_account_number' => 'required|string|max:50',
         ]);
 
         $trainerId = $request->input('trainer_id');
-        $month = $request->input('month');
-        $year = $request->input('year');
         $paymentMethod = $request->input('payment_method');
         $paymentAccountNumber = $request->input('payment_account_number');
 
-        // Find or create payroll record
-        $payroll = TrainerPayroll::firstOrCreate(
-            [
-                'trainer_id' => $trainerId,
-                'month' => $month,
-                'year' => $year,
-            ],
-            [
-                'lecture_rate' => 4000,
-                'renewal_bonus_rate' => 5000,
-                'status' => 'draft',
-            ]
-        );
+        // Find trainer and update payment method (ثابت لكل الأشهر)
+        $trainer = Trainer::findOrFail($trainerId);
+        
+        // Save old values for logging
+        $oldPaymentMethod = $trainer->payment_method;
+        $oldPaymentAccountNumber = $trainer->payment_account_number;
+        
+        // Update payment method in trainer table
+        $trainer->payment_method = $paymentMethod;
+        $trainer->payment_account_number = $paymentAccountNumber;
+        $trainer->save();
 
-        // Update payment method
-        $payroll->payment_method = $paymentMethod;
-        $payroll->payment_account_number = $paymentAccountNumber;
-        $payroll->save();
+        // Log the change in ActivityLog
+        try {
+            ActivityLog::create([
+                'user_id' => auth()->id() ?? $request->user()?->id,
+                'action' => 'trainer_payment_method_updated',
+                'model_type' => 'Trainer',
+                'model_id' => $trainer->id,
+                'old_values' => [
+                    'payment_method' => $oldPaymentMethod,
+                    'payment_account_number' => $oldPaymentAccountNumber,
+                ],
+                'new_values' => [
+                    'payment_method' => $paymentMethod,
+                    'payment_account_number' => $paymentAccountNumber,
+                ],
+                'description' => "تم تحديث طريقة التحويل للمدرب {$trainer->name} من '{$oldPaymentMethod}' إلى '{$paymentMethod}'",
+                'ip_address' => $request->ip(),
+            ]);
+        } catch (\Exception $e) {
+            // Log error but don't fail the request
+            \Log::warning('Failed to log payment method update: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'تم تحديث طريقة التحويل بنجاح',
-            'data' => $payroll,
+            'message' => 'تم تحديث طريقة التحويل بنجاح (ستطبق على جميع الأشهر)',
+            'data' => $trainer,
         ]);
     }
 
@@ -1118,16 +1143,120 @@ class FinanceController extends Controller
             ]
         );
 
+        // Save old status for logging
+        $oldStatus = $payroll->status ?? 'draft';
+        
         // Update status to paid
         $payroll->status = 'paid';
         $payroll->paid_at = now();
         $payroll->save();
+
+        // Log the change in ActivityLog
+        try {
+            $trainer = Trainer::find($trainerId);
+            $monthName = $this->getMonthName($month);
+            
+            ActivityLog::create([
+                'user_id' => auth()->id() ?? $request->user()?->id,
+                'action' => 'trainer_payroll_status_changed',
+                'model_type' => 'TrainerPayroll',
+                'model_id' => $payroll->id,
+                'old_values' => ['status' => $oldStatus],
+                'new_values' => ['status' => 'paid', 'paid_at' => $payroll->paid_at->format('Y-m-d H:i:s')],
+                'description' => "تم تحديث حالة راتب المدرب {$trainer->name} لشهر {$monthName} {$year} من '{$oldStatus}' إلى 'paid'",
+                'ip_address' => $request->ip(),
+            ]);
+        } catch (\Exception $e) {
+            // Log error but don't fail the request
+            \Log::warning('Failed to log payroll status change: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'تم تحديث حالة الراتب بنجاح',
             'data' => $payroll,
         ]);
+    }
+
+    /**
+     * Mark trainer payroll as unpaid
+     */
+    public function markTrainerUnpaid(Request $request): JsonResponse
+    {
+        if (!$this->isAuthorized($request)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $request->validate([
+            'trainer_id' => 'required|exists:trainers,id',
+            'month' => 'required|integer|min:1|max:12',
+            'year' => 'required|integer|min:2020',
+        ]);
+
+        $trainerId = $request->input('trainer_id');
+        $month = $request->input('month');
+        $year = $request->input('year');
+
+        // Find payroll record
+        $payroll = TrainerPayroll::where('trainer_id', $trainerId)
+            ->where('month', $month)
+            ->where('year', $year)
+            ->first();
+
+        if (!$payroll) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لم يتم العثور على سجل الراتب',
+            ], 404);
+        }
+
+        // Save old status for logging
+        $oldStatus = $payroll->status ?? 'draft';
+        $oldPaidAt = $payroll->paid_at ? $payroll->paid_at->format('Y-m-d H:i:s') : null;
+        
+        // Update status to draft (unpaid)
+        $payroll->status = 'draft';
+        $payroll->paid_at = null;
+        $payroll->save();
+
+        // Log the change in ActivityLog
+        try {
+            $trainer = Trainer::find($trainerId);
+            $monthName = $this->getMonthName($month);
+            
+            ActivityLog::create([
+                'user_id' => auth()->id() ?? $request->user()?->id,
+                'action' => 'trainer_payroll_status_changed',
+                'model_type' => 'TrainerPayroll',
+                'model_id' => $payroll->id,
+                'old_values' => ['status' => $oldStatus, 'paid_at' => $oldPaidAt],
+                'new_values' => ['status' => 'draft', 'paid_at' => null],
+                'description' => "تم تحديث حالة راتب المدرب {$trainer->name} لشهر {$monthName} {$year} من '{$oldStatus}' إلى 'draft'",
+                'ip_address' => $request->ip(),
+            ]);
+        } catch (\Exception $e) {
+            // Log error but don't fail the request
+            \Log::warning('Failed to log payroll status change: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث حالة الراتب بنجاح',
+            'data' => $payroll,
+        ]);
+    }
+
+    /**
+     * Helper: Get Arabic month name
+     */
+    protected function getMonthName(int $month): string
+    {
+        $months = [
+            1 => 'يناير', 2 => 'فبراير', 3 => 'مارس', 4 => 'أبريل',
+            5 => 'مايو', 6 => 'يونيو', 7 => 'يوليو', 8 => 'أغسطس',
+            9 => 'سبتمبر', 10 => 'أكتوبر', 11 => 'نوفمبر', 12 => 'ديسمبر'
+        ];
+        return $months[$month] ?? "شهر {$month}";
     }
 
     /**

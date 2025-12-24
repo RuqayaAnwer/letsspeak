@@ -59,3 +59,4 @@ class CourseType extends Model
 
 
 
+

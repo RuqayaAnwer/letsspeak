@@ -22,6 +22,8 @@ class Trainer extends Model
         'max_level',
         'status',
         'notes',
+        'payment_method',
+        'payment_account_number',
     ];
 
     protected $hidden = [

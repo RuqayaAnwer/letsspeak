@@ -90,19 +90,17 @@ class TrainerPayroll extends Model
             }
         } else {
             // New system: multiple selections using flags
-            // مكافأة التجديد
+            // مكافأة التجديد: مربوطة بعدد التجديدات (كل تجديد = renewal_bonus_rate)
             if ($this->include_renewal_bonus === true) {
-                $renewalAmount = ($this->renewal_total > 0) ? $this->renewal_total : 5000;
-                $total += $renewalAmount;
+                $total += (float) ($this->renewal_total ?? 0);
             }
             
-            // مكافأة المنافسة
+            // مكافأة المنافسة: لأكثر 3 مدربين لديهم تجديدات
             if ($this->include_competition_bonus === true) {
-                $competitionAmount = ($this->competition_bonus > 0) ? $this->competition_bonus : 20000;
-                $total += $competitionAmount;
+                $total += (float) ($this->competition_bonus ?? 0);
             }
             
-            // مكافأة الكمية
+            // مكافأة الكمية: مربوطة بعدد المحاضرات (60+ = 30,000، 80+ = 80,000)
             if ($this->selected_volume_bonus !== null && $this->selected_volume_bonus > 0) {
                 $total += (float) $this->selected_volume_bonus;
             }

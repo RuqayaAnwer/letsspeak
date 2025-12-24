@@ -89,6 +89,7 @@ Route::put('/trainer-payroll/bonus-selection', [FinanceController::class, 'updat
 Route::put('/trainer-payroll/bonus-inclusion', [FinanceController::class, 'updateBonusInclusion']);
 Route::put('/trainer-payroll/payment-method', [FinanceController::class, 'updatePaymentMethod']);
 Route::post('/trainer-payroll/mark-paid', [FinanceController::class, 'markTrainerPaid']);
+Route::put('/trainer-payroll/mark-unpaid', [FinanceController::class, 'markTrainerUnpaid']);
 
 // Find Available Training Times
 Route::post('/find-training-time', [CustomerServiceController::class, 'findTrainingTime']);
