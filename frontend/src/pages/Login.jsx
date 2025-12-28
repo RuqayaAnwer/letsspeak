@@ -99,9 +99,16 @@ const Login = () => {
             <div className="w-full max-w-4xl">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
-                        LetSpeak
-                    </h1>
+                    <div className="flex items-center justify-center gap-4 mb-4">
+                        <img 
+                            src="/Letspeak logo.png" 
+                            alt="LetSpeak Logo" 
+                            className="w-16 h-16"
+                        />
+                        <h1 className="text-4xl font-bold text-gray-800 dark:text-white">
+                            LetSpeak
+                        </h1>
+                    </div>
                     <p className="text-gray-600 dark:text-gray-400">
                         نظام إدارة التدريب
                     </p>

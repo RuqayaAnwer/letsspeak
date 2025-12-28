@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   CheckCircle,
   MessageSquare,
+  Trash2,
 } from 'lucide-react';
 
 /**
@@ -92,6 +93,24 @@ const CourseDetails = () => {
     completedLectures: 0,
   });
 
+  // Renewal reset modal state
+  const [renewalResetModal, setRenewalResetModal] = useState({
+    open: false,
+    start_date: '',
+    course_package_id: '',
+    lectures_count: '',
+    lecture_time: '',
+    lecture_days: [],
+    paid_amount: '',
+    remaining_amount: '',
+    student_ids: [],
+  });
+
+
+  // Packages and trainers for renewal reset modal
+  const [packages, setPackages] = useState([]);
+  const [trainers, setTrainers] = useState([]);
+
   /**
    * Check if a lecture can be modified based on its date/time.
    * - Future lectures: Cannot be modified
@@ -126,11 +145,43 @@ const CourseDetails = () => {
     fetchCourse();
   }, [id]);
 
+  useEffect(() => {
+    if (isCustomerService) {
+      fetchPackagesAndTrainers();
+    }
+  }, [isCustomerService]);
+
+  // Fetch packages and trainers for renewal reset modal
+  const fetchPackagesAndTrainers = async () => {
+    try {
+      const [packagesRes, trainersRes] = await Promise.all([
+        api.get('/course-packages'),
+        api.get('/trainers-list'),
+      ]);
+      
+      const packagesData = packagesRes.data?.data || packagesRes.data || [];
+      setPackages(Array.isArray(packagesData) ? packagesData : []);
+      
+      const trainersData = trainersRes.data?.data || trainersRes.data || [];
+      setTrainers(Array.isArray(trainersData) ? trainersData : []);
+    } catch (error) {
+      console.error('Error fetching packages and trainers:', error);
+    }
+  };
+
   const fetchCourse = async () => {
     try {
       const response = await api.get(`/courses/${id}`);
       setCourse(response.data);
       setLectures(response.data.lectures || []);
+      
+      // Debug: Log course students
+      console.log('Course fetched:', {
+        id: response.data.id,
+        is_dual: response.data.is_dual,
+        students_count: response.data.students?.length || 0,
+        students: response.data.students?.map(s => ({ id: s.id, name: s.name })) || []
+      });
       
       // Set default selected student for dual courses
       if (response.data.is_dual && response.data.students?.length > 0) {
@@ -153,6 +204,28 @@ const CourseDetails = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle course deletion
+  const handleDeleteCourse = async () => {
+    if (!course) return;
+
+    const courseName = course?.course_package?.name || course?.coursePackage?.name || `الكورس رقم ${course.id}`;
+    const studentNames = course?.students?.map(s => s.name).join(' و ') || course?.student_name || 'غير محدد';
+    
+    if (!confirm(`هل أنت متأكد من حذف ${courseName} للطالب/الطلاب: ${studentNames}؟\n\nتحذير: سيتم حذف الكورس وجميع المحاضرات المرتبطة به بشكل نهائي!`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/courses/${course.id}`);
+      alert('تم حذف الكورس بنجاح');
+      navigate('/courses'); // Navigate back to courses list
+    } catch (error) {
+      console.error('Error deleting course:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'حدث خطأ أثناء حذف الكورس';
+      alert(`فشل حذف الكورس: ${errorMessage}`);
     }
   };
 
@@ -840,13 +913,204 @@ const CourseDetails = () => {
         if (newStatus === 'sent') {
           alert('⚠️ تم إرسال رسالة التنبيه للمتدرب');
         } else if (newStatus === 'renewed') {
-          alert('✅ تم تأكيد تجديد الاشتراك');
+          alert('✅ تم اشتراك الطالب، قم بإعادة تعيين الكورس');
         }
         // No alert for 'alert' or 'none' statuses
       }
     } catch (error) {
       console.error('Error updating renewal alert status:', error);
       alert('حدث خطأ أثناء تحديث حالة التنبيه');
+    }
+  };
+
+  // Open renewal reset modal
+  const openRenewalResetModal = () => {
+    if (!course) return;
+    
+    // Get student ID(s)
+    const studentIds = course.is_dual && course.students?.length > 0
+      ? course.students.map(s => s.id)
+      : course.student_id 
+        ? [course.student_id]
+        : course.student?.id
+          ? [course.student.id]
+          : course.students?.[0]?.id
+            ? [course.students[0].id]
+            : [];
+
+    setRenewalResetModal({
+      open: true,
+      start_date: '',
+      course_package_id: '',
+      lectures_count: '',
+      lecture_time: course.lecture_time || '',
+      lecture_days: Array.isArray(course.lecture_days) ? [...course.lecture_days] : [],
+      paid_amount: '',
+      remaining_amount: '',
+      student_ids: studentIds,
+    });
+  };
+
+  // Close renewal reset modal
+  const closeRenewalResetModal = () => {
+    setRenewalResetModal({
+      open: false,
+      start_date: '',
+      course_package_id: '',
+      lectures_count: '',
+      lecture_time: '',
+      lecture_days: [],
+      paid_amount: '',
+      remaining_amount: '',
+      student_ids: [],
+    });
+  };
+
+  // Calculate price per student for dual courses (helper function)
+  const getStudentPriceForPackage = (packageName, isDual) => {
+    if (!isDual) {
+      return 0; // Will use package price for single courses
+    }
+    
+    // For dual courses, each student pays a fixed amount based on package
+    if (packageName?.includes('بمزاجي') || packageName === 'بمزاجي') {
+      return 90000;
+    } else if (packageName?.includes('توازن') || packageName?.includes('التوازن')) {
+      return 135000;
+    } else if (packageName?.includes('سرعة') || packageName?.includes('السرعة')) {
+      return 225000;
+    }
+    
+    return 0;
+  };
+
+  // Handle package change in renewal reset modal
+  const handleRenewalPackageChange = (packageId) => {
+    const selectedPackage = packages.find((p) => p.id.toString() === packageId);
+    const lecturesCount = selectedPackage ? selectedPackage.lectures_count.toString() : '';
+    const isDual = course?.is_dual || false;
+    
+    // Calculate price based on course type (dual or single)
+    const studentPrice = getStudentPriceForPackage(selectedPackage?.name, isDual);
+    const packagePrice = isDual && studentPrice > 0 
+      ? studentPrice 
+      : (selectedPackage ? (selectedPackage.price || 0) : 0);
+    
+    const paidAmount = parseFloat(renewalResetModal.paid_amount) || 0;
+    const remainingAmount = packagePrice - paidAmount;
+    
+    setRenewalResetModal(prev => ({
+      ...prev,
+      course_package_id: packageId,
+      lectures_count: lecturesCount,
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+    }));
+  };
+
+  // Handle paid amount change in renewal reset modal
+  const handleRenewalPaidAmountChange = (value) => {
+    const paidAmount = parseFloat(value) || 0;
+    const selectedPackage = packages.find((p) => p.id.toString() === renewalResetModal.course_package_id);
+    const isDual = course?.is_dual || false;
+    
+    // Calculate price based on course type (dual or single)
+    const studentPrice = getStudentPriceForPackage(selectedPackage?.name, isDual);
+    const packagePrice = isDual && studentPrice > 0 
+      ? studentPrice 
+      : (selectedPackage ? (selectedPackage.price || 0) : 0);
+    
+    const remainingAmount = packagePrice - paidAmount;
+    
+    setRenewalResetModal(prev => ({
+      ...prev,
+      paid_amount: value,
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+    }));
+  };
+
+  // Toggle day in renewal reset modal
+  const toggleRenewalDay = (day) => {
+    setRenewalResetModal(prev => ({
+      ...prev,
+      lecture_days: prev.lecture_days.includes(day)
+        ? prev.lecture_days.filter((d) => d !== day)
+        : [...prev.lecture_days, day],
+    }));
+  };
+
+  // Handle renewal reset submit
+  const handleRenewalResetSubmit = async () => {
+    if (!renewalResetModal.start_date || !renewalResetModal.course_package_id || !renewalResetModal.lecture_time || renewalResetModal.lecture_days.length === 0) {
+      alert('يرجى ملء جميع الحقول المطلوبة');
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      // Convert days from 'Sunday' format to 'sun' format for backend
+      const dayMap = {
+        'Sunday': 'sun',
+        'Monday': 'mon',
+        'Tuesday': 'tue',
+        'Wednesday': 'wed',
+        'Thursday': 'thu',
+        'Friday': 'fri',
+        'Saturday': 'sat',
+      };
+      const lectureDays = renewalResetModal.lecture_days.map(day => dayMap[day] || day);
+
+      // Get student IDs
+      const studentIds = renewalResetModal.student_ids || [];
+      if (studentIds.length === 0) {
+        alert('لا يمكن تحديد الطالب');
+        setSaving(false);
+        return;
+      }
+
+      // Create new course
+      // When resetting from alert status, this is a renewal with the same trainer
+      const courseData = {
+        trainer_id: course.trainer_id, // Same trainer as the previous course
+        course_package_id: parseInt(renewalResetModal.course_package_id),
+        lectures_count: renewalResetModal.lectures_count ? parseInt(renewalResetModal.lectures_count) : undefined,
+        start_date: renewalResetModal.start_date,
+        lecture_time: renewalResetModal.lecture_time,
+        lecture_days: lectureDays,
+        is_dual: course.is_dual || false,
+        student_ids: studentIds.map(id => parseInt(id)),
+        paid_amount: renewalResetModal.paid_amount ? parseFloat(renewalResetModal.paid_amount) : 0,
+        remaining_amount: renewalResetModal.remaining_amount ? parseFloat(renewalResetModal.remaining_amount) : 0,
+        previous_course_id: course.id, // Pass the previous course ID to help identify it as a renewal
+      };
+
+      const response = await api.post('/courses', courseData);
+      
+      if (response.data) {
+        // Update current course's renewal_alert_status to 'renewed' to remove it from alerts
+        await api.put(`/courses/${id}/renewal-alert-status`, {
+          renewal_alert_status: 'renewed',
+        });
+
+        // Refresh course data
+        fetchCourse();
+        
+        // Close modal
+        closeRenewalResetModal();
+        
+        alert('✅ تم إنشاء الكورس الجديد بنجاح');
+        
+        // Navigate to new course
+        const newCourseId = response.data.id || response.data.data?.id;
+        if (newCourseId) {
+          navigate(`/courses/${newCourseId}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error creating renewal course:', error);
+      alert(error.response?.data?.message || 'حدث خطأ أثناء إنشاء الكورس الجديد');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -936,27 +1200,53 @@ const CourseDetails = () => {
             <p className="page-subtitle">رقم الكورس: #{course.id}</p>
           </div>
         </div>
-        {Object.keys(editedLectures).length > 0 && (
-          <button
-            onClick={saveLectures}
-            disabled={saving}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Save className="w-5 h-5" />
-            {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {Object.keys(editedLectures).length > 0 && (
+            <button
+              onClick={saveLectures}
+              disabled={saving}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Save className="w-5 h-5" />
+              {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+            </button>
+          )}
+          {isCustomerService && (
+            <button
+              onClick={handleDeleteCourse}
+              className="btn-secondary flex items-center gap-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-300 dark:border-red-700"
+              title="حذف الكورس"
+            >
+              <Trash2 className="w-5 h-5" />
+              حذف الكورس
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Renewal Alert Status - Only show for courses at 75%+ completion and for customer service */}
       {isCustomerService && isAt75Percent() && (
-        <div className="card bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 border-2 border-orange-300 dark:border-orange-700">
+        <div className={`card border-2 ${
+          course.renewal_alert_status === 'renewed'
+            ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-300 dark:border-green-700'
+            : 'bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 border-orange-300 dark:border-orange-700'
+        }`}>
           <div className="p-4">
-            <h3 className="text-lg font-bold text-orange-800 dark:text-orange-200 mb-3">
-              ⚠️ تنبيه: الكورس على وشك الانتهاء ({calculateCompletionPercentage()}% مكتمل)
+            <h3 className={`text-lg font-bold mb-3 ${
+              course.renewal_alert_status === 'renewed'
+                ? 'text-green-800 dark:text-green-200'
+                : 'text-orange-800 dark:text-orange-200'
+            }`}>
+              {course.renewal_alert_status === 'renewed' ? '✅' : '⚠️'} تنبيه: الكورس على وشك الانتهاء ({calculateCompletionPercentage()}% مكتمل)
             </h3>
-            <p className="text-sm text-orange-700 dark:text-orange-300 mb-4">
-              يرجى إرسال رسالة للمتدرب لتجديد الاشتراك
+            <p className={`text-sm mb-4 ${
+              course.renewal_alert_status === 'renewed'
+                ? 'text-green-700 dark:text-green-300'
+                : 'text-orange-700 dark:text-orange-300'
+            }`}>
+              {course.renewal_alert_status === 'renewed' 
+                ? 'تم اشتراك الطالب، قم بإعادة تعيين الكورس'
+                : 'يرجى إرسال رسالة للمتدرب لتجديد الاشتراك'}
             </p>
             
             {/* Two-stage buttons: Sent and Renewed */}
@@ -988,20 +1278,28 @@ const CourseDetails = () => {
                 ✅ تم الاشتراك
               </button>
               
-              {course.renewal_alert_status !== 'none' && course.renewal_alert_status !== 'alert' && (
+              {course.renewal_alert_status === 'renewed' && (
                 <button
-                  onClick={() => handleRenewalAlertStatusChange('none')}
-                  className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
+                  onClick={openRenewalResetModal}
+                  className="px-4 py-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 font-semibold transition-all"
                 >
-                  إعادة تعيين
+                  🔄 إعادة تعيين
                 </button>
               )}
             </div>
             
             {/* Status indicator */}
             {course.renewal_alert_status !== 'none' && course.renewal_alert_status !== 'alert' && (
-              <div className="mt-3 pt-3 border-t border-orange-300 dark:border-orange-700">
-                <p className="text-sm text-orange-600 dark:text-orange-400">
+              <div className={`mt-3 pt-3 border-t ${
+                course.renewal_alert_status === 'renewed'
+                  ? 'border-green-300 dark:border-green-700'
+                  : 'border-orange-300 dark:border-orange-700'
+              }`}>
+                <p className={`text-sm ${
+                  course.renewal_alert_status === 'renewed'
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-orange-600 dark:text-orange-400'
+                }`}>
                   الحالة الحالية: 
                   <span className="font-bold ml-2">
                     {course.renewal_alert_status === 'sent' && '📧 تم الإرسال'}
@@ -1031,37 +1329,41 @@ const CourseDetails = () => {
           
           {/* Student and Trainer Info */}
           <div className="flex flex-wrap gap-4 text-sm">
-            {/* Show students - handle both single and dual courses */}
-            {course.is_dual && course.students?.length > 1 ? (
+          {/* Show students - handle both single and dual courses */}
+          {course.is_dual && course.students && course.students.length > 1 ? (
               <>
-                <button
-                  onClick={() => setSelectedStudentId(course.students[0]?.id)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    selectedStudentId === course.students[0]?.id
-                      ? 'bg-blue-500 text-white ring-2 ring-blue-300'
-                      : 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40'
-                  }`}
-                >
-                  <User className={`w-4 h-4 ${selectedStudentId === course.students[0]?.id ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
-                  <span className={selectedStudentId === course.students[0]?.id ? 'text-blue-100' : 'text-[var(--color-text-muted)]'}>الطالب الأول:</span>
-                  <span className="font-semibold">
-                    {course.students[0]?.name || 'غير محدد'}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setSelectedStudentId(course.students[1]?.id)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    selectedStudentId === course.students[1]?.id
-                      ? 'bg-purple-500 text-white ring-2 ring-purple-300'
-                      : 'bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40'
-                  }`}
-                >
-                  <User className={`w-4 h-4 ${selectedStudentId === course.students[1]?.id ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
-                  <span className={selectedStudentId === course.students[1]?.id ? 'text-purple-100' : 'text-[var(--color-text-muted)]'}>الطالب الثاني:</span>
-                  <span className="font-semibold">
-                    {course.students[1]?.name || 'غير محدد'}
-                  </span>
-                </button>
+                {course.students.map((student, index) => (
+                  <button
+                    key={student.id}
+                    onClick={() => setSelectedStudentId(student.id)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                      selectedStudentId === student.id
+                        ? index === 0 
+                          ? 'bg-blue-500 text-white ring-2 ring-blue-300'
+                          : 'bg-purple-500 text-white ring-2 ring-purple-300'
+                        : index === 0
+                          ? 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+                          : 'bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40'
+                    }`}
+                  >
+                    <User className={`w-4 h-4 ${
+                      selectedStudentId === student.id 
+                        ? 'text-white' 
+                        : index === 0 
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-purple-600 dark:text-purple-400'
+                    }`} />
+                    <span className={selectedStudentId === student.id 
+                      ? index === 0 ? 'text-blue-100' : 'text-purple-100'
+                      : 'text-[var(--color-text-muted)]'
+                    }>
+                      {index === 0 ? 'الطالب الأول:' : 'الطالب الثاني:'}
+                    </span>
+                    <span className="font-semibold">
+                      {student.name || 'غير محدد'}
+                    </span>
+                  </button>
+                ))}
               </>
             ) : (
               <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg">
@@ -1966,6 +2268,166 @@ const CourseDetails = () => {
               >
                 {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Renewal Reset Modal */}
+      {renewalResetModal.open && course && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 overflow-y-auto" style={{ zIndex: 9999 }}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6 my-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white">
+                إعادة تعيين الكورس
+              </h3>
+              <button
+                onClick={closeRenewalResetModal}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Student Name (Read-only) */}
+              <div>
+                <label className="label">الطالب</label>
+                <div className="input bg-gray-100 dark:bg-gray-700 cursor-not-allowed">
+                  {course.is_dual && course.students?.length > 0
+                    ? course.students.map(s => s.name).join(' و ')
+                    : course.student?.name || course.students?.[0]?.name || 'غير محدد'}
+                </div>
+              </div>
+
+              {/* Start Date */}
+              <div>
+                <label className="label">تاريخ البدء *</label>
+                <input
+                  type="date"
+                  value={renewalResetModal.start_date}
+                  onChange={(e) => setRenewalResetModal(prev => ({ ...prev, start_date: e.target.value }))}
+                  className="input"
+                  required
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+
+              {/* Package */}
+              <div>
+                <label className="label">الباقة *</label>
+                <select
+                  value={renewalResetModal.course_package_id}
+                  onChange={(e) => handleRenewalPackageChange(e.target.value)}
+                  className="select"
+                  required
+                >
+                  <option value="">اختر الباقة</option>
+                  {packages.map((pkg) => (
+                    <option key={pkg.id} value={pkg.id}>
+                      {pkg.name} ({pkg.price} د.ع - {pkg.lectures_count} محاضرة)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Lectures Count (auto-filled from package, but editable) */}
+              {renewalResetModal.course_package_id && (
+                <div>
+                  <label className="label">عدد المحاضرات</label>
+                  <input
+                    type="number"
+                    value={renewalResetModal.lectures_count}
+                    onChange={(e) => setRenewalResetModal(prev => ({ ...prev, lectures_count: e.target.value }))}
+                    className="input"
+                    min="1"
+                    placeholder="سيتم ملؤه تلقائياً من الباقة"
+                  />
+                </div>
+              )}
+
+              {/* Lecture Time */}
+              <div>
+                <label className="label">وقت المحاضرة *</label>
+                <input
+                  type="time"
+                  value={renewalResetModal.lecture_time}
+                  onChange={(e) => setRenewalResetModal(prev => ({ ...prev, lecture_time: e.target.value }))}
+                  className="input"
+                  required
+                />
+              </div>
+
+              {/* Lecture Days */}
+              <div>
+                <label className="label">أيام المحاضرات *</label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {[
+                    { value: 'Sunday', label: 'الأحد' },
+                    { value: 'Monday', label: 'الإثنين' },
+                    { value: 'Tuesday', label: 'الثلاثاء' },
+                    { value: 'Wednesday', label: 'الأربعاء' },
+                    { value: 'Thursday', label: 'الخميس' },
+                    { value: 'Friday', label: 'الجمعة' },
+                    { value: 'Saturday', label: 'السبت' },
+                  ].map((day) => (
+                    <button
+                      key={day.value}
+                      type="button"
+                      onClick={() => toggleRenewalDay(day.value)}
+                      className={`px-4 py-2 rounded-lg border-2 transition-all font-medium ${
+                        renewalResetModal.lecture_days.includes(day.value)
+                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-primary-300'
+                      }`}
+                    >
+                      {day.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Paid Amount */}
+              <div>
+                <label className="label">مبلغ الدفع (د.ع)</label>
+                <input
+                  type="number"
+                  value={renewalResetModal.paid_amount}
+                  onChange={(e) => handleRenewalPaidAmountChange(e.target.value)}
+                  className="input"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                />
+              </div>
+
+              {/* Remaining Amount (Read-only) */}
+              {renewalResetModal.remaining_amount && parseFloat(renewalResetModal.remaining_amount) > 0 && (
+                <div>
+                  <label className="label">المتبقي (د.ع)</label>
+                  <div className="input bg-gray-100 dark:bg-gray-700 cursor-not-allowed">
+                    {renewalResetModal.remaining_amount} د.ع
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={closeRenewalResetModal}
+                  className="flex-1 py-2 rounded-lg border border-gray-300 dark:border-gray-600 font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+                  disabled={saving}
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleRenewalResetSubmit}
+                  disabled={saving || !renewalResetModal.start_date || !renewalResetModal.course_package_id || !renewalResetModal.lecture_time || renewalResetModal.lecture_days.length === 0}
+                  className="flex-1 py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'جاري الحفظ...' : 'إنشاء الكورس الجديد'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

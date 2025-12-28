@@ -162,10 +162,36 @@ class FinanceController extends Controller
             $basePay = $completedLectures * $lectureRate;
 
             // Get renewals count (courses with renewed_with_trainer = true that started in this month)
+            // AND verify that the previous course was with the same trainer
             $renewalsCount = Course::where('trainer_id', $trainer->id)
                 ->where('renewed_with_trainer', true)
                 ->whereMonth('start_date', $month)
                 ->whereYear('start_date', $year)
+                ->get()
+                ->filter(function ($course) use ($trainer) {
+                    // Get students for this course
+                    $studentIds = $course->students->pluck('id')->toArray();
+                    if (empty($studentIds)) {
+                        return false; // No students, can't be a renewal
+                    }
+                    
+                    // Find previous course(s) for the same student(s)
+                    $previousCourse = Course::whereHas('students', function ($query) use ($studentIds) {
+                        $query->whereIn('students.id', $studentIds);
+                    })
+                    ->where('id', '!=', $course->id)
+                    ->where('start_date', '<', $course->start_date)
+                    ->orderBy('start_date', 'desc')
+                    ->first();
+                    
+                    // If there's a previous course, check if it was with the same trainer
+                    if ($previousCourse) {
+                        return $previousCourse->trainer_id === $trainer->id;
+                    }
+                    
+                    // If no previous course found, it's not a valid renewal
+                    return false;
+                })
                 ->count();
 
             // Calculate renewal bonus
@@ -760,12 +786,33 @@ class FinanceController extends Controller
         $includeCompetitionBonus = $request->input('include_competition_bonus', false);
         $selectedVolumeBonus = $request->input('selected_volume_bonus');
 
-        // Calculate renewal bonus
+        // Calculate renewal bonus - verify previous course was with same trainer
         $renewalBonusRate = 5000;
         $renewalsCount = Course::where('trainer_id', $trainerId)
             ->where('renewed_with_trainer', true)
             ->whereMonth('start_date', $month)
             ->whereYear('start_date', $year)
+            ->get()
+            ->filter(function ($course) use ($trainerId) {
+                $studentIds = $course->students->pluck('id')->toArray();
+                if (empty($studentIds)) {
+                    return false;
+                }
+                
+                $previousCourse = Course::whereHas('students', function ($query) use ($studentIds) {
+                    $query->whereIn('students.id', $studentIds);
+                })
+                ->where('id', '!=', $course->id)
+                ->where('start_date', '<', $course->start_date)
+                ->orderBy('start_date', 'desc')
+                ->first();
+                
+                if ($previousCourse) {
+                    return $previousCourse->trainer_id === $trainerId;
+                }
+                
+                return false;
+            })
             ->count();
         $renewalTotal = $renewalsCount * $renewalBonusRate;
 
@@ -894,12 +941,33 @@ class FinanceController extends Controller
         $month = $request->input('month');
         $year = $request->input('year');
 
-        // Calculate renewal bonus
+        // Calculate renewal bonus - verify previous course was with same trainer
         $renewalBonusRate = 5000;
         $renewalsCount = Course::where('trainer_id', $trainerId)
             ->where('renewed_with_trainer', true)
             ->whereMonth('start_date', $month)
             ->whereYear('start_date', $year)
+            ->get()
+            ->filter(function ($course) use ($trainerId) {
+                $studentIds = $course->students->pluck('id')->toArray();
+                if (empty($studentIds)) {
+                    return false;
+                }
+                
+                $previousCourse = Course::whereHas('students', function ($query) use ($studentIds) {
+                    $query->whereIn('students.id', $studentIds);
+                })
+                ->where('id', '!=', $course->id)
+                ->where('start_date', '<', $course->start_date)
+                ->orderBy('start_date', 'desc')
+                ->first();
+                
+                if ($previousCourse) {
+                    return $previousCourse->trainer_id === $trainerId;
+                }
+                
+                return false;
+            })
             ->count();
         $renewalTotal = $renewalsCount * $renewalBonusRate;
 

@@ -49,15 +49,15 @@ Route::post('/trainers/available-monthly', [TrainerController::class, 'available
 
 // Courses - Protected routes (require authentication)
 Route::middleware('simple.auth')->group(function () {
-    Route::get('/courses', [CourseController::class, 'index']);
-    Route::post('/courses', [CourseController::class, 'store']);
-    Route::get('/courses/{course}', [CourseController::class, 'show']);
-    Route::put('/courses/{course}', [CourseController::class, 'update']);
+Route::get('/courses', [CourseController::class, 'index']);
+Route::post('/courses', [CourseController::class, 'store']);
+Route::get('/courses/{course}', [CourseController::class, 'show']);
+Route::put('/courses/{course}', [CourseController::class, 'update']);
     Route::put('/courses/{course}/status', [CourseController::class, 'updateStatus']);
     Route::put('/courses/{course}/renewal-alert-status', [CourseController::class, 'updateRenewalAlertStatus']);
     Route::post('/courses/{course}/confirm-evaluation', [CourseController::class, 'confirmEvaluationSent']);
-    Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
-    Route::put('/courses/{course}/lectures/bulk', [CourseController::class, 'bulkUpdateLectures']);
+Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
+Route::put('/courses/{course}/lectures/bulk', [CourseController::class, 'bulkUpdateLectures']);
 });
 
 // Lectures

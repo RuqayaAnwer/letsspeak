@@ -1,15 +1,24 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle, Info, X, HelpCircle } from 'lucide-react';
 import api from '../../api/axios';
 
 // Updated: 2025-12-21 - Courses separated by status with smaller fonts
 const Courses = () => {
   const navigate = useNavigate();
-  const { isCustomerService } = useAuth();
+  const { isCustomerService, isFinance } = useAuth();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [studentPaymentsModal, setStudentPaymentsModal] = useState({
+    open: false,
+    studentId: null,
+    studentName: '',
+    courseId: null,
+    course: null, // Store course object for dual courses
+    payments: [],
+    loading: false,
+  });
 
   useEffect(() => {
     fetchCourses();
@@ -125,6 +134,200 @@ const Courses = () => {
     return percentage >= 75 && percentage < 100;
   };
 
+  // Fetch student payments for a specific course
+  const fetchStudentPayments = async (studentId, studentName, courseId, course = null) => {
+    try {
+      setStudentPaymentsModal({
+        open: true,
+        studentId,
+        studentName,
+        courseId,
+        course, // Store course object for dual courses
+        payments: [],
+        loading: true,
+      });
+
+      // For dual courses, fetch payments for both students
+      if (course?.is_dual && course?.students && course.students.length > 1) {
+        const allStudentsPayments = [];
+        
+        // Fetch payments for each student
+        for (const student of course.students) {
+          let studentPayments = [];
+          let currentPage = 1;
+          let hasMorePages = true;
+
+          while (hasMorePages) {
+            const response = await api.get('/payments', {
+              params: {
+                student_id: student.id,
+                course_id: courseId,
+                page: currentPage,
+              },
+            });
+
+            const responseData = response.data;
+            const paymentsData = responseData?.data || responseData || [];
+            
+            if (Array.isArray(paymentsData) && paymentsData.length > 0) {
+              studentPayments = [...studentPayments, ...paymentsData];
+              hasMorePages = responseData?.current_page < responseData?.last_page;
+              currentPage++;
+            } else {
+              hasMorePages = false;
+            }
+          }
+
+          // Filter only completed/paid payments for display
+          const completedPayments = studentPayments.filter(p => 
+            p.status === 'completed' || p.status === 'paid'
+          );
+
+          allStudentsPayments.push({
+            studentId: student.id,
+            studentName: student.name,
+            payments: completedPayments,
+          });
+        }
+
+        console.log('Dual course payments:', allStudentsPayments);
+        setStudentPaymentsModal(prev => ({
+          ...prev,
+          payments: allStudentsPayments, // Array of {studentId, studentName, payments}
+          loading: false,
+        }));
+      } else {
+        // For single courses, check if there's a second student in the course
+        // If course has students array with more than one student, fetch payments for both
+        if (course?.students && course.students.length > 1) {
+          // Course has multiple students, fetch payments for all
+          const allStudentsPayments = [];
+          
+          for (const student of course.students) {
+            let studentPayments = [];
+            let currentPage = 1;
+            let hasMorePages = true;
+
+            while (hasMorePages) {
+              const response = await api.get('/payments', {
+                params: {
+                  student_id: student.id,
+                  course_id: courseId,
+                  page: currentPage,
+                },
+              });
+
+              const responseData = response.data;
+              const paymentsData = responseData?.data || responseData || [];
+              
+              if (Array.isArray(paymentsData) && paymentsData.length > 0) {
+                studentPayments = [...studentPayments, ...paymentsData];
+                hasMorePages = responseData?.current_page < responseData?.last_page;
+                currentPage++;
+              } else {
+                hasMorePages = false;
+              }
+            }
+
+            // Filter only completed/paid payments for display
+            const completedPayments = studentPayments.filter(p => 
+              p.status === 'completed' || p.status === 'paid'
+            );
+
+            allStudentsPayments.push({
+              studentId: student.id,
+              studentName: student.name,
+              payments: completedPayments,
+            });
+          }
+
+          setStudentPaymentsModal(prev => ({
+            ...prev,
+            payments: allStudentsPayments, // Array of {studentId, studentName, payments}
+            loading: false,
+          }));
+        } else {
+          // Single student course, fetch payments for one student
+          let allPayments = [];
+          let currentPage = 1;
+          let hasMorePages = true;
+
+          while (hasMorePages) {
+            const response = await api.get('/payments', {
+              params: {
+                student_id: studentId,
+                course_id: courseId,
+                page: currentPage,
+              },
+            });
+
+            const responseData = response.data;
+            const paymentsData = responseData?.data || responseData || [];
+            
+            if (Array.isArray(paymentsData) && paymentsData.length > 0) {
+              allPayments = [...allPayments, ...paymentsData];
+              hasMorePages = responseData?.current_page < responseData?.last_page;
+              currentPage++;
+            } else {
+              hasMorePages = false;
+            }
+          }
+
+          // Filter only completed/paid payments for display
+          const completedPayments = allPayments.filter(p => 
+            p.status === 'completed' || p.status === 'paid'
+          );
+          
+          setStudentPaymentsModal(prev => ({
+            ...prev,
+            payments: completedPayments, // Array of payment objects
+            loading: false,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching student payments:', error);
+      setStudentPaymentsModal(prev => ({
+        ...prev,
+        payments: [],
+        loading: false,
+      }));
+    }
+  };
+
+  // Close payments modal
+  const closePaymentsModal = () => {
+    setStudentPaymentsModal({
+      open: false,
+      studentId: null,
+      studentName: '',
+      courseId: null,
+      course: null,
+      payments: [],
+      loading: false,
+    });
+  };
+
+  // Get student ID from course
+  const getStudentId = (course) => {
+    if (course.student_id) return course.student_id;
+    if (course.students && course.students.length > 0) {
+      return course.students[0].id;
+    }
+    if (typeof course.student === 'object' && course.student?.id) {
+      return course.student.id;
+    }
+    return null;
+  };
+
+  // Get student name from course
+  const getStudentName = (course) => {
+    return course.student_name || 
+           (course.students && course.students.length > 0 
+             ? course.students.map(s => s.name).join(', ') 
+             : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-';
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -134,6 +337,8 @@ const Courses = () => {
   }
 
   const coursesArray = Array.isArray(courses) ? courses : [];
+  
+  // Filter courses by status (all courses, including those with alerts)
   const activeCourses = coursesArray.filter(c => c.status === 'active');
   const pausedCourses = coursesArray.filter(c => c.status === 'paused');
   const finishedCourses = coursesArray.filter(c => c.status === 'finished');
@@ -142,21 +347,19 @@ const Courses = () => {
     c.status && 
     !['active', 'paused', 'finished'].includes(c.status)
   );
-  
-  // Get all courses at 75% completion (regardless of status)
-  const coursesAt75 = coursesArray.filter(isAt75Percent);
 
   const renderCourseTable = (coursesList, title, titleColor) => {
     if (coursesList.length === 0) return null;
 
     return (
       <div className="mb-5">
-        <h2 className={`text-sm font-bold mb-2 pr-16 ${titleColor}`}>
+        <h2 className={`text-sm sm:text-base font-bold mb-2 pr-2 sm:pr-16 ${titleColor}`}>
           {title} ({coursesList.length})
         </h2>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-          <table className="w-full text-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[600px]">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>#</th>
@@ -193,10 +396,45 @@ const Courses = () => {
                       )}
                     </td>
                     <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
-                      {course.student_name || 
-                       (course.students && course.students.length > 0 
-                         ? course.students.map(s => s.name).join(', ') 
-                         : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
+                      <div className="flex items-center justify-center gap-1 flex-wrap">
+                        {course.is_dual && course.students && course.students.length > 1 ? (
+                          // Dual course: Show each student with their own icon (only if not finance)
+                          course.students.map((student, index) => (
+                            <div key={student.id} className="flex items-center gap-1">
+                              <span>{student.name}</span>
+                              {!isFinance && (
+                                <button
+                                  onClick={() => fetchStudentPayments(student.id, student.name, course.id, course)}
+                                  className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
+                                  title={`عرض تفاصيل دفعات ${student.name}`}
+                                >
+                                  <HelpCircle className="w-4 h-4" />
+                                </button>
+                              )}
+                              {index < course.students.length - 1 && <span className="text-gray-400">،</span>}
+                            </div>
+                          ))
+                        ) : (
+                          // Single course: Show one student with one icon (only if not finance)
+                          <>
+                            <span>
+                              {course.student_name || 
+                               (course.students && course.students.length > 0 
+                                 ? course.students.map(s => s.name).join(', ') 
+                                 : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
+                            </span>
+                            {getStudentId(course) && !isFinance && (
+                              <button
+                                onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id, course)}
+                                className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
+                                title="عرض تفاصيل الدفعات والاشتراك"
+                              >
+                                <HelpCircle className="w-4 h-4" />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </td>
                     <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
                       {course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'}
@@ -226,6 +464,7 @@ const Courses = () => {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     );
@@ -234,18 +473,18 @@ const Courses = () => {
   return (
     <div>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-white pr-20">
+          <h1 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white pr-2 sm:pr-20">
             الكورسات
           </h1>
         </div>
         {isCustomerService && (
           <Link 
             to="/customer-service/create-course" 
-            className="btn-primary flex items-center gap-2 w-fit"
+            className="btn-primary flex items-center gap-2 w-full sm:w-fit justify-center sm:justify-start text-sm sm:text-base px-4 py-2"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             كورس جديد
           </Link>
         )}
@@ -257,98 +496,438 @@ const Courses = () => {
         </div>
       )}
 
-      {/* Special Table for Courses at 75% Completion */}
-      {isCustomerService && coursesAt75.length > 0 && (
-        <div className="mb-6">
-          <div className="bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-700 rounded-xl p-4 mb-4">
-            <div className="flex items-center gap-3 mb-3">
-              <AlertTriangle className="w-6 h-6 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-              <div>
-                <h2 className="text-lg font-bold text-orange-800 dark:text-orange-300">
-                  تنبيه: كورسات قريبة من الإكتمال
-                </h2>
-                <p className="text-sm text-orange-600 dark:text-orange-400">
-                  {coursesAt75.length} كورس وصل إلى 75% من الإكتمال
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border-2 border-orange-200 dark:border-orange-800">
-            <table className="w-full text-xs">
-              <thead className="bg-orange-100 dark:bg-orange-900/30">
-                <tr>
-                  <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>#</th>
-                  <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>الباقة</th>
-                  <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>الطالب</th>
-                  <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>المدرب</th>
-                  <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>نسبة الإكتمال</th>
-                  <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>الحالة</th>
-                  <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-orange-200 dark:divide-orange-800">
-                {coursesAt75.map((course) => {
-                  const completionPercentage = calculateCompletionPercentage(course);
-                  
-                  return (
-                    <tr 
-                      key={course.id} 
-                      className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 hover:bg-orange-100 dark:hover:bg-orange-900/30"
-                    >
-                      <td className="px-2 py-2 text-center text-gray-800 dark:text-white text-[10px] font-medium">{course.id}</td>
-                      <td className="px-2 py-2 text-center text-gray-800 dark:text-white">
-                        {(course.course_package || course.coursePackage) ? (
-                          <div className="flex flex-col items-center gap-0.5">
-                            <span className="text-[10px] font-medium">{(course.course_package || course.coursePackage)?.name || '-'}</span>
-                            <span className="text-[9px] text-gray-500 dark:text-gray-400">
-                              ({(course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-[10px]">-</span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
-                        {course.student_name || 
-                         (course.students && course.students.length > 0 
-                           ? course.students.map(s => s.name).join(', ') 
-                           : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
-                      </td>
-                      <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
-                        {course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'}
-                      </td>
-                      <td className="px-2 py-2 text-center">
-                        <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
-                          {completionPercentage}%
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-center">
-                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${getStatusBadge(course.status)}`}>
-                          {getStatusLabel(course.status)}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-center">
-                        <Link
-                          to={`/courses/${course.id}`}
-                          className="text-blue-600 dark:text-blue-400 hover:underline text-[10px]"
-                        >
-                          التفاصيل
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
       {renderCourseTable(activeCourses, 'الكورسات النشطة', 'text-green-600 dark:text-green-400')}
       {renderCourseTable(pausedCourses, 'الكورسات المتوقفة', 'text-yellow-600 dark:text-yellow-400')}
       {renderCourseTable(finishedCourses, 'الكورسات المنتهية', 'text-blue-600 dark:text-blue-400')}
       {renderCourseTable(otherCourses, 'كورسات أخرى', 'text-gray-600 dark:text-gray-400')}
+
+      {/* Student Payments Modal */}
+      {studentPaymentsModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h2 className="text-lg font-bold text-gray-800 dark:text-white">
+                    تفاصيل دفعات الطالب: {studentPaymentsModal.studentName}
+                  </h2>
+                  {(() => {
+                    // Check if course is dual - try multiple ways to determine
+                    const isDual = studentPaymentsModal.course?.is_dual || 
+                                  (studentPaymentsModal.course?.students && studentPaymentsModal.course.students.length > 1) ||
+                                  (Array.isArray(studentPaymentsModal.payments) && 
+                                   studentPaymentsModal.payments.length > 0 && 
+                                   typeof studentPaymentsModal.payments[0] === 'object' && 
+                                   studentPaymentsModal.payments[0].studentId);
+                    
+                    return isDual ? (
+                      <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-semibold">
+                        كورس ثنائي
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-semibold">
+                        كورس فردي
+                      </span>
+                    );
+                  })()}
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  الكورس رقم: {studentPaymentsModal.courseId}
+                </p>
+                {studentPaymentsModal.course?.is_dual && studentPaymentsModal.course?.students && studentPaymentsModal.course.students.length > 1 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    الطلاب: {studentPaymentsModal.course.students.map(s => s.name).join(' - ')}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={closePaymentsModal}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {studentPaymentsModal.loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                </div>
+              ) : (
+                <>
+                  {/* Check if this is a dual course with multiple students */}
+                  {studentPaymentsModal.course?.is_dual && 
+                   Array.isArray(studentPaymentsModal.payments) && 
+                   studentPaymentsModal.payments.length > 0 && 
+                   typeof studentPaymentsModal.payments[0] === 'object' && 
+                   studentPaymentsModal.payments[0].studentId ? (
+                    // Dual course: Show payments for each student separately
+                    <div className="space-y-6">
+                      {studentPaymentsModal.payments.map((studentData, studentIndex) => (
+                        <div key={studentData.studentId} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                          {/* Student Header */}
+                          <div className="mb-4 pb-3 border-b border-blue-300 dark:border-blue-700">
+                            <h3 className="text-base font-bold text-blue-800 dark:text-blue-300">
+                              {studentIndex === 0 ? 'الطالب الأول' : 'الطالب الثاني'}: {studentData.studentName}
+                            </h3>
+                          </div>
+
+                          {/* Payments Summary for this student */}
+                          {studentData.payments && studentData.payments.length > 0 ? (
+                            <>
+                              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-3">
+                                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">ملخص الدفعات</h4>
+                                <div className="grid grid-cols-2 gap-3 text-xs">
+                                  <div>
+                                    <p className="text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
+                                    <p className="text-lg font-bold text-gray-800 dark:text-white">
+                                      {studentData.payments.length}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
+                                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                      {studentData.payments
+                                        .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                                        .toLocaleString('ar-EG')} د.ع
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Payments List for this student */}
+                              <div>
+                                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">قائمة الدفعات</h4>
+                                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                                  <table className="w-full text-xs">
+                                    <thead className="bg-gray-50 dark:bg-gray-700">
+                                      <tr>
+                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">#</th>
+                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">المبلغ</th>
+                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ الدفع</th>
+                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
+                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">ملاحظات</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                      {studentData.payments.map((payment, index) => {
+                                        const statusColors = {
+                                          paid: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+                                          completed: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+                                          pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+                                          unpaid: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+                                          partial: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+                                        };
+                                        
+                                        const statusLabels = {
+                                          paid: 'مدفوع',
+                                          completed: 'مكتمل',
+                                          pending: 'معلق',
+                                          unpaid: 'غير مدفوع',
+                                          partial: 'جزئي',
+                                        };
+
+                                        const paymentDate = payment.payment_date || payment.date || payment.created_at;
+                                        const formattedDate = paymentDate 
+                                          ? new Date(paymentDate).toLocaleDateString('ar-EG', {
+                                              year: 'numeric',
+                                              month: 'long',
+                                              day: 'numeric',
+                                            })
+                                          : '-';
+
+                                        return (
+                                          <tr key={payment.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                            <td className="px-3 py-2 text-gray-800 dark:text-white text-[10px]">{index + 1}</td>
+                                            <td className="px-3 py-2 text-gray-800 dark:text-white text-[10px] font-medium">
+                                              {parseFloat(payment.amount || 0).toLocaleString('ar-EG')} د.ع
+                                            </td>
+                                            <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-[10px]">
+                                              {formattedDate}
+                                            </td>
+                                            <td className="px-3 py-2">
+                                              <span className={`px-2 py-1 rounded-full text-[9px] font-medium ${
+                                                statusColors[payment.status] || 'bg-gray-100 text-gray-700'
+                                              }`}>
+                                                {statusLabels[payment.status] || payment.status}
+                                              </span>
+                                            </td>
+                                            <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-[10px]">
+                                              {payment.notes || '-'}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                              لا توجد دفعات مسجلة لهذا الطالب في هذا الكورس
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    // Single course: Check if payments is array of student objects or payment objects
+                    <>
+                      {(() => {
+                        // Check if payments is array of student objects (multiple students in single course)
+                        const isMultipleStudents = Array.isArray(studentPaymentsModal.payments) && 
+                          studentPaymentsModal.payments.length > 0 && 
+                          typeof studentPaymentsModal.payments[0] === 'object' && 
+                          studentPaymentsModal.payments[0].studentId;
+                        
+                        if (isMultipleStudents) {
+                          // Multiple students in single course - show both
+                          return (
+                            <div className="space-y-6">
+                              {studentPaymentsModal.payments.map((studentData, studentIndex) => (
+                                <div key={studentData.studentId} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                                  {/* Student Header */}
+                                  <div className="mb-4 pb-3 border-b border-blue-300 dark:border-blue-700">
+                                    <h3 className="text-base font-bold text-blue-800 dark:text-blue-300">
+                                      {studentIndex === 0 ? 'الطالب الأول' : 'الطالب الثاني'}: {studentData.studentName}
+                                    </h3>
+                                  </div>
+
+                                  {/* Payments Summary for this student */}
+                                  {studentData.payments && studentData.payments.length > 0 ? (
+                                    <>
+                                      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-3">
+                                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">ملخص الدفعات</h4>
+                                        <div className="grid grid-cols-2 gap-3 text-xs">
+                                          <div>
+                                            <p className="text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
+                                            <p className="text-lg font-bold text-gray-800 dark:text-white">
+                                              {studentData.payments.length}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <p className="text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
+                                            <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                              {studentData.payments
+                                                .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                                                .toLocaleString('ar-EG')} د.ع
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Payments List for this student */}
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">قائمة الدفعات</h4>
+                                        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                                          <table className="w-full text-xs">
+                                            <thead className="bg-gray-50 dark:bg-gray-700">
+                                              <tr>
+                                                <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">#</th>
+                                                <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">المبلغ</th>
+                                                <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ الدفع</th>
+                                                <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
+                                                <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">ملاحظات</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                              {studentData.payments.map((payment, index) => {
+                                                const statusColors = {
+                                                  paid: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+                                                  completed: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+                                                  pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+                                                  unpaid: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+                                                  partial: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+                                                };
+                                                
+                                                const statusLabels = {
+                                                  paid: 'مدفوع',
+                                                  completed: 'مكتمل',
+                                                  pending: 'معلق',
+                                                  unpaid: 'غير مدفوع',
+                                                  partial: 'جزئي',
+                                                };
+
+                                                const paymentDate = payment.payment_date || payment.date || payment.created_at;
+                                                const formattedDate = paymentDate 
+                                                  ? new Date(paymentDate).toLocaleDateString('ar-EG', {
+                                                      year: 'numeric',
+                                                      month: 'long',
+                                                      day: 'numeric',
+                                                    })
+                                                  : '-';
+
+                                                return (
+                                                  <tr key={payment.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                                    <td className="px-3 py-2 text-gray-800 dark:text-white text-[10px]">{index + 1}</td>
+                                                    <td className="px-3 py-2 text-gray-800 dark:text-white text-[10px] font-medium">
+                                                      {parseFloat(payment.amount || 0).toLocaleString('ar-EG')} د.ع
+                                                    </td>
+                                                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-[10px]">
+                                                      {formattedDate}
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                      <span className={`px-2 py-1 rounded-full text-[9px] font-medium ${
+                                                        statusColors[payment.status] || 'bg-gray-100 text-gray-700'
+                                                      }`}>
+                                                        {statusLabels[payment.status] || payment.status}
+                                                      </span>
+                                                    </td>
+                                                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-[10px]">
+                                                      {payment.notes || '-'}
+                                                    </td>
+                                                  </tr>
+                                                );
+                                              })}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                                      لا توجد دفعات مسجلة لهذا الطالب في هذا الكورس
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        
+                        // Single student - show payments normally
+                        if (!Array.isArray(studentPaymentsModal.payments) || studentPaymentsModal.payments.length === 0) {
+                          return (
+                            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                              لا توجد دفعات مسجلة لهذا الطالب في هذا الكورس
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                        <div className="space-y-4">
+                          {/* Payments Summary */}
+                          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">ملخص الدفعات</h3>
+                            <div className="grid grid-cols-3 gap-4 text-xs">
+                              <div>
+                                <p className="text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
+                                <p className="text-lg font-bold text-gray-800 dark:text-white">
+                                  {studentPaymentsModal.payments.length}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
+                                <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                  {studentPaymentsModal.payments
+                                    .filter(p => p.status === 'paid' || p.status === 'completed')
+                                    .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                                    .toLocaleString('ar-EG')} د.ع
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500 dark:text-gray-400">المبلغ المتبقي</p>
+                                <p className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                                  {studentPaymentsModal.payments
+                                    .filter(p => p.status === 'pending' || p.status === 'unpaid' || p.status === 'partial')
+                                    .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                                    .toLocaleString('ar-EG')} د.ع
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Payments List */}
+                          <div>
+                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">قائمة الدفعات</h3>
+                            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                              <table className="w-full text-xs">
+                                <thead className="bg-gray-50 dark:bg-gray-700">
+                                  <tr>
+                                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">#</th>
+                                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">المبلغ</th>
+                                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ الدفع</th>
+                                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
+                                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">ملاحظات</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                  {studentPaymentsModal.payments.map((payment, index) => {
+                                    const statusColors = {
+                                      paid: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+                                      completed: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+                                      pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+                                      unpaid: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+                                      partial: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+                                    };
+                                    
+                                    const statusLabels = {
+                                      paid: 'مدفوع',
+                                      completed: 'مكتمل',
+                                      pending: 'معلق',
+                                      unpaid: 'غير مدفوع',
+                                      partial: 'جزئي',
+                                    };
+
+                                    const paymentDate = payment.payment_date || payment.date || payment.created_at;
+                                    const formattedDate = paymentDate 
+                                      ? new Date(paymentDate).toLocaleDateString('ar-EG', {
+                                          year: 'numeric',
+                                          month: 'long',
+                                          day: 'numeric',
+                                        })
+                                      : '-';
+
+                                    return (
+                                      <tr key={payment.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                        <td className="px-3 py-2 text-gray-800 dark:text-white text-[10px]">{index + 1}</td>
+                                        <td className="px-3 py-2 text-gray-800 dark:text-white text-[10px] font-medium">
+                                          {parseFloat(payment.amount || 0).toLocaleString('ar-EG')} د.ع
+                                        </td>
+                                        <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-[10px]">
+                                          {formattedDate}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                          <span className={`px-2 py-1 rounded-full text-[9px] font-medium ${
+                                            statusColors[payment.status] || 'bg-gray-100 text-gray-700'
+                                          }`}>
+                                            {statusLabels[payment.status] || payment.status}
+                                          </span>
+                                        </td>
+                                        <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-[10px]">
+                                          {payment.notes || '-'}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                        );
+                      })()}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={closePaymentsModal}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

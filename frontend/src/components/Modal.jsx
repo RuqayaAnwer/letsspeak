@@ -31,25 +31,25 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
       />
 
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-center justify-center p-2 sm:p-4">
         <div
-          className={`relative w-full ${sizeClasses[size]} bg-[var(--color-bg-primary)] rounded-2xl shadow-2xl transform transition-all animate-slide-up`}
+          className={`relative w-full ${sizeClasses[size]} bg-[var(--color-bg-primary)] rounded-xl sm:rounded-2xl shadow-2xl transform transition-all animate-slide-up max-h-[95vh] overflow-hidden flex flex-col`}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-[var(--color-border)]">
-            <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[var(--color-border)] flex-shrink-0">
+            <h3 className="text-base sm:text-lg font-bold text-[var(--color-text-primary)] truncate pr-2">
               {title}
             </h3>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] transition-colors flex-shrink-0"
             >
-              <X className="w-5 h-5 text-[var(--color-text-muted)]" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--color-text-muted)]" />
             </button>
           </div>
 
           {/* Content */}
-          <div className="p-6">{children}</div>
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1">{children}</div>
         </div>
       </div>
     </div>

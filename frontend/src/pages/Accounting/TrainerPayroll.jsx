@@ -748,8 +748,8 @@ const TrainerPayroll = () => {
               تفاصيل رواتب المدربين - {months[selectedMonth - 1]?.label} {selectedYear}
             </h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="table text-sm">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <table className="table text-sm min-w-[1000px]">
               <thead>
                 <tr>
                   <th className="text-xs py-2 px-2 text-center">#</th>

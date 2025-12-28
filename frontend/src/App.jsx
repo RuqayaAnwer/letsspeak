@@ -17,6 +17,7 @@ import TrainerPayroll from './pages/Accounting/TrainerPayroll';
 import Courses from './pages/shared/Courses';
 import CourseDetails from './pages/shared/CourseDetails';
 import ActivityLogs from './pages/CustomerService/ActivityLogs';
+import CourseAlerts from './pages/CustomerService/CourseAlerts';
 import MyTimes from './pages/Trainer/MyTimes';
 
 // Components
@@ -123,6 +124,14 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/customer-service/alerts"
+        element={
+          <ProtectedRoute allowedRoles={['customer_service']}>
+            <CourseAlerts />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Trainer Routes */}
       <Route
@@ -197,7 +206,12 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Router>
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <AppRoutes />
         </Router>
       </AuthProvider>

@@ -167,6 +167,37 @@ class CourseController extends Controller
             return response()->json(['message' => 'يجب تحديد طالب واحد على الأقل'], 422);
         }
 
+        // Automatically determine if this is a renewal with the same trainer
+        $renewedWithTrainer = false;
+        if (!empty($studentIds)) {
+            // If previous_course_id is provided (renewal reset scenario), use it directly
+            $previousCourseId = $request->input('previous_course_id');
+            if ($previousCourseId) {
+                $previousCourse = Course::find($previousCourseId);
+                // If previous course exists and was with the same trainer, it's a renewal
+                if ($previousCourse && $previousCourse->trainer_id == $request->trainer_id) {
+                    // Verify that the previous course has the same students
+                    $previousStudentIds = $previousCourse->students->pluck('id')->toArray();
+                    if (count(array_intersect($studentIds, $previousStudentIds)) > 0) {
+                        $renewedWithTrainer = true;
+                    }
+                }
+            } else {
+                // Find previous course(s) for the same student(s) by start_date
+                $previousCourse = Course::whereHas('students', function ($query) use ($studentIds) {
+                    $query->whereIn('students.id', $studentIds);
+                })
+                ->where('start_date', '<', $request->start_date)
+                ->orderBy('start_date', 'desc')
+                ->first();
+                
+                // If there's a previous course and it was with the same trainer, it's a renewal
+                if ($previousCourse && $previousCourse->trainer_id == $request->trainer_id) {
+                    $renewedWithTrainer = true;
+                }
+            }
+        }
+
         $course = Course::create([
             'trainer_id' => $request->trainer_id,
             'course_package_id' => $request->course_package_id,
@@ -175,7 +206,7 @@ class CourseController extends Controller
             'lecture_time' => $request->lecture_time,
             'lecture_days' => $request->lecture_days,
             'is_dual' => $isDual,
-            'renewed_with_trainer' => $request->boolean('renewed_with_trainer', false),
+            'renewed_with_trainer' => $renewedWithTrainer,
             'status' => 'active',
         ]);
 
@@ -189,21 +220,69 @@ class CourseController extends Controller
         // Generate lecture schedule
         $this->generateLectureSchedule($course);
 
-        // Create payment record if paid_amount is provided
-        $paidAmount = $request->paid_amount ?? 0;
-        if ($paidAmount > 0) {
-            $primaryStudentId = $studentIds[0] ?? null;
-            Payment::create([
-                'course_id' => $course->id,
-                'student_id' => $primaryStudentId,
-                'amount' => $paidAmount,
-                'payment_method' => null,
-                'status' => 'completed',
-                'payment_date' => $request->start_date ?? now()->toDateString(),
-                'receipt_number' => null,
-                'notes' => 'دفعة أولية عند إنشاء الكورس',
-                'recorded_by' => auth()->id(),
-            ]);
+        // Create payment record(s) if paid_amount is provided
+        if ($isDual && count($studentIds) > 1) {
+            // For dual courses, check if student_payments array is provided
+            $studentPayments = $request->input('student_payments', []);
+            if (!empty($studentPayments) && is_array($studentPayments)) {
+                // Create separate payment for each student with their specific amount
+                foreach ($studentIds as $index => $studentId) {
+                    $studentPayment = $studentPayments[$index] ?? null;
+                    if ($studentPayment && isset($studentPayment['paid_amount'])) {
+                        $paidAmount = floatval($studentPayment['paid_amount'] ?? 0);
+                        if ($paidAmount > 0) {
+                            Payment::create([
+                                'course_id' => $course->id,
+                                'student_id' => $studentId,
+                                'amount' => $paidAmount,
+                                'payment_method' => null,
+                                'status' => 'completed',
+                                'payment_date' => $request->start_date ?? now()->toDateString(),
+                                'receipt_number' => null,
+                                'notes' => 'دفعة أولية عند إنشاء الكورس',
+                                'recorded_by' => auth()->id(),
+                            ]);
+                        }
+                    }
+                }
+            } else {
+                // Fallback: use paid_amount if student_payments not provided
+                $paidAmount = $request->paid_amount ?? 0;
+                if ($paidAmount > 0) {
+                    foreach ($studentIds as $studentId) {
+                        Payment::create([
+                            'course_id' => $course->id,
+                            'student_id' => $studentId,
+                            'amount' => $paidAmount,
+                            'payment_method' => null,
+                            'status' => 'completed',
+                            'payment_date' => $request->start_date ?? now()->toDateString(),
+                            'receipt_number' => null,
+                            'notes' => 'دفعة أولية عند إنشاء الكورس',
+                            'recorded_by' => auth()->id(),
+                        ]);
+                    }
+                }
+            }
+        } else {
+            // For single courses, create one payment for the primary student
+            $paidAmount = $request->paid_amount ?? 0;
+            if ($paidAmount > 0) {
+                $primaryStudentId = $studentIds[0] ?? null;
+                if ($primaryStudentId) {
+                    Payment::create([
+                        'course_id' => $course->id,
+                        'student_id' => $primaryStudentId,
+                        'amount' => $paidAmount,
+                        'payment_method' => null,
+                        'status' => 'completed',
+                        'payment_date' => $request->start_date ?? now()->toDateString(),
+                        'receipt_number' => null,
+                        'notes' => 'دفعة أولية عند إنشاء الكورس',
+                        'recorded_by' => auth()->id(),
+                    ]);
+                }
+            }
         }
 
         $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);

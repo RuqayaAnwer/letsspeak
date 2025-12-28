@@ -23,9 +23,12 @@ const CreateCourse = () => {
     start_date: '',
     lecture_time: '',
     lecture_days: [],
-    renewed_with_trainer: false,
-    paid_amount: '',
-    remaining_amount: '',
+    paid_amount: '', // For single courses
+    remaining_amount: '', // For single courses
+    student_payments: [
+      { paid_amount: '', remaining_amount: '' }, // Student 1
+      { paid_amount: '', remaining_amount: '' }, // Student 2
+    ],
   });
 
   const daysOfWeek = [
@@ -70,32 +73,112 @@ const CreateCourse = () => {
     }
   };
 
+  // Calculate price per student for dual courses
+  const getStudentPrice = (packageName, isDual) => {
+    if (!isDual) {
+      // For single courses, return 0 (will use package price)
+      return 0;
+    }
+    
+    // For dual courses, each student pays a fixed amount based on package
+    if (packageName?.includes('بمزاجي') || packageName === 'بمزاجي') {
+      return 90000;
+    } else if (packageName?.includes('توازن') || packageName?.includes('التوازن')) {
+      return 135000;
+    } else if (packageName?.includes('سرعة') || packageName?.includes('السرعة')) {
+      return 225000;
+    }
+    
+    return 0;
+  };
+
   const handlePackageChange = (packageId) => {
     const selectedPackage = packages.find((p) => p.id.toString() === packageId);
     // يتم ملء عدد المحاضرات تلقائياً من الباقة المختارة
     const lecturesCount = selectedPackage ? selectedPackage.lectures_count.toString() : '';
-    const packagePrice = selectedPackage ? (selectedPackage.price || 0) : 0;
-    const paidAmount = parseFloat(formData.paid_amount) || 0;
-    const remainingAmount = packagePrice - paidAmount;
     
-    setFormData({
-      ...formData,
-      course_package_id: packageId,
-      lectures_count: lecturesCount,
-      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
-    });
+    // Calculate price based on course type (dual or single)
+    const studentPrice = getStudentPrice(selectedPackage?.name, isDual);
+    const packagePrice = isDual && studentPrice > 0 
+      ? studentPrice 
+      : (selectedPackage ? (selectedPackage.price || 0) : 0);
+    
+    if (isDual) {
+      // For dual courses, update remaining amounts for both students
+      const updatedStudentPayments = formData.student_payments.map((studentPayment, index) => {
+        const paidAmount = parseFloat(studentPayment.paid_amount) || 0;
+        const remainingAmount = packagePrice - paidAmount;
+        return {
+          paid_amount: studentPayment.paid_amount,
+          remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+        };
+      });
+      
+      setFormData({
+        ...formData,
+        course_package_id: packageId,
+        lectures_count: lecturesCount,
+        student_payments: updatedStudentPayments,
+      });
+    } else {
+      // For single courses, use the old logic
+      const paidAmount = parseFloat(formData.paid_amount) || 0;
+      const remainingAmount = packagePrice - paidAmount;
+      
+      setFormData({
+        ...formData,
+        course_package_id: packageId,
+        lectures_count: lecturesCount,
+        remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+      });
+    }
   };
 
   const handlePaidAmountChange = (value) => {
-    const paidAmount = parseFloat(value) || 0;
     const selectedPackage = packages.find((p) => p.id.toString() === formData.course_package_id);
-    const packagePrice = selectedPackage ? (selectedPackage.price || 0) : 0;
-    const remainingAmount = packagePrice - paidAmount;
+    
+    // Calculate price based on course type (dual or single)
+    const studentPrice = getStudentPrice(selectedPackage?.name, isDual);
+    const packagePrice = isDual && studentPrice > 0 
+      ? studentPrice 
+      : (selectedPackage ? (selectedPackage.price || 0) : 0);
+    
+    if (isDual) {
+      // This should not be called for dual courses, but handle it just in case
+      setFormData({
+        ...formData,
+        paid_amount: value,
+      });
+    } else {
+      // For single courses
+      const paidAmount = parseFloat(value) || 0;
+      const remainingAmount = packagePrice - paidAmount;
+      
+      setFormData({
+        ...formData,
+        paid_amount: value,
+        remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+      });
+    }
+  };
+
+  // Handle paid amount change for a specific student in dual courses
+  const handleStudentPaidAmountChange = (studentIndex, value) => {
+    const selectedPackage = packages.find((p) => p.id.toString() === formData.course_package_id);
+    const studentPrice = getStudentPrice(selectedPackage?.name, true); // Always true for dual courses
+    
+    const paidAmount = parseFloat(value) || 0;
+    const remainingAmount = studentPrice - paidAmount;
+    
+    const updatedStudentPayments = [...formData.student_payments];
+    updatedStudentPayments[studentIndex] = {
+      paid_amount: value,
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+    };
     
     setFormData({
       ...formData,
-      paid_amount: value,
-      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+      student_payments: updatedStudentPayments,
     });
   };
 
@@ -144,9 +227,12 @@ const CreateCourse = () => {
         lecture_days: lectureDays,
         is_dual: isDual,
         student_ids: studentIds,
-        renewed_with_trainer: formData.renewed_with_trainer,
-        paid_amount: formData.paid_amount ? parseFloat(formData.paid_amount) : 0,
-        remaining_amount: formData.remaining_amount ? parseFloat(formData.remaining_amount) : 0,
+        // For single courses, use paid_amount
+        // For dual courses, we'll create payments separately for each student
+        paid_amount: isDual ? 0 : (formData.paid_amount ? parseFloat(formData.paid_amount) : 0),
+        remaining_amount: isDual ? 0 : (formData.remaining_amount ? parseFloat(formData.remaining_amount) : 0),
+        // For dual courses, include student payments
+        student_payments: isDual ? formData.student_payments : null,
       };
 
       console.log('Sending course data:', data);
@@ -182,27 +268,27 @@ const CreateCourse = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="page-header flex items-center gap-4">
+      <div className="page-header flex items-center gap-2 sm:gap-4">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] relative z-10 mr-16 lg:mr-0"
+          className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] relative z-10 mr-2 sm:mr-16 lg:mr-0"
         >
-          <ArrowRight className="w-5 h-5" />
+          <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
         <div>
-          <h1 className="page-title">إنشاء كورس جديد</h1>
-          <p className="page-subtitle">إعداد كورس جديد للطالب</p>
+          <h1 className="page-title text-lg sm:text-2xl">إنشاء كورس جديد</h1>
+          <p className="page-subtitle text-xs sm:text-sm">إعداد كورس جديد للطالب</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Course Type Selection */}
-        <div className="card p-6">
-          <h2 className="text-lg font-bold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary-500" />
+        <div className="card p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-[var(--color-text-primary)] mb-3 sm:mb-4 flex items-center gap-2">
+            <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary-500" />
             نوع الكورس
           </h2>
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <button
               type="button"
               onClick={() => setIsDual(false)}
@@ -244,7 +330,7 @@ const CreateCourse = () => {
           </h2>
           <div className="space-y-4">
             {/* Students */}
-            <div className={`grid gap-4 ${isDual ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+            <div className={`grid gap-3 sm:gap-4 ${isDual ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
               <div>
                 <label className="label">{isDual ? 'الطالب الأول *' : 'الطالب *'}</label>
                 <select
@@ -312,24 +398,6 @@ const CreateCourse = () => {
               </select>
             </div>
 
-            {/* Renewal Checkbox */}
-            <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
-              <input
-                type="checkbox"
-                id="renewed_with_trainer"
-                checked={formData.renewed_with_trainer}
-                onChange={(e) => setFormData({ ...formData, renewed_with_trainer: e.target.checked })}
-                className="w-5 h-5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
-              />
-              <label htmlFor="renewed_with_trainer" className="flex-1 cursor-pointer">
-                <span className="font-semibold text-[var(--color-text-primary)] block">
-                  تجديد مع نفس المدرب
-                </span>
-                <span className="text-sm text-[var(--color-text-muted)]">
-                  حدد هذا الخيار إذا كان الطالب يجدد اشتراكه مع نفس المدرب (يؤهل للمكافأة)
-                </span>
-              </label>
-            </div>
           </div>
         </div>
 
@@ -340,7 +408,7 @@ const CreateCourse = () => {
             تفاصيل الكورس
           </h2>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="label">الباقة *</label>
                 <select
@@ -385,38 +453,97 @@ const CreateCourse = () => {
             معلومات الدفع
           </h2>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">المبلغ المدفوع (د.ع)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.paid_amount}
-                  onChange={(e) => handlePaidAmountChange(e.target.value)}
-                  className="input"
-                  placeholder="0.00"
-                />
-              </div>
+            {isDual ? (
+              // Dual course: Show payment info for each student
+              <div className="space-y-6">
+                {formData.student_ids.map((studentId, index) => {
+                  const student = students.find(s => s.id.toString() === studentId);
+                  const studentPayment = formData.student_payments[index] || { paid_amount: '', remaining_amount: '' };
+                  
+                  return (
+                    <div key={index} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                      <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3">
+                        {student ? `${student.name} - ${student.phone}` : `الطالب ${index + 1}`}
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                        <div>
+                          <label className="label" htmlFor={`student-${index}-paid-amount`}>المبلغ المدفوع (د.ع)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={studentPayment.paid_amount}
+                            onChange={(e) => handleStudentPaidAmountChange(index, e.target.value)}
+                            className="input"
+                            placeholder="0.00"
+                            id={`student-${index}-paid-amount`}
+                            name={`student-${index}-paid-amount`}
+                          />
+                        </div>
 
-              <div>
-                <label className="label">المبلغ المتبقي (د.ع)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.remaining_amount}
-                  className="input bg-[var(--color-bg-secondary)] cursor-not-allowed"
-                  placeholder="0.00"
-                  readOnly
-                  disabled
-                />
-                {formData.course_package_id && (
-                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                    يتم حساب المتبقي تلقائياً من سعر الباقة
-                  </p>
-                )}
+                        <div>
+                          <label className="label" htmlFor={`student-${index}-remaining-amount`}>المبلغ المتبقي (د.ع)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={studentPayment.remaining_amount}
+                            className="input bg-[var(--color-bg-secondary)] cursor-not-allowed"
+                            placeholder="0.00"
+                            readOnly
+                            disabled
+                            id={`student-${index}-remaining-amount`}
+                            name={`student-${index}-remaining-amount`}
+                          />
+                          {formData.course_package_id && (
+                            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                              يتم حساب المتبقي تلقائياً حسب الباقة
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+            ) : (
+              // Single course: Show single payment info
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <label className="label" htmlFor="paid-amount">المبلغ المدفوع (د.ع)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.paid_amount}
+                    onChange={(e) => handlePaidAmountChange(e.target.value)}
+                    className="input"
+                    placeholder="0.00"
+                    id="paid-amount"
+                    name="paid-amount"
+                  />
+                </div>
+
+                <div>
+                  <label className="label" htmlFor="remaining-amount">المبلغ المتبقي (د.ع)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.remaining_amount}
+                    className="input bg-[var(--color-bg-secondary)] cursor-not-allowed"
+                    placeholder="0.00"
+                    readOnly
+                    disabled
+                    id="remaining-amount"
+                    name="remaining-amount"
+                  />
+                  {formData.course_package_id && (
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                      يتم حساب المتبقي تلقائياً من سعر الباقة
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -427,7 +554,7 @@ const CreateCourse = () => {
             الجدول الزمني
           </h2>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="label">تاريخ البدء *</label>
                 <input

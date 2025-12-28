@@ -2,7 +2,7 @@ import { useContext, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
-import { Menu, X, ChevronRight } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -58,6 +58,7 @@ const Layout = ({ children }) => {
           { path: '/customer-service/students', label: 'الطلاب', icon: '👥' },
           { path: '/customer-service/trainers', label: 'المدربين', icon: '🎓' },
           { path: '/courses', label: 'الكورسات', icon: '📚' },
+          { path: '/customer-service/alerts', label: 'التنبيهات', icon: '⚠️' },
           { path: '/customer-service/packages', label: 'الباقات', icon: '📦' },
           { path: '/customer-service/find-time', label: 'أوقات التدريب', icon: '🕐' },
           { path: '/customer-service/activity-logs', label: 'سجل التعديلات', icon: '📝' },
@@ -104,31 +105,38 @@ const Layout = ({ children }) => {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed top-0 right-0 h-full w-64 bg-white dark:bg-gray-800 shadow-2xl z-50 transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-64 sm:w-72 bg-white dark:bg-gray-800 shadow-2xl z-50 transition-transform duration-300 ease-in-out ${
           sidebarOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">LetSpeak</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{getRoleTitle()}</p>
+        <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <img 
+              src="/Letspeak logo.png" 
+              alt="LetSpeak Logo" 
+              className="w-8 h-8 sm:w-10 sm:h-10"
+            />
+            <h1 className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">LetSpeak</h1>
+          </div>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">{getRoleTitle()}</p>
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-          <ul className="space-y-2">
+        <nav className="p-2 sm:p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+          <ul className="space-y-1 sm:space-y-2">
             {navItems.map((item) => (
               <li key={item.path}>
                 <Link
                   to={item.path}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-all text-sm sm:text-base ${
                     location.pathname === item.path
                       ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
-                  <span className="text-xl">{item.icon}</span>
-                  <span>{item.label}</span>
+                  <span className="text-lg sm:text-xl">{item.icon}</span>
+                  <span className="truncate">{item.label}</span>
                 </Link>
               </li>
             ))}
@@ -136,19 +144,19 @@ const Layout = ({ children }) => {
         </nav>
 
         {/* Bottom Section */}
-        <div className="absolute bottom-0 right-0 left-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+        <div className="absolute bottom-0 right-0 left-0 p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
                 <span className="text-white text-xs font-bold">
                   {user?.name?.charAt(0)?.toUpperCase()}
                 </span>
               </div>
-              <span className="text-sm text-gray-600 dark:text-gray-400">{user?.name}</span>
+              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{user?.name}</span>
             </div>
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
               title={theme === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن'}
             >
               {theme === 'dark' ? '☀️' : '🌙'}
@@ -156,7 +164,7 @@ const Layout = ({ children }) => {
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40"
+            className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 text-sm sm:text-base"
           >
             <span>🚪</span>
             <span>تسجيل الخروج</span>
@@ -164,41 +172,47 @@ const Layout = ({ children }) => {
         </div>
       </aside>
 
-      {/* Collapsed Sidebar Indicator (when closed) */}
-      {!sidebarOpen && !isMobile && (
-        <div className="fixed top-20 right-4 z-30">
+      {/* Top Header with Logo */}
+      <header 
+        className={`fixed top-0 left-0 right-0 h-14 sm:h-16 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-md z-30 transition-all duration-300 ${
+          sidebarOpen && !isMobile ? 'mr-64' : 'mr-0'
+        }`}
+      >
+        <div className="h-full flex items-center justify-start px-3 sm:px-6">
+          {/* Toggle Button - Before Logo */}
           <button
             onClick={toggleSidebar}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg shadow-lg hover:bg-blue-600 transition-all"
+            className="p-1.5 sm:p-2 rounded-lg bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 mr-2 sm:mr-3"
+            style={{ 
+              zIndex: 9999,
+              pointerEvents: 'auto'
+            }}
+            title={sidebarOpen ? 'إخفاء القائمة' : 'إظهار القائمة'}
           >
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-sm">القائمة</span>
+            {sidebarOpen ? (
+              <X className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+            ) : (
+              <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+            )}
           </button>
+          
+          {/* Logo Section */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <img 
+              src="/Letspeak logo.png" 
+              alt="LetSpeak Logo" 
+              className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-sm"
+            />
+            <h2 className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 hidden xs:block">
+              LetSpeak
+            </h2>
+          </div>
         </div>
-      )}
-
-      {/* Toggle Button - Fixed at top right, stays at top only */}
-      <button
-        onClick={toggleSidebar}
-        className={`fixed top-4 p-3 rounded-xl bg-white/30 dark:bg-gray-800/30 backdrop-blur-lg shadow-lg hover:shadow-xl border-2 border-blue-500/20 dark:border-blue-400/20 transition-all duration-300 hover:scale-110 active:scale-95 hover:bg-white/40 dark:hover:bg-gray-800/40 ${
-          sidebarOpen && !isMobile ? 'right-[17rem]' : 'right-4'
-        }`}
-        style={{ 
-          zIndex: 9999,
-          pointerEvents: 'auto'
-        }}
-        title={sidebarOpen ? 'إخفاء القائمة' : 'إظهار القائمة'}
-      >
-        {sidebarOpen ? (
-          <X className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-        ) : (
-          <Menu className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-        )}
-      </button>
+      </header>
 
       {/* Main Content */}
       <main 
-        className={`transition-all duration-300 p-8 relative ${
+        className={`transition-all duration-300 pt-20 sm:pt-24 px-3 sm:px-4 md:px-6 lg:px-8 pb-4 sm:pb-6 md:pb-8 relative ${
           sidebarOpen && !isMobile ? 'mr-64' : 'mr-0'
         }`}
         style={{ zIndex: 1 }}

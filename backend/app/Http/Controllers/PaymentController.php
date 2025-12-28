@@ -58,18 +58,54 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
+        // Log incoming request for debugging
+        \Log::info('Payment Store Request:', [
+            'request_data' => $request->all(),
+        ]);
+
         $request->validate([
             'course_id' => 'required|exists:courses,id',
             'student_id' => 'required|exists:students,id',
             'amount' => 'required|numeric|min:0',
             'status' => 'required|in:completed,pending',
-            'date' => 'required|date',
+            'payment_date' => 'nullable|date',
+            'date' => 'nullable|date',
             'notes' => 'nullable|string',
+        ], [
+            'course_id.required' => 'يجب تحديد الكورس',
+            'course_id.exists' => 'الكورس المحدد غير موجود',
+            'student_id.required' => 'يجب تحديد الطالب',
+            'student_id.exists' => 'الطالب المحدد غير موجود',
+            'amount.required' => 'يجب تحديد المبلغ',
+            'amount.numeric' => 'المبلغ يجب أن يكون رقماً',
+            'amount.min' => 'المبلغ يجب أن يكون أكبر من أو يساوي صفر',
+            'status.required' => 'يجب تحديد حالة الدفعة',
+            'status.in' => 'حالة الدفعة غير صالحة',
+            'payment_date.date' => 'تاريخ الدفع غير صالح',
+            'date.date' => 'التاريخ غير صالح',
         ]);
 
-        $payment = Payment::create($request->only([
-            'course_id', 'student_id', 'amount', 'status', 'date', 'notes'
-        ]));
+        // Prepare payment data
+        $paymentData = [
+            'course_id' => $request->course_id,
+            'student_id' => $request->student_id,
+            'amount' => $request->amount,
+            'status' => $request->status,
+            'notes' => $request->notes ?? '',
+        ];
+
+        // Handle date field (payment_date takes priority, then date)
+        if ($request->has('payment_date') && !empty($request->payment_date)) {
+            $paymentData['payment_date'] = $request->payment_date;
+        } elseif ($request->has('date') && !empty($request->date)) {
+            $paymentData['payment_date'] = $request->date;
+        } else {
+            $paymentData['payment_date'] = date('Y-m-d');
+        }
+
+        \Log::info('Payment Store Data:', ['payment_data' => $paymentData]);
+
+        $payment = Payment::create($paymentData);
 
         $payment->load(['course', 'student']);
 
@@ -91,27 +127,78 @@ class PaymentController extends Controller
      */
     public function update(Request $request, Payment $payment)
     {
-        $request->validate([
-            'amount' => 'sometimes|required|numeric|min:0',
-            'status' => 'sometimes|required|in:completed,pending,refunded,cancelled',
-            'payment_date' => 'sometimes|required|date',
-            'date' => 'sometimes|required|date',
-            'notes' => 'nullable|string',
-            'course_package_id' => 'sometimes|exists:course_packages,id',
+        // Log incoming request for debugging
+        \Log::info('Payment Update Request:', [
+            'payment_id' => $payment->id,
+            'request_data' => $request->all(),
+            'has_payment_date' => $request->has('payment_date'),
+            'payment_date_value' => $request->payment_date,
         ]);
+
+        try {
+            $request->validate([
+                'amount' => 'sometimes|numeric|min:0',
+                'status' => 'sometimes|in:completed,pending,refunded,cancelled',
+                'payment_date' => 'nullable|date',
+                'date' => 'nullable|date',
+                'notes' => 'nullable|string|max:1000',
+                'course_package_id' => 'sometimes|exists:course_packages,id',
+            ], [
+                'amount.numeric' => 'المبلغ يجب أن يكون رقماً',
+                'amount.min' => 'المبلغ يجب أن يكون أكبر من أو يساوي صفر',
+                'payment_date.date' => 'تاريخ الدفع غير صالح',
+                'date.date' => 'التاريخ غير صالح',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Payment Update Validation Failed:', [
+                'errors' => $e->errors(),
+                'request_data' => $request->all(),
+            ]);
+            throw $e;
+        }
 
         // Save old data for logging
         $oldData = $payment->only(['amount', 'status', 'payment_date', 'date', 'notes']);
         
-        // Prepare update data
-        $updateData = $request->only(['amount', 'status', 'notes']);
+        // Prepare update data - only include fields that are present and valid
+        $updateData = [];
         
-        // Handle date field (payment_date or date)
-        if ($request->has('payment_date')) {
+        if ($request->has('amount')) {
+            $amount = $request->amount;
+            // Convert to float if it's a string
+            if (is_string($amount)) {
+                $amount = (float) $amount;
+            }
+            if (is_numeric($amount) && $amount >= 0) {
+                $updateData['amount'] = $amount;
+            }
+        }
+        
+        if ($request->has('status') && $request->status !== null && $request->status !== '') {
+            $updateData['status'] = $request->status;
+        }
+        
+        if ($request->has('notes')) {
+            $updateData['notes'] = $request->notes ?? '';
+        }
+        
+        // Handle date field (payment_date takes priority, then date)
+        if ($request->has('payment_date') && !empty($request->payment_date) && $request->payment_date !== 'null') {
             $updateData['payment_date'] = $request->payment_date;
-        } elseif ($request->has('date')) {
+        } elseif ($request->has('date') && !empty($request->date) && $request->date !== 'null') {
             $updateData['payment_date'] = $request->date;
         }
+        // Note: If no date is provided, we don't update it (keep existing date)
+        
+        // Ensure we have at least one field to update
+        if (empty($updateData)) {
+            return response()->json([
+                'message' => 'لا توجد بيانات للتحديث',
+                'errors' => []
+            ], 422);
+        }
+
+        \Log::info('Payment Update Data:', ['update_data' => $updateData]);
 
         $payment->update($updateData);
 
