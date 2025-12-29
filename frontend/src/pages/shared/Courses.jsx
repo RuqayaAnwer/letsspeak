@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, AlertTriangle, Info, X, HelpCircle } from 'lucide-react';
+import { Plus, AlertTriangle, Info, X, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../api/axios';
 
 // Updated: 2025-12-21 - Courses separated by status with smaller fonts
 const Courses = () => {
   const navigate = useNavigate();
-  const { isCustomerService, isFinance } = useAuth();
+  const { isCustomerService, isFinance, isTrainer } = useAuth();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [studentPaymentsModal, setStudentPaymentsModal] = useState({
@@ -19,6 +19,8 @@ const Courses = () => {
     payments: [],
     loading: false,
   });
+  // Pagination state for each course status section
+  const [coursesPages, setCoursesPages] = useState({});
 
   useEffect(() => {
     fetchCourses();
@@ -32,6 +34,11 @@ const Courses = () => {
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
+
+  // Reset pagination when courses change
+  useEffect(() => {
+    setCoursesPages({});
+  }, [courses]);
 
   const fetchCourses = async () => {
     try {
@@ -348,21 +355,182 @@ const Courses = () => {
     !['active', 'paused', 'finished'].includes(c.status)
   );
 
-  const renderCourseTable = (coursesList, title, titleColor) => {
+  const renderCourseTable = (coursesList, title, titleColor, sectionKey) => {
     if (coursesList.length === 0) return null;
 
+    // Get pagination state for this section
+    const currentPage = coursesPages[sectionKey] || 1;
+    const itemsPerPage = 5;
+    const totalPages = Math.ceil(coursesList.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentCourses = coursesList.slice(startIndex, endIndex);
+
+    const setPage = (page) => {
+      setCoursesPages(prev => ({ ...prev, [sectionKey]: page }));
+    };
+
     return (
-      <div className="mb-5">
-        <h2 className={`text-sm sm:text-base font-bold mb-2 pr-2 sm:pr-16 ${titleColor}`}>
+      <div className="mb-4 sm:mb-5">
+        <h2 className={`text-xs sm:text-base font-bold mb-1.5 sm:mb-2 pr-1 sm:pr-16 ${titleColor}`}>
           {title} ({coursesList.length})
         </h2>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs min-w-[600px]">
+          {/* Mobile Cards View */}
+          <div className="md:hidden">
+            <div className="space-y-2 p-2">
+              {currentCourses.map((course) => {
+              const completionPercentage = calculateCompletionPercentage(course);
+              const is75Percent = isAt75Percent(course);
+              
+              return (
+                <div
+                  key={course.id}
+                  className={`p-3 rounded-lg border-2 ${
+                    is75Percent 
+                      ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-500' 
+                      : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50'
+                  }`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الباقة</span>
+                      <div className="text-right flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 ml-1">{course.id}</span>
+                        {(course.course_package || course.coursePackage) ? (
+                          <>
+                            <div className="text-xs font-medium text-gray-800 dark:text-white">
+                              {(course.course_package || course.coursePackage)?.name || '-'}
+                            </div>
+                            <div className="text-[10px] text-gray-500 dark:text-gray-400">
+                              ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-gray-400 text-xs">-</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الطالب</span>
+                      <div className="flex items-center gap-1 flex-wrap justify-end max-w-[65%]">
+                        {course.is_dual && course.students && course.students.length > 1 ? (
+                          course.students.map((student, index) => (
+                            <div key={student.id} className="flex items-center gap-1">
+                              <span className="text-xs text-gray-800 dark:text-white">{student.name}</span>
+                              {!isFinance && !isTrainer && (
+                                <button
+                                  onClick={() => fetchStudentPayments(student.id, student.name, course.id, course)}
+                                  className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
+                                  title={`عرض تفاصيل دفعات ${student.name}`}
+                                >
+                                  <HelpCircle className="w-3 h-3" />
+                                </button>
+                              )}
+                              {index < course.students.length - 1 && <span className="text-gray-400 text-[10px]">،</span>}
+                            </div>
+                          ))
+                        ) : (
+                          <>
+                            <span className="text-xs text-gray-800 dark:text-white">
+                              {course.student_name || 
+                               (course.students && course.students.length > 0 
+                                 ? course.students.map(s => s.name).join(', ') 
+                                 : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
+                            </span>
+                            {getStudentId(course) && !isFinance && !isTrainer && (
+                              <button
+                                onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id, course)}
+                                className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
+                                title="عرض تفاصيل الدفعات والاشتراك"
+                              >
+                                <HelpCircle className="w-3 h-3" />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">المدرب</span>
+                      <span className="text-xs text-gray-800 dark:text-white truncate max-w-[65%]">
+                        {course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الحالة</span>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getStatusBadge(course.status)}`}>
+                        {getStatusLabel(course.status)}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الإجراءات</span>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <Link
+                          to={`/courses/${course.id}`}
+                          className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium"
+                        >
+                          التفاصيل
+                        </Link>
+                        {is75Percent && (
+                          <span className="text-[10px] text-orange-600 dark:text-orange-400 font-semibold">
+                            {completionPercentage}% مكتمل
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+              })}
+            </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                <button
+                  onClick={() => setPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
+                    currentPage === 1
+                      ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+                >
+                  <ChevronRight className="w-3 h-3" />
+                  السابق
+                </button>
+
+                <span className="text-[9px] text-gray-600 dark:text-gray-400">
+                  صفحة {currentPage} من {totalPages}
+                </span>
+
+                <button
+                  onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
+                    currentPage === totalPages
+                      ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+                >
+                  التالي
+                  <ChevronLeft className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-xs">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>#</th>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>الباقة</th>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>الطالب</th>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>المدرب</th>
@@ -382,7 +550,6 @@ const Courses = () => {
                       is75Percent ? 'bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500' : ''
                     }`}
                   >
-                    <td className="px-2 py-2 text-center text-gray-800 dark:text-white text-[10px] font-medium">{course.id}</td>
                     <td className="px-2 py-2 text-center text-gray-800 dark:text-white">
                       {(course.course_package || course.coursePackage) ? (
                         <div className="flex flex-col items-center gap-0.5">
@@ -398,11 +565,10 @@ const Courses = () => {
                     <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
                       <div className="flex items-center justify-center gap-1 flex-wrap">
                         {course.is_dual && course.students && course.students.length > 1 ? (
-                          // Dual course: Show each student with their own icon (only if not finance)
                           course.students.map((student, index) => (
                             <div key={student.id} className="flex items-center gap-1">
                               <span>{student.name}</span>
-                              {!isFinance && (
+                              {!isFinance && !isTrainer && (
                                 <button
                                   onClick={() => fetchStudentPayments(student.id, student.name, course.id, course)}
                                   className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
@@ -415,7 +581,6 @@ const Courses = () => {
                             </div>
                           ))
                         ) : (
-                          // Single course: Show one student with one icon (only if not finance)
                           <>
                             <span>
                               {course.student_name || 
@@ -423,7 +588,7 @@ const Courses = () => {
                                  ? course.students.map(s => s.name).join(', ') 
                                  : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
                             </span>
-                            {getStudentId(course) && !isFinance && (
+                            {getStudentId(course) && !isFinance && !isTrainer && (
                               <button
                                 onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id, course)}
                                 className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
@@ -473,18 +638,18 @@ const Courses = () => {
   return (
     <div>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white pr-2 sm:pr-20">
+          <h1 className="text-base sm:text-xl font-bold text-gray-800 dark:text-white pr-2 sm:pr-20">
             الكورسات
           </h1>
         </div>
         {isCustomerService && (
           <Link 
             to="/customer-service/create-course" 
-            className="btn-primary flex items-center gap-2 w-full sm:w-fit justify-center sm:justify-start text-sm sm:text-base px-4 py-2"
+            className="btn-primary flex items-center gap-1.5 sm:gap-2 w-full sm:w-fit justify-center sm:justify-start text-xs sm:text-base px-3 sm:px-4 py-1.5 sm:py-2"
           >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <Plus className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
             كورس جديد
           </Link>
         )}
@@ -496,20 +661,20 @@ const Courses = () => {
         </div>
       )}
 
-      {renderCourseTable(activeCourses, 'الكورسات النشطة', 'text-green-600 dark:text-green-400')}
-      {renderCourseTable(pausedCourses, 'الكورسات المتوقفة', 'text-yellow-600 dark:text-yellow-400')}
-      {renderCourseTable(finishedCourses, 'الكورسات المنتهية', 'text-blue-600 dark:text-blue-400')}
-      {renderCourseTable(otherCourses, 'كورسات أخرى', 'text-gray-600 dark:text-gray-400')}
+      {renderCourseTable(activeCourses, 'الكورسات النشطة', 'text-green-600 dark:text-green-400', 'active')}
+      {renderCourseTable(pausedCourses, 'الكورسات المتوقفة', 'text-yellow-600 dark:text-yellow-400', 'paused')}
+      {renderCourseTable(finishedCourses, 'الكورسات المنتهية', 'text-blue-600 dark:text-blue-400', 'finished')}
+      {renderCourseTable(otherCourses, 'كورسات أخرى', 'text-gray-600 dark:text-gray-400', 'other')}
 
       {/* Student Payments Modal */}
       {studentPaymentsModal.open && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h2 className="text-lg font-bold text-gray-800 dark:text-white">
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2 flex-wrap">
+                  <h2 className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white truncate">
                     تفاصيل دفعات الطالب: {studentPaymentsModal.studentName}
                   </h2>
                   {(() => {
@@ -522,35 +687,35 @@ const Courses = () => {
                                    studentPaymentsModal.payments[0].studentId);
                     
                     return isDual ? (
-                      <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-semibold">
+                      <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] sm:text-xs font-semibold">
                         كورس ثنائي
                       </span>
                     ) : (
-                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-semibold">
+                      <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-[10px] sm:text-xs font-semibold">
                         كورس فردي
                       </span>
                     );
                   })()}
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400">
                   الكورس رقم: {studentPaymentsModal.courseId}
                 </p>
                 {studentPaymentsModal.course?.is_dual && studentPaymentsModal.course?.students && studentPaymentsModal.course.students.length > 1 && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">
                     الطلاب: {studentPaymentsModal.course.students.map(s => s.name).join(' - ')}
                   </p>
                 )}
               </div>
               <button
                 onClick={closePaymentsModal}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors flex-shrink-0 ml-2"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-2 sm:p-4">
               {studentPaymentsModal.loading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -564,12 +729,12 @@ const Courses = () => {
                    typeof studentPaymentsModal.payments[0] === 'object' && 
                    studentPaymentsModal.payments[0].studentId ? (
                     // Dual course: Show payments for each student separately
-                    <div className="space-y-6">
+                    <div className="space-y-3 sm:space-y-6">
                       {studentPaymentsModal.payments.map((studentData, studentIndex) => (
-                        <div key={studentData.studentId} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                        <div key={studentData.studentId} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2.5 sm:p-4 border border-blue-200 dark:border-blue-800">
                           {/* Student Header */}
-                          <div className="mb-4 pb-3 border-b border-blue-300 dark:border-blue-700">
-                            <h3 className="text-base font-bold text-blue-800 dark:text-blue-300">
+                          <div className="mb-2 sm:mb-4 pb-2 sm:pb-3 border-b border-blue-300 dark:border-blue-700">
+                            <h3 className="text-xs sm:text-base font-bold text-blue-800 dark:text-blue-300">
                               {studentIndex === 0 ? 'الطالب الأول' : 'الطالب الثاني'}: {studentData.studentName}
                             </h3>
                           </div>
@@ -577,18 +742,18 @@ const Courses = () => {
                           {/* Payments Summary for this student */}
                           {studentData.payments && studentData.payments.length > 0 ? (
                             <>
-                              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-3">
-                                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">ملخص الدفعات</h4>
-                                <div className="grid grid-cols-2 gap-3 text-xs">
+                              <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
+                                <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">ملخص الدفعات</h4>
+                                <div className="grid grid-cols-2 gap-2 sm:gap-3 text-[10px] sm:text-xs">
                                   <div>
                                     <p className="text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
-                                    <p className="text-lg font-bold text-gray-800 dark:text-white">
+                                    <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white">
                                       {studentData.payments.length}
                                     </p>
                                   </div>
                                   <div>
                                     <p className="text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
-                                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                    <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
                                       {studentData.payments
                                         .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
                                         .toLocaleString('ar-EG')} د.ع
@@ -599,16 +764,15 @@ const Courses = () => {
 
                               {/* Payments List for this student */}
                               <div>
-                                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">قائمة الدفعات</h4>
-                                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                                  <table className="w-full text-xs">
+                                <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">قائمة الدفعات</h4>
+                                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+                                  <table className="w-full text-[9px] sm:text-xs min-w-full">
                                     <thead className="bg-gray-50 dark:bg-gray-700">
                                       <tr>
-                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">#</th>
-                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">المبلغ</th>
-                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ الدفع</th>
-                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
-                                        <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">ملاحظات</th>
+                                        <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">المبلغ</th>
+                                        <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ الدفع</th>
+                                        <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
+                                        <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">ملاحظات</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -640,21 +804,20 @@ const Courses = () => {
 
                                         return (
                                           <tr key={payment.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                            <td className="px-3 py-2 text-gray-800 dark:text-white text-[10px]">{index + 1}</td>
-                                            <td className="px-3 py-2 text-gray-800 dark:text-white text-[10px] font-medium">
+                                            <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-800 dark:text-white text-[9px] sm:text-[10px] font-medium whitespace-nowrap">
                                               {parseFloat(payment.amount || 0).toLocaleString('ar-EG')} د.ع
                                             </td>
-                                            <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-[10px]">
+                                            <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-600 dark:text-gray-400 text-[9px] sm:text-[10px] whitespace-nowrap">
                                               {formattedDate}
                                             </td>
-                                            <td className="px-3 py-2">
-                                              <span className={`px-2 py-1 rounded-full text-[9px] font-medium ${
+                                            <td className="px-1.5 sm:px-3 py-1 sm:py-2">
+                                              <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[9px] font-medium ${
                                                 statusColors[payment.status] || 'bg-gray-100 text-gray-700'
                                               }`}>
                                                 {statusLabels[payment.status] || payment.status}
                                               </span>
                                             </td>
-                                            <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-[10px]">
+                                            <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-600 dark:text-gray-400 text-[9px] sm:text-[10px] max-w-[100px] truncate">
                                               {payment.notes || '-'}
                                             </td>
                                           </tr>
@@ -686,12 +849,12 @@ const Courses = () => {
                         if (isMultipleStudents) {
                           // Multiple students in single course - show both
                           return (
-                            <div className="space-y-6">
+                            <div className="space-y-3 sm:space-y-6">
                               {studentPaymentsModal.payments.map((studentData, studentIndex) => (
-                                <div key={studentData.studentId} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                                <div key={studentData.studentId} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2.5 sm:p-4 border border-blue-200 dark:border-blue-800">
                                   {/* Student Header */}
-                                  <div className="mb-4 pb-3 border-b border-blue-300 dark:border-blue-700">
-                                    <h3 className="text-base font-bold text-blue-800 dark:text-blue-300">
+                                  <div className="mb-2 sm:mb-4 pb-2 sm:pb-3 border-b border-blue-300 dark:border-blue-700">
+                                    <h3 className="text-xs sm:text-base font-bold text-blue-800 dark:text-blue-300">
                                       {studentIndex === 0 ? 'الطالب الأول' : 'الطالب الثاني'}: {studentData.studentName}
                                     </h3>
                                   </div>
@@ -699,18 +862,18 @@ const Courses = () => {
                                   {/* Payments Summary for this student */}
                                   {studentData.payments && studentData.payments.length > 0 ? (
                                     <>
-                                      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-3">
-                                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">ملخص الدفعات</h4>
-                                        <div className="grid grid-cols-2 gap-3 text-xs">
+                                      <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
+                                        <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">ملخص الدفعات</h4>
+                                        <div className="grid grid-cols-2 gap-2 sm:gap-3 text-[10px] sm:text-xs">
                                           <div>
                                             <p className="text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
-                                            <p className="text-lg font-bold text-gray-800 dark:text-white">
+                                            <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white">
                                               {studentData.payments.length}
                                             </p>
                                           </div>
                                           <div>
                                             <p className="text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
-                                            <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                            <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
                                               {studentData.payments
                                                 .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
                                                 .toLocaleString('ar-EG')} د.ع
@@ -721,16 +884,15 @@ const Courses = () => {
 
                                       {/* Payments List for this student */}
                                       <div>
-                                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">قائمة الدفعات</h4>
-                                        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                                          <table className="w-full text-xs">
+                                        <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">قائمة الدفعات</h4>
+                                        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+                                          <table className="w-full text-[9px] sm:text-xs min-w-full">
                                             <thead className="bg-gray-50 dark:bg-gray-700">
                                               <tr>
-                                                <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">#</th>
-                                                <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">المبلغ</th>
-                                                <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ الدفع</th>
-                                                <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
-                                                <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">ملاحظات</th>
+                                                <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">المبلغ</th>
+                                                <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ الدفع</th>
+                                                <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
+                                                <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">ملاحظات</th>
                                               </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -762,21 +924,20 @@ const Courses = () => {
 
                                                 return (
                                                   <tr key={payment.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                                    <td className="px-3 py-2 text-gray-800 dark:text-white text-[10px]">{index + 1}</td>
-                                                    <td className="px-3 py-2 text-gray-800 dark:text-white text-[10px] font-medium">
+                                                    <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-800 dark:text-white text-[9px] sm:text-[10px] font-medium whitespace-nowrap">
                                                       {parseFloat(payment.amount || 0).toLocaleString('ar-EG')} د.ع
                                                     </td>
-                                                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-[10px]">
+                                                    <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-600 dark:text-gray-400 text-[9px] sm:text-[10px] whitespace-nowrap">
                                                       {formattedDate}
                                                     </td>
-                                                    <td className="px-3 py-2">
-                                                      <span className={`px-2 py-1 rounded-full text-[9px] font-medium ${
+                                                    <td className="px-1.5 sm:px-3 py-1 sm:py-2">
+                                                      <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[9px] font-medium ${
                                                         statusColors[payment.status] || 'bg-gray-100 text-gray-700'
                                                       }`}>
                                                         {statusLabels[payment.status] || payment.status}
                                                       </span>
                                                     </td>
-                                                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-[10px]">
+                                                    <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-600 dark:text-gray-400 text-[9px] sm:text-[10px] max-w-[100px] truncate">
                                                       {payment.notes || '-'}
                                                     </td>
                                                   </tr>
@@ -788,7 +949,7 @@ const Courses = () => {
                                       </div>
                                     </>
                                   ) : (
-                                    <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                                    <div className="text-center py-3 sm:py-4 text-gray-500 dark:text-gray-400 text-[10px] sm:text-sm">
                                       لا توجد دفعات مسجلة لهذا الطالب في هذا الكورس
                                     </div>
                                   )}
@@ -801,27 +962,27 @@ const Courses = () => {
                         // Single student - show payments normally
                         if (!Array.isArray(studentPaymentsModal.payments) || studentPaymentsModal.payments.length === 0) {
                           return (
-                            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <div className="text-center py-6 sm:py-8 text-gray-500 dark:text-gray-400 text-[10px] sm:text-sm">
                               لا توجد دفعات مسجلة لهذا الطالب في هذا الكورس
                             </div>
                           );
                         }
                         
                         return (
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           {/* Payments Summary */}
-                          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">ملخص الدفعات</h3>
-                            <div className="grid grid-cols-3 gap-4 text-xs">
+                          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2.5 sm:p-4">
+                            <h3 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">ملخص الدفعات</h3>
+                            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-[10px] sm:text-xs">
                               <div>
                                 <p className="text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
-                                <p className="text-lg font-bold text-gray-800 dark:text-white">
+                                <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white">
                                   {studentPaymentsModal.payments.length}
                                 </p>
                               </div>
                               <div>
                                 <p className="text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
-                                <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
                                   {studentPaymentsModal.payments
                                     .filter(p => p.status === 'paid' || p.status === 'completed')
                                     .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
@@ -830,7 +991,7 @@ const Courses = () => {
                               </div>
                               <div>
                                 <p className="text-gray-500 dark:text-gray-400">المبلغ المتبقي</p>
-                                <p className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                                <p className="text-sm sm:text-lg font-bold text-orange-600 dark:text-orange-400">
                                   {studentPaymentsModal.payments
                                     .filter(p => p.status === 'pending' || p.status === 'unpaid' || p.status === 'partial')
                                     .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
@@ -842,16 +1003,15 @@ const Courses = () => {
 
                           {/* Payments List */}
                           <div>
-                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">قائمة الدفعات</h3>
-                            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                              <table className="w-full text-xs">
+                            <h3 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">قائمة الدفعات</h3>
+                            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+                              <table className="w-full text-[9px] sm:text-xs min-w-full">
                                 <thead className="bg-gray-50 dark:bg-gray-700">
                                   <tr>
-                                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">#</th>
-                                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">المبلغ</th>
-                                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ الدفع</th>
-                                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
-                                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-700 dark:text-gray-300">ملاحظات</th>
+                                    <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">المبلغ</th>
+                                    <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ الدفع</th>
+                                    <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
+                                    <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">ملاحظات</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -883,21 +1043,20 @@ const Courses = () => {
 
                                     return (
                                       <tr key={payment.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td className="px-3 py-2 text-gray-800 dark:text-white text-[10px]">{index + 1}</td>
-                                        <td className="px-3 py-2 text-gray-800 dark:text-white text-[10px] font-medium">
+                                        <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-800 dark:text-white text-[9px] sm:text-[10px] font-medium whitespace-nowrap">
                                           {parseFloat(payment.amount || 0).toLocaleString('ar-EG')} د.ع
                                         </td>
-                                        <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-[10px]">
+                                        <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-600 dark:text-gray-400 text-[9px] sm:text-[10px] whitespace-nowrap">
                                           {formattedDate}
                                         </td>
-                                        <td className="px-3 py-2">
-                                          <span className={`px-2 py-1 rounded-full text-[9px] font-medium ${
+                                        <td className="px-1.5 sm:px-3 py-1 sm:py-2">
+                                          <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[9px] font-medium ${
                                             statusColors[payment.status] || 'bg-gray-100 text-gray-700'
                                           }`}>
                                             {statusLabels[payment.status] || payment.status}
                                           </span>
                                         </td>
-                                        <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-[10px]">
+                                        <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-600 dark:text-gray-400 text-[9px] sm:text-[10px] max-w-[100px] truncate">
                                           {payment.notes || '-'}
                                         </td>
                                       </tr>

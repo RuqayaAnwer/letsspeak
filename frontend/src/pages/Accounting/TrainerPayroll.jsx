@@ -11,6 +11,8 @@ import {
   TrendingUp,
   Calendar,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Trophy,
   Repeat,
   BookOpen,
@@ -58,6 +60,7 @@ const TrainerPayroll = () => {
     newStatus: 'paid',
   });
   const [copiedAccount, setCopiedAccount] = useState(null);
+  const [mobilePage, setMobilePage] = useState(1); // Pagination for mobile cards
 
   const months = [
     { value: 1, label: 'يناير' },
@@ -80,6 +83,11 @@ const TrainerPayroll = () => {
   useEffect(() => {
     fetchPayrollData();
   }, [selectedMonth, selectedYear]);
+
+  // Reset mobile page when payrolls change
+  useEffect(() => {
+    setMobilePage(1);
+  }, [payrollData?.payrolls]);
 
   const fetchPayrollData = async () => {
     setLoading(true);
@@ -313,98 +321,142 @@ const TrainerPayroll = () => {
         <html dir="rtl" lang="ar">
         <head>
           <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
               font-family: 'Cairo', Arial, sans-serif;
-              padding: 40px;
+              padding: 20px;
               background: white;
               color: #1f2937;
+              font-size: 14px;
             }
             .payroll-container {
-              max-width: 800px;
+              max-width: 100%;
               margin: 0 auto;
               background: white;
-              padding: 30px;
+              padding: 20px;
               border: 2px solid #e5e7eb;
-              border-radius: 12px;
+              border-radius: 8px;
             }
             .header {
               text-align: center;
-              margin-bottom: 30px;
-              padding-bottom: 20px;
-              border-bottom: 3px solid #3b82f6;
+              margin-bottom: 20px;
+              padding-bottom: 15px;
+              border-bottom: 2px solid #3b82f6;
             }
             .header h1 {
-              font-size: 28px;
+              font-size: 20px;
               color: #1f2937;
-              margin-bottom: 10px;
+              margin-bottom: 8px;
+              font-weight: 700;
             }
             .header h2 {
-              font-size: 20px;
+              font-size: 16px;
               color: #6b7280;
-              font-weight: 500;
+              font-weight: 600;
+            }
+            .header p {
+              font-size: 12px;
+              color: #6b7280;
+              margin-top: 8px;
             }
             .info-section {
-              margin-bottom: 25px;
+              margin-bottom: 18px;
             }
             .info-row {
               display: flex;
               justify-content: space-between;
-              padding: 12px 0;
+              align-items: center;
+              padding: 10px 0;
               border-bottom: 1px solid #e5e7eb;
+              flex-wrap: wrap;
             }
             .info-label {
               font-weight: 600;
               color: #4b5563;
+              font-size: 13px;
+              flex: 1;
+              min-width: 120px;
             }
             .info-value {
               font-weight: 700;
               color: #1f2937;
+              font-size: 13px;
+              text-align: left;
+              flex: 1;
+              min-width: 100px;
             }
             .bonuses-section {
               background: #f9fafb;
-              padding: 20px;
-              border-radius: 8px;
-              margin: 20px 0;
+              padding: 15px;
+              border-radius: 6px;
+              margin: 15px 0;
             }
             .bonuses-section h3 {
-              font-size: 18px;
-              margin-bottom: 15px;
+              font-size: 15px;
+              margin-bottom: 12px;
               color: #1f2937;
               border-bottom: 2px solid #3b82f6;
-              padding-bottom: 8px;
+              padding-bottom: 6px;
+              font-weight: 700;
             }
             .bonus-item {
               display: flex;
               justify-content: space-between;
-              padding: 10px 0;
+              align-items: center;
+              padding: 8px 0;
               border-bottom: 1px solid #e5e7eb;
+              flex-wrap: wrap;
             }
             .bonus-item:last-child {
               border-bottom: none;
             }
+            .bonus-item span:first-child {
+              font-size: 12px;
+              color: #4b5563;
+              flex: 1;
+              min-width: 100px;
+            }
+            .bonus-item span:last-child {
+              font-size: 13px;
+              font-weight: 700;
+              color: #1f2937;
+              text-align: left;
+              flex: 1;
+              min-width: 80px;
+            }
             .total-section {
               background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
               color: white;
-              padding: 25px;
-              border-radius: 8px;
+              padding: 18px;
+              border-radius: 6px;
               text-align: center;
-              margin-top: 25px;
+              margin-top: 20px;
             }
             .total-section .label {
-              font-size: 16px;
-              margin-bottom: 10px;
+              font-size: 14px;
+              margin-bottom: 8px;
+              font-weight: 600;
             }
             .total-section .amount {
-              font-size: 32px;
+              font-size: 24px;
               font-weight: 700;
             }
             .no-bonuses {
               text-align: center;
               color: #9ca3af;
-              padding: 15px;
+              padding: 12px;
+              font-size: 12px;
+            }
+            @media print {
+              body {
+                padding: 10px;
+              }
+              .payroll-container {
+                padding: 15px;
+              }
             }
           </style>
         </head>
@@ -413,7 +465,7 @@ const TrainerPayroll = () => {
             <div class="header">
               <h1>كشف راتب المدرب</h1>
               <h2>${payroll.trainer_name || 'غير محدد'}</h2>
-              <p style="margin-top: 10px; color: #6b7280;">شهر ${monthName} ${selectedYear}</p>
+              <p>شهر ${monthName} ${selectedYear}</p>
             </div>
             
             <div class="info-section">
@@ -451,7 +503,7 @@ const TrainerPayroll = () => {
             </div>
             
             ${payroll.bonus_deduction && parseFloat(payroll.bonus_deduction) !== 0 ? `
-              <div class="info-section" style="background: ${parseFloat(payroll.bonus_deduction) > 0 ? '#d1fae5' : '#fee2e2'}; padding: 15px; border-radius: 8px;">
+              <div class="info-section" style="background: ${parseFloat(payroll.bonus_deduction) > 0 ? '#d1fae5' : '#fee2e2'}; padding: 12px; border-radius: 6px;">
                 <div class="info-row" style="border: none;">
                   <span class="info-label">${parseFloat(payroll.bonus_deduction) > 0 ? 'بونص إضافي' : 'خصم'}:</span>
                   <span class="info-value" style="color: ${parseFloat(payroll.bonus_deduction) > 0 ? '#059669' : '#dc2626'};">
@@ -459,7 +511,7 @@ const TrainerPayroll = () => {
                   </span>
                 </div>
                 ${payroll.bonus_deduction_notes ? `
-                  <p style="margin-top: 10px; font-size: 14px; color: #6b7280;">${payroll.bonus_deduction_notes.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+                  <p style="margin-top: 8px; font-size: 11px; color: #6b7280; line-height: 1.4;">${payroll.bonus_deduction_notes.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
                 ` : ''}
               </div>
             ` : ''}
@@ -478,7 +530,8 @@ const TrainerPayroll = () => {
       hiddenDiv.style.position = 'absolute';
       hiddenDiv.style.left = '-9999px';
       hiddenDiv.style.top = '-9999px';
-      hiddenDiv.style.width = '800px';
+      hiddenDiv.style.width = '100%';
+      hiddenDiv.style.maxWidth = '600px';
       hiddenDiv.innerHTML = htmlContent;
       document.body.appendChild(hiddenDiv);
       
@@ -492,7 +545,7 @@ const TrainerPayroll = () => {
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
-          width: 800,
+          width: hiddenDiv.scrollWidth,
           height: hiddenDiv.scrollHeight,
         });
         
@@ -545,7 +598,7 @@ const TrainerPayroll = () => {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="page-header">
-          <h1 className="page-title">رواتب المدربين</h1>
+          <h1 className="page-title text-base sm:text-2xl">رواتب المدربين</h1>
         </div>
         <div className="card p-8 text-center">
           <p className="text-[var(--color-text-muted)]">جاري تحميل البيانات...</p>
@@ -565,10 +618,10 @@ const TrainerPayroll = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div>
-          <h1 className="page-title flex items-center gap-2">
-            <DollarSign className="w-8 h-8 text-emerald-500" />
+          <h1 className="page-title flex items-center gap-1.5 sm:gap-2 text-base sm:text-2xl">
+            <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-500" />
             رواتب المدربين
           </h1>
           <p className="page-subtitle">
@@ -577,26 +630,28 @@ const TrainerPayroll = () => {
         </div>
 
         {/* Period Selector */}
-        <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-          <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">التاريخ الحالي:</span>
-            <span className="text-sm font-bold text-blue-700 dark:text-blue-300">
-              {new Date().toLocaleDateString('ar-IQ', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 px-2.5 sm:px-4 py-2 sm:py-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 max-w-full overflow-hidden">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
+            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+              <span className="text-[10px] sm:text-sm text-blue-600 dark:text-blue-400 font-medium">التاريخ الحالي:</span>
+              <span className="text-[10px] sm:text-sm font-bold text-blue-700 dark:text-blue-300 truncate">
+                {new Date().toLocaleDateString('ar-IQ', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </span>
+            </div>
           </div>
-          <div className="h-6 w-px bg-blue-300 dark:bg-blue-700 mx-2"></div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">الفترة المحددة:</span>
+          <div className="hidden sm:block h-6 w-px bg-blue-300 dark:bg-blue-700 mx-2"></div>
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0 flex-1">
+            <span className="text-[10px] sm:text-sm text-blue-600 dark:text-blue-400 font-medium">الفترة المحددة:</span>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="px-3 py-1 rounded-md border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-800 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 text-blue-700 dark:text-blue-300 font-medium text-sm cursor-pointer appearance-none"
+              className="px-2 sm:px-3 py-1 rounded-md border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-800 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 text-blue-700 dark:text-blue-300 font-medium text-[10px] sm:text-sm cursor-pointer appearance-none"
             >
               {months.map((month) => (
                 <option key={month.value} value={month.value}>
@@ -607,7 +662,7 @@ const TrainerPayroll = () => {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="px-3 py-1 rounded-md border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-800 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 text-blue-700 dark:text-blue-300 font-medium text-sm cursor-pointer appearance-none"
+              className="px-2 sm:px-3 py-1 rounded-md border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-800 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 text-blue-700 dark:text-blue-300 font-medium text-[10px] sm:text-sm cursor-pointer appearance-none"
             >
               {years.map((year) => (
                 <option key={year} value={year}>
@@ -620,57 +675,57 @@ const TrainerPayroll = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-200 dark:border-emerald-800">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-emerald-500/20">
-              <DollarSign className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        <div className="card p-2 sm:p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-200 dark:border-emerald-800">
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <div className="p-1.5 sm:p-3 rounded-xl bg-emerald-500/20">
+              <DollarSign className="w-4 h-4 sm:w-6 sm:h-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <div>
-              <p className="text-sm text-[var(--color-text-muted)]">إجمالي الرواتب</p>
-              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)]">إجمالي الرواتب</p>
+              <p className="text-sm sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 truncate">
                 {formatCurrency(summary.total_payout)}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="card p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200 dark:border-blue-800">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-blue-500/20">
-              <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <div className="card p-2 sm:p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200 dark:border-blue-800">
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <div className="p-1.5 sm:p-3 rounded-xl bg-blue-500/20">
+              <Users className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
             </div>
-            <div>
-              <p className="text-sm text-[var(--color-text-muted)]">عدد المدربين</p>
-              <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)]">عدد المدربين</p>
+              <p className="text-sm sm:text-xl font-bold text-blue-600 dark:text-blue-400">
                 {summary.total_trainers || payrolls.length}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="card p-4 bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-200 dark:border-purple-800">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-purple-500/20">
-              <BookOpen className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+        <div className="card p-2 sm:p-4 bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-200 dark:border-purple-800">
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <div className="p-1.5 sm:p-3 rounded-xl bg-purple-500/20">
+              <BookOpen className="w-4 h-4 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
             </div>
-            <div>
-              <p className="text-sm text-[var(--color-text-muted)]">إجمالي المحاضرات</p>
-              <p className="text-xl font-bold text-purple-600 dark:text-purple-400">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)]">إجمالي المحاضرات</p>
+              <p className="text-sm sm:text-xl font-bold text-purple-600 dark:text-purple-400">
                 {summary.total_lectures || 0}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="card p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-200 dark:border-amber-800">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-amber-500/20">
-              <Repeat className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+        <div className="card p-2 sm:p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-200 dark:border-amber-800">
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <div className="p-1.5 sm:p-3 rounded-xl bg-amber-500/20">
+              <Repeat className="w-4 h-4 sm:w-6 sm:h-6 text-amber-600 dark:text-amber-400" />
             </div>
-            <div>
-              <p className="text-sm text-[var(--color-text-muted)]">إجمالي التجديدات</p>
-              <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)]">إجمالي التجديدات</p>
+              <p className="text-sm sm:text-xl font-bold text-amber-600 dark:text-amber-400">
                 {summary.total_renewals || 0}
               </p>
             </div>
@@ -681,21 +736,21 @@ const TrainerPayroll = () => {
       {/* Competition Winners */}
       {competitionWinners.length > 0 && (
         <div className="card overflow-hidden">
-          <div className="p-4 bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border-b border-amber-200 dark:border-amber-800">
-            <h2 className="text-lg font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-amber-500" />
-              الفائزون بمكافأة المنافسة
-              <span className="text-sm font-normal text-[var(--color-text-muted)]">
+          <div className="p-2.5 sm:p-4 bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border-b border-amber-200 dark:border-amber-800">
+            <h2 className="text-xs sm:text-lg font-bold text-[var(--color-text-primary)] flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 flex-shrink-0" />
+              <span className="truncate">الفائزون بمكافأة المنافسة</span>
+              <span className="text-[10px] sm:text-sm font-normal text-[var(--color-text-muted)]">
                 (أعلى 3 مدربين بالتجديدات)
               </span>
             </h2>
           </div>
-          <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-2.5 sm:p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4">
               {competitionWinners.map((winner, index) => (
                 <div
                   key={winner.trainer_id}
-                  className={`relative p-4 rounded-xl border-2 ${
+                  className={`relative p-2.5 sm:p-4 rounded-xl border-2 ${
                     index === 0
                       ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border-yellow-400'
                       : index === 1
@@ -703,9 +758,9 @@ const TrainerPayroll = () => {
                       : 'bg-gradient-to-br from-orange-400/20 to-orange-500/10 border-orange-400'
                   }`}
                 >
-                  <div className="absolute -top-3 -right-3">
+                  <div className="absolute -top-2 sm:-top-3 -right-2 sm:-right-3">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-start justify-start text-white font-bold shadow-lg p-1.5 ${
+                      className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-start justify-start text-white font-bold shadow-lg p-1 sm:p-1.5 ${
                         index === 0
                           ? 'bg-gradient-to-br from-yellow-500 to-yellow-600'
                           : index === 1
@@ -713,17 +768,17 @@ const TrainerPayroll = () => {
                           : 'bg-gradient-to-br from-orange-400 to-orange-500'
                       }`}
                     >
-                      <span className="text-xs leading-none">{winner.rank}</span>
+                      <span className="text-[9px] sm:text-xs leading-none">{winner.rank}</span>
                     </div>
                   </div>
-                  <div className="pt-2">
-                    <h3 className="font-bold text-lg text-[var(--color-text-primary)]">
+                  <div className="pt-1.5 sm:pt-2">
+                    <h3 className="font-bold text-xs sm:text-lg text-[var(--color-text-primary)] truncate">
                       {winner.trainer_name}
                     </h3>
-                    <p className="text-sm text-[var(--color-text-muted)] mt-1">
+                    <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)] mt-0.5 sm:mt-1">
                       {winner.renewals_count} تجديد
                     </p>
-                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-2">
+                    <p className="text-sm sm:text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1.5 sm:mt-2">
                       +{formatCurrency(winner.bonus)}
                     </p>
                   </div>
@@ -743,12 +798,234 @@ const TrainerPayroll = () => {
         />
       ) : (
         <div className="card overflow-hidden">
-          <div className="p-4 border-b border-[var(--color-border)]">
-            <h2 className="text-lg font-bold text-[var(--color-text-primary)]">
+          <div className="p-3 sm:p-4 border-b border-[var(--color-border)]">
+            <h2 className="text-xs sm:text-lg font-bold text-[var(--color-text-primary)] text-center whitespace-nowrap">
               تفاصيل رواتب المدربين - {months[selectedMonth - 1]?.label} {selectedYear}
             </h2>
           </div>
-          <div className="overflow-x-auto -mx-4 sm:mx-0">
+          {/* Mobile Cards View */}
+          <div className="md:hidden">
+            {/* Pagination Logic */}
+            {(() => {
+              const itemsPerPage = 5;
+              const totalPages = Math.ceil(payrolls.length / itemsPerPage);
+              const startIndex = (mobilePage - 1) * itemsPerPage;
+              const endIndex = startIndex + itemsPerPage;
+              const currentPayrolls = payrolls.slice(startIndex, endIndex);
+              
+              return (
+                <>
+                  <div className="space-y-2 p-2">
+                    {currentPayrolls.map((payroll, relativeIndex) => {
+                      const index = startIndex + relativeIndex;
+                      const volumeBonus = getVolumeBonus(payroll.completed_lectures);
+                      const isWinner = isCompetitionWinner(payroll.trainer_id);
+                      const rank = getWinnerRank(payroll.trainer_id);
+                      
+                      return (
+                <div
+                  key={payroll.trainer_id}
+                  className={`p-2 rounded-lg border-2 max-w-full overflow-hidden ${
+                    isWinner 
+                      ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-300 dark:border-amber-700' 
+                      : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50'
+                  }`}
+                >
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-gray-800 dark:text-white">{index + 1}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadPayrollImage(payroll);
+                        }}
+                        className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-blue-500 hover:text-blue-600 transition-colors"
+                        title="تحميل صورة الراتب"
+                      >
+                        <Receipt className="w-3 h-3" />
+                      </button>
+                      {isWinner && (
+                        <span
+                          className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[9px] font-medium ${
+                            rank === 1
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              : rank === 2
+                              ? 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
+                              : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                          }`}
+                        >
+                          <Trophy className="w-2 h-2" />
+                          {rank}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="col-span-2 flex items-center gap-1">
+                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المدرب:</span>
+                      <span className="text-[10px] font-semibold text-gray-800 dark:text-white truncate flex-1">{payroll.trainer_name}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المحاضرات:</span>
+                      <span className="badge badge-info text-[9px] px-1 py-0.5">
+                        {payroll.completed_lectures}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الراتب:</span>
+                      <span className="text-[10px] font-medium text-gray-800 dark:text-white truncate">{formatCurrency(payroll.base_pay)}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">التحويل:</span>
+                      {payroll.payment_method ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPaymentModal({
+                              open: true,
+                              trainerId: payroll.trainer_id,
+                              trainerName: payroll.trainer_name,
+                              paymentMethod: payroll.payment_method || '',
+                              accountNumber: payroll.payment_account_number || '',
+                            });
+                          }}
+                          className={`px-1 py-0.5 rounded-md font-medium text-[9px] transition-all flex items-center gap-0.5 ${
+                            payroll.payment_method === 'zain_cash'
+                              ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
+                              : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}
+                        >
+                          {payroll.payment_method === 'zain_cash' ? (
+                            <>
+                              <Smartphone className="w-2.5 h-2.5" />
+                              <span>زين</span>
+                            </>
+                          ) : (
+                            <>
+                              <CreditCard className="w-2.5 h-2.5" />
+                              <span>بنك</span>
+                            </>
+                          )}
+                        </button>
+                      ) : (
+                        <span className="text-[9px] text-gray-400">—</span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">التجديدات:</span>
+                      <span className="text-[10px] text-gray-800 dark:text-white">{payroll.renewals_count || 0}</span>
+                    </div>
+                    
+                    <div className="col-span-2 flex items-center gap-1 flex-wrap">
+                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المكافآت:</span>
+                      <div className="flex flex-wrap gap-0.5">
+                        {payroll.include_renewal_bonus && (payroll.renewals_count > 0 || (payroll.renewal_total && payroll.renewal_total > 0)) && (
+                          <span className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border border-yellow-400 dark:border-yellow-500 rounded text-[9px]">
+                            تجديد
+                          </span>
+                        )}
+                        {payroll.include_volume_bonus && volumeBonus > 0 && (
+                          <span className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border border-yellow-400 dark:border-yellow-500 rounded text-[9px]">
+                            كمية
+                          </span>
+                        )}
+                        {isWinner && (
+                          <span className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border border-yellow-400 dark:border-yellow-500 rounded text-[9px]">
+                            منافسة
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">بونص/خصم:</span>
+                      <span className={`text-[10px] font-medium ${
+                        (payroll.bonus_deduction || 0) >= 0 
+                          ? 'text-green-600 dark:text-green-400' 
+                          : 'text-red-600 dark:text-red-400'
+                      }`}>
+                        {formatCurrency(payroll.bonus_deduction || 0)}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الإجمالي:</span>
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400 truncate">{formatCurrency(payroll.total)}</span>
+                    </div>
+                    
+                    <div className="col-span-2 flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
+                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">حالة الدفع:</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openPaymentStatusModal(
+                            payroll.trainer_id,
+                            payroll.trainer_name,
+                            payroll.status
+                          );
+                        }}
+                        className={`px-2 py-0.5 rounded-lg text-[9px] font-medium transition-all ${
+                          payroll.status === 'paid'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        {payroll.status === 'paid' ? '✓ تم الدفع' : 'مسودة'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+                    })}
+                  </div>
+                  
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                      <button
+                        onClick={() => setMobilePage(prev => Math.max(1, prev - 1))}
+                        disabled={mobilePage === 1}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors text-[10px] sm:text-xs ${
+                          mobilePage === 1
+                            ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                        السابق
+                      </button>
+
+                      <span className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
+                        صفحة {mobilePage} من {totalPages}
+                      </span>
+
+                      <button
+                        onClick={() => setMobilePage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={mobilePage === totalPages}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors text-[10px] sm:text-xs ${
+                          mobilePage === totalPages
+                            ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                      >
+                        التالي
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0">
             <table className="table text-sm min-w-[1000px]">
               <thead>
                 <tr>
@@ -1070,53 +1347,53 @@ const TrainerPayroll = () => {
       )}
 
       {/* Bonus Info */}
-      <div className="card p-6">
-        <h3 className="font-bold text-lg text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
-          <Award className="w-5 h-5 text-primary-500" />
-          نظام المكافآت والبونصات
+      <div className="card p-3 sm:p-6 max-w-full overflow-hidden">
+        <h3 className="font-bold text-xs sm:text-lg text-[var(--color-text-primary)] mb-3 sm:mb-4 flex items-center justify-center gap-1.5 sm:gap-2">
+          <Award className="w-4 h-4 sm:w-5 sm:h-5 text-primary-500 flex-shrink-0" />
+          <span className="text-center">نظام المكافآت والبونصات</span>
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
-            <div className="flex items-center gap-2 mb-2">
-              <BookOpen className="w-5 h-5 text-blue-500" />
-              <span className="font-semibold text-[var(--color-text-primary)]">سعر المحاضرة</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <div className="p-2.5 sm:p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-center">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 flex-shrink-0" />
+              <span className="font-semibold text-[10px] sm:text-sm text-[var(--color-text-primary)]">سعر المحاضرة</span>
             </div>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">4,000 د.ع</p>
-            <p className="text-sm text-[var(--color-text-muted)] mt-1">لكل محاضرة مكتملة</p>
+            <p className="text-base sm:text-2xl font-bold text-blue-600 dark:text-blue-400">4,000 د.ع</p>
+            <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)] mt-1">لكل محاضرة مكتملة</p>
           </div>
 
-          <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
-            <div className="flex items-center gap-2 mb-2">
-              <Repeat className="w-5 h-5 text-amber-500" />
-              <span className="font-semibold text-[var(--color-text-primary)]">مكافأة التجديد</span>
+          <div className="p-2.5 sm:p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-center">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+              <Repeat className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 flex-shrink-0" />
+              <span className="font-semibold text-[10px] sm:text-sm text-[var(--color-text-primary)]">مكافأة التجديد</span>
             </div>
-            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">5,000 د.ع</p>
-            <p className="text-sm text-[var(--color-text-muted)] mt-1">لكل تجديد مع نفس المدرب</p>
+            <p className="text-base sm:text-2xl font-bold text-amber-600 dark:text-amber-400">5,000 د.ع</p>
+            <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)] mt-1">لكل تجديد مع نفس المدرب</p>
           </div>
 
-          <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-5 h-5 text-purple-500" />
-              <span className="font-semibold text-[var(--color-text-primary)]">مكافأة الكمية</span>
+          <div className="p-2.5 sm:p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-center">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 flex-shrink-0" />
+              <span className="font-semibold text-[10px] sm:text-sm text-[var(--color-text-primary)]">مكافأة الكمية</span>
             </div>
-            <div className="space-y-1">
-              <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
+            <div className="space-y-0.5 sm:space-y-1">
+              <p className="text-sm sm:text-lg font-bold text-purple-600 dark:text-purple-400">
                 60+ = 30,000 د.ع
               </p>
-              <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
+              <p className="text-sm sm:text-lg font-bold text-purple-600 dark:text-purple-400">
                 80+ = 80,000 د.ع
               </p>
             </div>
-            <p className="text-sm text-[var(--color-text-muted)] mt-1">محاضرات شهرياً</p>
+            <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)] mt-1">محاضرات شهرياً</p>
           </div>
 
-          <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
-            <div className="flex items-center gap-2 mb-2">
-              <Trophy className="w-5 h-5 text-yellow-500" />
-              <span className="font-semibold text-[var(--color-text-primary)]">مكافأة المنافسة</span>
+          <div className="p-2.5 sm:p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-center">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+              <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 flex-shrink-0" />
+              <span className="font-semibold text-[10px] sm:text-sm text-[var(--color-text-primary)]">مكافأة المنافسة</span>
             </div>
-            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">20,000 د.ع</p>
-            <p className="text-sm text-[var(--color-text-muted)] mt-1">
+            <p className="text-base sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">20,000 د.ع</p>
+            <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)] mt-1">
               لأفضل 3 مدربين بالتجديدات
             </p>
           </div>

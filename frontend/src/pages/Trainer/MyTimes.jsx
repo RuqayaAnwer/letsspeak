@@ -194,35 +194,35 @@ const MyTimes = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+    <div className="space-y-3 sm:space-y-6">
+      <h1 className="text-base sm:text-2xl font-bold text-gray-800 dark:text-white">
         أوقاتي
       </h1>
 
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 p-4 rounded-lg flex items-center gap-2">
-          <CheckCircle className="w-5 h-5" />
+        <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 p-2.5 sm:p-4 rounded-lg flex items-center gap-1.5 sm:gap-2 text-xs sm:text-base">
+          <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
           {successMessage}
         </div>
       )}
 
       {/* Error Message */}
       {errorMessage && (
-        <div className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 p-4 rounded-lg flex items-center gap-2">
-          <X className="w-5 h-5" />
+        <div className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 p-2.5 sm:p-4 rounded-lg flex items-center gap-1.5 sm:gap-2 text-xs sm:text-base">
+          <X className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
           {errorMessage}
         </div>
       )}
 
       {/* Restriction Info */}
       {restrictionInfo && (
-        <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 p-4 rounded-lg flex items-center gap-2">
-          <Calendar className="w-5 h-5" />
-          <div>
-            <p className="font-semibold">{restrictionInfo.message}</p>
+        <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 p-2.5 sm:p-4 rounded-lg flex items-center gap-1.5 sm:gap-2 text-xs sm:text-base">
+          <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+          <div className="min-w-0">
+            <p className="font-semibold text-xs sm:text-base">{restrictionInfo.message}</p>
             {restrictionInfo.daysRemaining !== undefined && (
-              <p className="text-sm mt-1">
+              <p className="text-[10px] sm:text-sm mt-1">
                 يمكنك التعديل بعد {restrictionInfo.daysRemaining} يوم
               </p>
             )}
@@ -231,25 +231,25 @@ const MyTimes = () => {
       )}
 
       {/* Statistics */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-          <Clock className="w-5 h-5 text-blue-500" />
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 sm:p-6 max-w-full overflow-hidden">
+        <h2 className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
+          <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 flex-shrink-0" />
           الإحصائيات
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
-            <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-4">
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2.5 sm:p-4 text-center">
+            <div className="text-xl sm:text-3xl font-bold text-green-600 dark:text-green-400">
               {stats.completedLectures}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-[10px] sm:text-sm text-gray-600 dark:text-gray-400">
               عدد المحاضرات المكتملة
             </div>
           </div>
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
-            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2.5 sm:p-4 text-center">
+            <div className="text-xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
               {stats.completedCoursesThisMonth}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-[10px] sm:text-sm text-gray-600 dark:text-gray-400">
               عدد الكورسات المكتملة خلال الشهر
             </div>
           </div>
@@ -257,20 +257,20 @@ const MyTimes = () => {
       </div>
 
       {/* Unavailable Days */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-red-500" />
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 sm:p-6 max-w-full overflow-hidden">
+        <h2 className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
+          <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 flex-shrink-0" />
           يوم الإجازة الأسبوعية
         </h2>
-        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-3 rounded mb-4">
-          <p className="text-sm text-blue-800 dark:text-blue-300 font-semibold">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-2 sm:border-l-4 border-blue-500 p-2 sm:p-3 rounded mb-3 sm:mb-4">
+          <p className="text-[10px] sm:text-sm text-blue-800 dark:text-blue-300 font-semibold">
             ⚠️ تنبيه: يمكنك تحديد يوم الإجازة مرة واحدة فقط. بعد التحديد، لا يمكنك التعديل إلا بعد أسبوع من آخر تعديل.
           </p>
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        <p className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
           اختر يوم إجازة واحد فقط لا يمكنك العمل به
         </p>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           {weekDays.map((day) => {
             const isSelected = unavailableDays.includes(day.key);
             const isDisabled = unavailableDays.length > 0 && !isSelected;
@@ -281,7 +281,7 @@ const MyTimes = () => {
                 key={day.key}
                 onClick={() => toggleDay(day.key)}
                 disabled={isDisabled || isRestricted}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium transition-all text-xs sm:text-sm ${
                   isSelected
                     ? 'bg-red-500 text-white shadow-lg'
                     : (isDisabled || isRestricted)
@@ -304,46 +304,54 @@ const MyTimes = () => {
           })}
         </div>
         {unavailableDays.length > 0 && (
-          <p className="text-sm text-green-600 dark:text-green-400 mt-3">
+          <p className="text-[10px] sm:text-sm text-green-600 dark:text-green-400 mt-2 sm:mt-3">
             ✓ تم تحديد يوم الإجازة: {weekDays.find(d => d.key === unavailableDays[0])?.label}
           </p>
         )}
       </div>
 
       {/* Unavailable Time Slots */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-            <Clock className="w-5 h-5 text-orange-500" />
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 sm:p-6 max-w-full overflow-hidden">
+        <div className="flex items-center justify-between mb-3 sm:mb-4 flex-wrap gap-2">
+          <h2 className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white flex items-center gap-1.5 sm:gap-2">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 flex-shrink-0" />
             أوقات غير متاحة
           </h2>
           <button
             onClick={addTimeSlot}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs sm:text-sm"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             إضافة وقت
           </button>
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        <p className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
           حدد أوقات معينة لا يمكنك العمل بها في أيام محددة
         </p>
 
         {unavailableTimes.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-6 sm:py-8 text-gray-500 dark:text-gray-400 text-xs sm:text-base">
             لا توجد أوقات غير متاحة محددة
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {unavailableTimes.map((slot, index) => (
               <div
                 key={index}
-                className="flex flex-wrap items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                className="flex flex-wrap items-center gap-1.5 sm:gap-3 p-2 sm:p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
               >
                 <select
                   value={slot.day}
                   onChange={(e) => updateTimeSlot(index, 'day', e.target.value)}
-                  className="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-[10px] sm:text-sm flex-1 min-w-[80px] sm:min-w-[100px]"
+                  style={{
+                    paddingTop: '4px',
+                    paddingBottom: '4px',
+                    paddingLeft: '6px',
+                    paddingRight: '6px',
+                    fontSize: '10px',
+                    height: '28px'
+                  }}
                 >
                   {weekDays.map((day) => (
                     <option key={day.key} value={day.key}>
@@ -351,27 +359,45 @@ const MyTimes = () => {
                     </option>
                   ))}
                 </select>
-                <span className="text-gray-600 dark:text-gray-400">من</span>
+                <span className="text-gray-600 dark:text-gray-400 text-[10px] sm:text-sm">من</span>
                 <input
                   type="time"
                   value={slot.from}
                   onChange={(e) =>
                     updateTimeSlot(index, 'from', e.target.value)
                   }
-                  className="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-[10px] sm:text-sm"
+                  style={{
+                    paddingTop: '4px',
+                    paddingBottom: '4px',
+                    paddingLeft: '6px',
+                    paddingRight: '6px',
+                    fontSize: '10px',
+                    height: '28px',
+                    width: '80px'
+                  }}
                 />
-                <span className="text-gray-600 dark:text-gray-400">إلى</span>
+                <span className="text-gray-600 dark:text-gray-400 text-[10px] sm:text-sm">إلى</span>
                 <input
                   type="time"
                   value={slot.to}
                   onChange={(e) => updateTimeSlot(index, 'to', e.target.value)}
-                  className="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-[10px] sm:text-sm"
+                  style={{
+                    paddingTop: '4px',
+                    paddingBottom: '4px',
+                    paddingLeft: '6px',
+                    paddingRight: '6px',
+                    fontSize: '10px',
+                    height: '28px',
+                    width: '80px'
+                  }}
                 />
                 <button
                   onClick={() => removeTimeSlot(index)}
-                  className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                  className="p-1 sm:p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors flex-shrink-0"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                 </button>
               </div>
             ))}
@@ -380,8 +406,8 @@ const MyTimes = () => {
       </div>
 
       {/* Notes */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 sm:p-6 max-w-full overflow-hidden">
+        <h2 className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white mb-3 sm:mb-4">
           ملاحظات إضافية
         </h2>
         <textarea
@@ -390,9 +416,9 @@ const MyTimes = () => {
           rows={4}
           maxLength={500}
           placeholder="أضف أي ملاحظات إضافية حول أوقات عدم توفرك..."
-          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+          className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none text-xs sm:text-sm"
         />
-        <div className="text-left text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <div className="text-left text-[10px] sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
           {notes.length}/500
         </div>
       </div>
@@ -402,16 +428,16 @@ const MyTimes = () => {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-base w-full sm:w-auto justify-center"
         >
           {saving ? (
             <>
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               جاري الحفظ...
             </>
           ) : (
             <>
-              <Save className="w-5 h-5" />
+              <Save className="w-4 h-4 sm:w-5 sm:h-5" />
               حفظ التغييرات
             </>
           )}

@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
-import { Plus, Search, Edit2, Trash2, GraduationCap, Phone, Filter, MessageSquare, X } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, GraduationCap, Phone, Filter, MessageSquare, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const Trainers = () => {
   const [trainers, setTrainers] = useState([]);
@@ -22,10 +22,16 @@ const Trainers = () => {
     notes: '',
   });
   const [submitting, setSubmitting] = useState(false);
+  const [trainersPage, setTrainersPage] = useState(1); // Pagination for mobile cards
 
   useEffect(() => {
     fetchTrainers();
   }, [search, weeklyFilter]);
+
+  // Reset pagination when trainers change
+  useEffect(() => {
+    setTrainersPage(1);
+  }, [trainers]);
 
   const fetchTrainers = async () => {
     setLoading(true);
@@ -175,107 +181,260 @@ const Trainers = () => {
         />
       ) : (
         <div className="card">
-          <div className="overflow-x-auto">
-            <table className="table text-xs">
-              <thead>
-                <tr>
-                  <th className="py-2 px-2 text-center">#</th>
-                  <th className="py-2 px-2 text-center">اسم المدرب</th>
-                  <th className="py-2 px-2 text-center">رقم الهاتف</th>
-                  <th className="py-2 px-2 text-center">البريد الإلكتروني</th>
-                  <th className="py-2 px-2 text-center">المستوى</th>
-                  <th className="py-2 px-2 text-center">الكورسات</th>
-                  <th className="py-2 px-2 text-center">محاضرات الأسبوع</th>
-                  <th className="py-2 px-2 text-center">ملاحظات</th>
-                  <th className="py-2 px-2 text-center">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trainers.map((trainer, index) => (
-                  <tr key={trainer.id}>
-                    <td className="py-2 px-2 text-center font-semibold">{index + 1}</td>
-                    <td className="py-2 px-2 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
-                          <span className="text-white font-bold text-[9px]">
-                            {(trainer.user?.name || trainer.name)?.charAt(0).toUpperCase()}
+          {/* Mobile Cards View */}
+          <div className="md:hidden">
+            {(() => {
+              const itemsPerPage = 5;
+              const totalPages = Math.ceil(trainers.length / itemsPerPage);
+              const startIndex = (trainersPage - 1) * itemsPerPage;
+              const endIndex = startIndex + itemsPerPage;
+              const currentTrainers = trainers.slice(startIndex, endIndex);
+              
+              return (
+                <>
+                  <div className="space-y-2 p-2">
+                    {currentTrainers.map((trainer, index) => {
+                      const displayIndex = startIndex + index + 1;
+                      return (
+                        <div key={trainer.id} className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">اسم المدرب</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
+                                <span className="text-xs font-semibold text-gray-800 dark:text-white">
+                                  {trainer.user?.name || trainer.name}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">رقم الهاتف</span>
+                              <div className="flex items-center gap-1.5">
+                                <Phone className="w-3 h-3 text-gray-400" />
+                                <span dir="ltr" className="text-xs text-gray-800 dark:text-white">{trainer.phone || '-'}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">البريد الإلكتروني</span>
+                              <span dir="ltr" className="text-[10px] text-gray-600 dark:text-gray-400 truncate max-w-[60%]">{trainer.user?.email || trainer.email || '-'}</span>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">المستوى</span>
+                              <span className="text-[10px] text-gray-800 dark:text-white font-medium">
+                                {trainer.min_level && trainer.max_level 
+                                  ? `${trainer.min_level} - ${trainer.max_level}` 
+                                  : trainer.min_level || trainer.max_level || '-'}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الكورسات</span>
+                              <span className="badge badge-info text-[10px] px-1.5 py-0.5">
+                                {trainer.courses_count || 0}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">محاضرات الأسبوع</span>
+                              <span className={`badge text-[10px] px-1.5 py-0.5 ${
+                                trainer.weekly_lectures_count >= 3 
+                                  ? 'badge-success' 
+                                  : trainer.weekly_lectures_count > 0 
+                                    ? 'badge-warning' 
+                                    : 'badge-gray'
+                              }`}>
+                                {trainer.weekly_lectures_count || 0}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">ملاحظات</span>
+                              {trainer.notes ? (
+                                <button
+                                  onClick={() => setNotesPopup({
+                                    open: true,
+                                    notes: trainer.notes,
+                                    trainerName: trainer.user?.name || trainer.name || 'المدرب'
+                                  })}
+                                  className="p-1 rounded-lg text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors"
+                                  title={trainer.notes}
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-gray-300 dark:text-gray-600">-</span>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الإجراءات</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => openModal(trainer)}
+                                  className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 hover:text-primary-600"
+                                  title="تعديل"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(trainer.id)}
+                                  className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600"
+                                  title="حذف"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                      <button
+                        onClick={() => setTrainersPage(prev => Math.max(1, prev - 1))}
+                        disabled={trainersPage === 1}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
+                          trainersPage === 1
+                            ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                      >
+                        <ChevronRight className="w-3 h-3" />
+                        السابق
+                      </button>
+
+                      <span className="text-[9px] text-gray-600 dark:text-gray-400">
+                        صفحة {trainersPage} من {totalPages}
+                      </span>
+
+                      <button
+                        onClick={() => setTrainersPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={trainersPage === totalPages}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
+                          trainersPage === totalPages
+                            ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                      >
+                        التالي
+                        <ChevronLeft className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="table text-xs">
+                <thead>
+                  <tr>
+                    <th className="py-2 px-2 text-center">#</th>
+                    <th className="py-2 px-2 text-center">اسم المدرب</th>
+                    <th className="py-2 px-2 text-center">رقم الهاتف</th>
+                    <th className="py-2 px-2 text-center">البريد الإلكتروني</th>
+                    <th className="py-2 px-2 text-center">المستوى</th>
+                    <th className="py-2 px-2 text-center">الكورسات</th>
+                    <th className="py-2 px-2 text-center">محاضرات الأسبوع</th>
+                    <th className="py-2 px-2 text-center">ملاحظات</th>
+                    <th className="py-2 px-2 text-center">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trainers.map((trainer, index) => (
+                    <tr key={trainer.id}>
+                      <td className="py-2 px-2 text-center font-semibold">{index + 1}</td>
+                      <td className="py-2 px-2 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-bold text-[9px]">
+                              {(trainer.user?.name || trainer.name)?.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <span className="font-medium text-[11px] text-[var(--color-text-primary)] whitespace-nowrap">
+                            {trainer.user?.name || trainer.name}
                           </span>
                         </div>
-                        <span className="font-medium text-[11px] text-[var(--color-text-primary)] whitespace-nowrap">
-                          {trainer.user?.name || trainer.name}
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Phone className="w-3 h-3 text-[var(--color-text-muted)]" />
+                          <span dir="ltr" className="text-[11px]">{trainer.phone || '-'}</span>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <span dir="ltr" className="text-[11px]">{trainer.user?.email || trainer.email || '-'}</span>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <span className="text-[10px] text-[var(--color-text-secondary)] whitespace-nowrap font-medium">
+                          {trainer.min_level && trainer.max_level 
+                            ? `${trainer.min_level} - ${trainer.max_level}` 
+                            : trainer.min_level || trainer.max_level || '-'}
                         </span>
-                      </div>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Phone className="w-3 h-3 text-[var(--color-text-muted)]" />
-                        <span dir="ltr" className="text-[11px]">{trainer.phone || '-'}</span>
-                      </div>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <span dir="ltr" className="text-[11px]">{trainer.user?.email || trainer.email || '-'}</span>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <span className="text-[10px] text-[var(--color-text-secondary)] whitespace-nowrap font-medium">
-                        {trainer.min_level && trainer.max_level 
-                          ? `${trainer.min_level} - ${trainer.max_level}` 
-                          : trainer.min_level || trainer.max_level || '-'}
-                      </span>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <span className="badge badge-info text-[10px] px-1.5 py-0.5">
-                        {trainer.courses_count || 0}
-                      </span>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <span className={`badge text-[10px] px-1.5 py-0.5 ${
-                        trainer.weekly_lectures_count >= 3 
-                          ? 'badge-success' 
-                          : trainer.weekly_lectures_count > 0 
-                            ? 'badge-warning' 
-                            : 'badge-gray'
-                      }`}>
-                        {trainer.weekly_lectures_count || 0}
-                      </span>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      {trainer.notes ? (
-                        <button
-                          onClick={() => setNotesPopup({
-                            open: true,
-                            notes: trainer.notes,
-                            trainerName: trainer.user?.name || trainer.name || 'المدرب'
-                          })}
-                          className="p-1 rounded-lg text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors"
-                          title={trainer.notes}
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                        </button>
-                      ) : (
-                        <span className="text-gray-300 dark:text-gray-600">-</span>
-                      )}
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <div className="flex items-center justify-center gap-0.5">
-                        <button
-                          onClick={() => openModal(trainer)}
-                          className="p-1.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
-                          title="تعديل"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(trainer.id)}
-                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[var(--color-text-muted)] hover:text-red-600"
-                          title="حذف"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <span className="badge badge-info text-[10px] px-1.5 py-0.5">
+                          {trainer.courses_count || 0}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <span className={`badge text-[10px] px-1.5 py-0.5 ${
+                          trainer.weekly_lectures_count >= 3 
+                            ? 'badge-success' 
+                            : trainer.weekly_lectures_count > 0 
+                              ? 'badge-warning' 
+                              : 'badge-gray'
+                        }`}>
+                          {trainer.weekly_lectures_count || 0}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        {trainer.notes ? (
+                          <button
+                            onClick={() => setNotesPopup({
+                              open: true,
+                              notes: trainer.notes,
+                              trainerName: trainer.user?.name || trainer.name || 'المدرب'
+                            })}
+                            className="p-1 rounded-lg text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors"
+                            title={trainer.notes}
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <span className="text-gray-300 dark:text-gray-600">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <div className="flex items-center justify-center gap-0.5">
+                          <button
+                            onClick={() => openModal(trainer)}
+                            className="p-1.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
+                            title="تعديل"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(trainer.id)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[var(--color-text-muted)] hover:text-red-600"
+                            title="حذف"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
             </table>
           </div>
         </div>

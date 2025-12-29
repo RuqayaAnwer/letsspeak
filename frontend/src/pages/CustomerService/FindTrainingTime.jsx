@@ -152,34 +152,34 @@ const FindTrainingTime = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] pr-20">
+          <h1 className="text-base sm:text-2xl font-bold text-[var(--color-text-primary)] pr-2 sm:pr-20">
             البحث عن وقت تدريب
           </h1>
-          <p className="text-[var(--color-text-muted)] mt-1">
+          <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)] mt-0.5 sm:mt-1">
             ابحث عن المدربين المتاحين في أوقات محددة
           </p>
         </div>
       </div>
 
       {/* Two Column Layout for Filters */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         
         {/* Filter 1: Multiple Days per Week for a Month */}
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-emerald-500" />
+        <div className="card p-3 sm:p-6">
+          <h2 className="text-sm sm:text-lg font-semibold text-[var(--color-text-primary)] mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
+            <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
             البحث عن تفرغ أسبوعي
           </h2>
           
-          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-            <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              اختر أيام الأسبوع المطلوبة للبحث عن المدربين المتفرغين خلال الشهر القادم
+          <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+            <p className="text-[10px] sm:text-sm text-amber-700 dark:text-amber-400 flex items-center gap-1.5 sm:gap-2">
+              <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span>اختر أيام الأسبوع المطلوبة للبحث عن المدربين المتفرغين خلال الشهر القادم</span>
             </p>
           </div>
 
           {/* Week Days Selection */}
-          <div className="grid grid-cols-7 gap-1 mb-4">
+          <div className="grid grid-cols-4 sm:grid-cols-7 gap-1 sm:gap-1 mb-3 sm:mb-4">
             {weekDaysOptions.map((day) => {
               const isSelected = selectedWeekDays.includes(day.id);
               
@@ -187,13 +187,13 @@ const FindTrainingTime = () => {
                 <button
                   key={day.id}
                   onClick={() => toggleWeekDay(day.id)}
-                  className={`p-3 rounded-lg border-2 transition-all text-center ${
+                  className={`p-1.5 sm:p-3 rounded-lg border-2 transition-all text-center ${
                     isSelected
                       ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
                       : 'border-[var(--color-border)] hover:border-emerald-300 hover:bg-[var(--color-bg-tertiary)]'
                   }`}
                 >
-                  <p className={`text-xs font-bold ${
+                  <p className={`text-[9px] sm:text-xs font-bold ${
                     isSelected 
                       ? 'text-emerald-600 dark:text-emerald-400'
                       : 'text-[var(--color-text-primary)]'
@@ -201,7 +201,7 @@ const FindTrainingTime = () => {
                     {day.name}
                   </p>
                   {isSelected && (
-                    <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto mt-1" />
+                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-500 mx-auto mt-0.5 sm:mt-1" />
                   )}
                 </button>
               );
@@ -209,24 +209,24 @@ const FindTrainingTime = () => {
           </div>
 
           {/* Time Selection */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-2">
-                <Clock className="w-4 h-4 inline-block ml-1" />
+              <label className="block text-[10px] sm:text-sm font-medium text-[var(--color-text-muted)] mb-1.5 sm:mb-2">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block ml-1" />
                 الوقت المطلوب
               </label>
               <input
                 type="time"
                 value={time1}
                 onChange={(e) => setTime1(e.target.value)}
-                className="input w-full"
+                className="input w-full text-xs sm:text-sm py-2 sm:py-2.5"
               />
             </div>
 
             {/* Selected Info */}
             {selectedWeekDays.length > 0 && (
-              <div className="p-3 rounded-lg border bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800">
-                <p className="text-sm text-emerald-700 dark:text-emerald-400">
+              <div className="p-2 sm:p-3 rounded-lg border bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800">
+                <p className="text-[10px] sm:text-sm text-emerald-700 dark:text-emerald-400">
                   <span className="font-medium">الأيام المحددة ({selectedWeekDays.length}):</span>{' '}
                   {getSelectedDayNames()}
                 </p>
@@ -237,63 +237,63 @@ const FindTrainingTime = () => {
             <button
               onClick={handleSearch1}
               disabled={loading1 || selectedWeekDays.length === 0 || !time1}
-              className="btn btn-primary w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-primary w-full flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-base"
             >
               {loading1 ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Search className="w-5 h-5" />
+                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
               بحث عن المدربين المتفرغين
             </button>
           </div>
 
           {/* Results */}
-          <div className="mt-6 pt-6 border-t border-[var(--color-border)]">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3 flex items-center gap-2">
-              <Users className="w-4 h-4 text-emerald-500" />
+          <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-[var(--color-border)]">
+            <h3 className="text-[10px] sm:text-sm font-semibold text-[var(--color-text-primary)] mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2">
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500" />
               النتائج
               {results1.length > 0 && (
-                <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs px-2 py-0.5 rounded-full">
+                <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[9px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full">
                   {results1.length} مدرب متفرغ
                 </span>
               )}
             </h3>
             
             {!searched1 ? (
-              <p className="text-sm text-[var(--color-text-muted)] text-center py-4">
+              <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)] text-center py-3 sm:py-4">
                 حدد الأيام والوقت للبحث
               </p>
             ) : loading1 ? (
-              <div className="text-center py-4">
-                <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+              <div className="text-center py-3 sm:py-4">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
               </div>
             ) : results1.length === 0 ? (
-              <div className="text-center py-4">
-                <User className="w-10 h-10 mx-auto mb-2 text-[var(--color-text-muted)] opacity-50" />
-                <p className="text-sm text-[var(--color-text-muted)]">لا يوجد مدربين متفرغين في هذه الأيام</p>
+              <div className="text-center py-3 sm:py-4">
+                <User className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-[var(--color-text-muted)] opacity-50" />
+                <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)]">لا يوجد مدربين متفرغين في هذه الأيام</p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="space-y-1.5 sm:space-y-2 max-h-64 overflow-y-auto">
                 {results1.map((trainer) => (
                   <div
                     key={trainer.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-bg-tertiary)] hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
+                    className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-[var(--color-bg-tertiary)] hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-bold text-xs sm:text-sm">
                         {trainer.name?.charAt(0)}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-[var(--color-text-primary)] truncate">
+                      <p className="font-medium text-[var(--color-text-primary)] truncate text-xs sm:text-sm">
                         {trainer.name}
                       </p>
-                      <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                      <p className="text-[9px] sm:text-xs text-emerald-600 dark:text-emerald-400">
                         متفرغ في جميع الأيام المحددة
                       </p>
                     </div>
-                    <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 flex-shrink-0" />
                   </div>
                 ))}
               </div>
@@ -302,25 +302,25 @@ const FindTrainingTime = () => {
         </div>
 
         {/* Filter 2: Number of Days with Time */}
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary-500" />
+        <div className="card p-3 sm:p-6">
+          <h2 className="text-sm sm:text-lg font-semibold text-[var(--color-text-primary)] mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary-500" />
             البحث عن تفرغ أسبوعي بوقت محدد
           </h2>
           
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              اختر عدد الأيام المطلوبة ووقت التفرغ للبحث عن المدربين المتفرغين
+          <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-[10px] sm:text-sm text-blue-700 dark:text-blue-400 flex items-center gap-1.5 sm:gap-2">
+              <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span>اختر عدد الأيام المطلوبة ووقت التفرغ للبحث عن المدربين المتفرغين</span>
             </p>
           </div>
 
           {/* Days Count Selection (7 boxes for numbers 1-7) */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-3">
+          <div className="mb-3 sm:mb-4">
+            <label className="block text-[10px] sm:text-sm font-medium text-[var(--color-text-muted)] mb-2 sm:mb-3">
               عدد الأيام المطلوبة
             </label>
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
               {[1, 2, 3, 4, 5, 6, 7].map((dayNum) => {
                 const isSelected = selectedDaysCount === dayNum;
                 
@@ -328,13 +328,13 @@ const FindTrainingTime = () => {
                   <button
                     key={dayNum}
                     onClick={() => setSelectedDaysCount(dayNum)}
-                    className={`p-4 rounded-lg border-2 transition-all text-center ${
+                    className={`p-2 sm:p-4 rounded-lg border-2 transition-all text-center ${
                       isSelected
                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
                         : 'border-[var(--color-border)] hover:border-primary-300 hover:bg-[var(--color-bg-tertiary)]'
                     }`}
                   >
-                    <p className={`text-lg font-bold ${
+                    <p className={`text-sm sm:text-lg font-bold ${
                       isSelected 
                         ? 'text-primary-600 dark:text-primary-400'
                         : 'text-[var(--color-text-primary)]'
@@ -342,7 +342,7 @@ const FindTrainingTime = () => {
                       {dayNum}
                     </p>
                     {isSelected && (
-                      <CheckCircle className="w-4 h-4 text-primary-500 mx-auto mt-1" />
+                      <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-primary-500 mx-auto mt-0.5 sm:mt-1" />
                     )}
                   </button>
                 );
@@ -351,23 +351,23 @@ const FindTrainingTime = () => {
           </div>
 
           {/* Time Selection */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-2">
-              <Clock className="w-4 h-4 inline-block ml-1" />
+          <div className="mb-3 sm:mb-4">
+            <label className="block text-[10px] sm:text-sm font-medium text-[var(--color-text-muted)] mb-1.5 sm:mb-2">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block ml-1" />
               وقت التفرغ
             </label>
             <input
               type="time"
               value={time2}
               onChange={(e) => setTime2(e.target.value)}
-              className="input w-full"
+              className="input w-full text-xs sm:text-sm py-2 sm:py-2.5"
             />
           </div>
 
           {/* Selected Info */}
           {selectedDaysCount && time2 && (
-            <div className="p-3 rounded-lg border bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800 mb-4">
-              <p className="text-sm text-primary-700 dark:text-primary-400">
+            <div className="p-2 sm:p-3 rounded-lg border bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800 mb-3 sm:mb-4">
+              <p className="text-[10px] sm:text-sm text-primary-700 dark:text-primary-400">
                 <span className="font-medium">البحث عن:</span>{' '}
                 مدربين لديهم {selectedDaysCount} {selectedDaysCount === 1 ? 'يوم' : selectedDaysCount === 2 ? 'يومان' : 'أيام'} متفرغة في الأسبوع بوقت {time2}
               </p>
@@ -378,62 +378,62 @@ const FindTrainingTime = () => {
           <button
             onClick={handleSearch2}
             disabled={loading2 || !selectedDaysCount || !time2}
-            className="btn btn-primary w-full flex items-center justify-center gap-2 py-3"
+            className="btn btn-primary w-full flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-3 text-xs sm:text-base"
           >
             {loading2 ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             )}
             بحث عن المدربين المتفرغين
           </button>
 
           {/* Results */}
-          <div className="mt-6 pt-6 border-t border-[var(--color-border)]">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3 flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary-500" />
+          <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-[var(--color-border)]">
+            <h3 className="text-[10px] sm:text-sm font-semibold text-[var(--color-text-primary)] mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2">
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-500" />
               النتائج
               {results2.length > 0 && (
-                <span className="bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 text-xs px-2 py-0.5 rounded-full">
+                <span className="bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 text-[9px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full">
                   {results2.length} مدرب متاح
                 </span>
               )}
             </h3>
             
             {!searched2 ? (
-              <p className="text-sm text-[var(--color-text-muted)] text-center py-4">
+              <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)] text-center py-3 sm:py-4">
                 حدد التاريخ والوقت للبحث
               </p>
             ) : loading2 ? (
-              <div className="text-center py-4">
-                <div className="w-8 h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
+              <div className="text-center py-3 sm:py-4">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 border-3 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
               </div>
             ) : results2.length === 0 ? (
-              <div className="text-center py-4">
-                <User className="w-10 h-10 mx-auto mb-2 text-[var(--color-text-muted)] opacity-50" />
-                <p className="text-sm text-[var(--color-text-muted)]">لا يوجد مدربين متاحين</p>
+              <div className="text-center py-3 sm:py-4">
+                <User className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-[var(--color-text-muted)] opacity-50" />
+                <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)]">لا يوجد مدربين متاحين</p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="space-y-1.5 sm:space-y-2 max-h-64 overflow-y-auto">
                 {results2.map((trainer) => (
                   <div
                     key={trainer.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-bg-tertiary)] hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all"
+                    className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-[var(--color-bg-tertiary)] hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-bold text-xs sm:text-sm">
                         {trainer.name?.charAt(0)}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-[var(--color-text-primary)] truncate">
+                      <p className="font-medium text-[var(--color-text-primary)] truncate text-xs sm:text-sm">
                         {trainer.name}
                       </p>
-                      <p className="text-xs text-[var(--color-text-muted)] truncate">
+                      <p className="text-[9px] sm:text-xs text-[var(--color-text-muted)] truncate">
                         {trainer.phone || trainer.email}
                       </p>
                     </div>
-                    <CheckCircle className="w-5 h-5 text-primary-500 flex-shrink-0" />
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-primary-500 flex-shrink-0" />
                   </div>
                 ))}
               </div>

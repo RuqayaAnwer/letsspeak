@@ -1124,35 +1124,35 @@ const CourseDetails = () => {
     <div className="space-y-6 animate-fade-in">
       {/* Evaluation Modal - Blocks access until confirmed (for trainers only) */}
       {evaluationModal.open && isTrainer && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[10000] p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full p-6 border-4 border-orange-500">
-            <div className="flex items-center gap-3 mb-4">
-              <AlertTriangle className="w-8 h-8 text-orange-500" />
-              <h3 className="text-xl font-bold text-gray-800 dark:text-white">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[10000] p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full p-3 sm:p-6 border-2 sm:border-4 border-orange-500 max-h-[95vh] overflow-y-auto">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <AlertTriangle className="w-5 h-5 sm:w-8 sm:h-8 text-orange-500 flex-shrink-0" />
+              <h3 className="text-sm sm:text-xl font-bold text-gray-800 dark:text-white">
                 ⚠️ تنبيه: يرجى إرسال التقييم
               </h3>
             </div>
             
-            <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded-lg mb-4">
-              <p className="text-gray-800 dark:text-gray-200 font-semibold mb-2">
+            <div className="bg-orange-50 dark:bg-orange-900/20 border-l-2 sm:border-l-4 border-orange-500 p-2.5 sm:p-4 rounded-lg mb-3 sm:mb-4">
+              <p className="text-xs sm:text-base text-gray-800 dark:text-gray-200 font-semibold mb-1.5 sm:mb-2">
                 تم اكتمال {evaluationModal.completedLectures} محاضرة في هذا الكورس
               </p>
-              <p className="text-gray-700 dark:text-gray-300">
+              <p className="text-[10px] sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                 يرجى إرسال التقييم للطالب قبل المتابعة. لا يمكنك الوصول إلى لوحة المحاضرات حتى يتم تأكيد إرسال التقييم.
               </p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               <button
                 onClick={handleConfirmEvaluation}
-                className="flex-1 py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                className="flex-1 py-2 sm:py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-base"
               >
-                <CheckCircle className="w-5 h-5" />
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                 تم إرسال التقييم
               </button>
             </div>
             
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
+            <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mt-3 sm:mt-4 text-center">
               سيتم إظهار هذا التنبيه عند اكتمال كل 5 محاضرات (5, 10, 15, 20...)
             </p>
           </div>
@@ -1226,20 +1226,20 @@ const CourseDetails = () => {
 
       {/* Renewal Alert Status - Only show for courses at 75%+ completion and for customer service */}
       {isCustomerService && isAt75Percent() && (
-        <div className={`card border-2 ${
+        <div className={`card border-2 max-w-full mx-auto ${
           course.renewal_alert_status === 'renewed'
             ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-300 dark:border-green-700'
             : 'bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 border-orange-300 dark:border-orange-700'
         }`}>
-          <div className="p-4">
-            <h3 className={`text-lg font-bold mb-3 ${
+          <div className="p-2.5 sm:p-4">
+            <h3 className={`text-xs sm:text-lg font-bold mb-2 sm:mb-3 text-center ${
               course.renewal_alert_status === 'renewed'
                 ? 'text-green-800 dark:text-green-200'
                 : 'text-orange-800 dark:text-orange-200'
             }`}>
               {course.renewal_alert_status === 'renewed' ? '✅' : '⚠️'} تنبيه: الكورس على وشك الانتهاء ({calculateCompletionPercentage()}% مكتمل)
             </h3>
-            <p className={`text-sm mb-4 ${
+            <p className={`text-[10px] sm:text-sm mb-2.5 sm:mb-4 text-center ${
               course.renewal_alert_status === 'renewed'
                 ? 'text-green-700 dark:text-green-300'
                 : 'text-orange-700 dark:text-orange-300'
@@ -1250,10 +1250,10 @@ const CourseDetails = () => {
             </p>
             
             {/* Two-stage buttons: Sent and Renewed */}
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-3 flex-wrap">
               <button
                 onClick={() => handleRenewalAlertStatusChange('sent')}
-                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-[10px] sm:text-sm font-semibold transition-all ${
                   course.renewal_alert_status === 'sent'
                     ? 'bg-blue-500 text-white shadow-lg scale-105'
                     : course.renewal_alert_status === 'sent' || course.renewal_alert_status === 'renewed'
@@ -1266,7 +1266,7 @@ const CourseDetails = () => {
               
               <button
                 onClick={() => handleRenewalAlertStatusChange('renewed')}
-                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-[10px] sm:text-sm font-semibold transition-all ${
                   course.renewal_alert_status === 'renewed'
                     ? 'bg-green-500 text-white shadow-lg scale-105'
                     : course.renewal_alert_status === 'sent' || course.renewal_alert_status === 'renewed'
@@ -1281,7 +1281,7 @@ const CourseDetails = () => {
               {course.renewal_alert_status === 'renewed' && (
                 <button
                   onClick={openRenewalResetModal}
-                  className="px-4 py-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 font-semibold transition-all"
+                  className="px-2 sm:px-4 py-1 sm:py-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 text-[10px] sm:text-sm font-semibold transition-all"
                 >
                   🔄 إعادة تعيين
                 </button>
@@ -1290,12 +1290,12 @@ const CourseDetails = () => {
             
             {/* Status indicator */}
             {course.renewal_alert_status !== 'none' && course.renewal_alert_status !== 'alert' && (
-              <div className={`mt-3 pt-3 border-t ${
+              <div className={`mt-2 sm:mt-3 pt-2 sm:pt-3 border-t ${
                 course.renewal_alert_status === 'renewed'
                   ? 'border-green-300 dark:border-green-700'
                   : 'border-orange-300 dark:border-orange-700'
               }`}>
-                <p className={`text-sm ${
+                <p className={`text-[10px] sm:text-sm text-center ${
                   course.renewal_alert_status === 'renewed'
                     ? 'text-green-600 dark:text-green-400'
                     : 'text-orange-600 dark:text-orange-400'
@@ -1316,10 +1316,10 @@ const CourseDetails = () => {
       <div className={`card ${evaluationModal.open && isTrainer ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="p-4 border-b border-[var(--color-border)]">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-[var(--color-text-primary)]">
+            <h2 className="text-sm sm:text-lg font-bold text-[var(--color-text-primary)] whitespace-nowrap">
               جدول المحاضرات
             </h2>
-            <span className="badge badge-info">
+            <span className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">
               {lectures.filter((l) => {
                 // Check if lecture is completed based on is_completed flag or attendance
                 return l.is_completed || l.attendance === 'present' || l.attendance === 'absent';
@@ -1407,7 +1407,294 @@ const CourseDetails = () => {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        {/* Mobile Cards View */}
+        <div className="md:hidden space-y-2 p-2">
+          {lectures.map((lecture) => {
+            const rawEdited = editedLectures[lecture.id] || {};
+            const lectureDate = new Date(lecture.date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            lectureDate.setHours(0, 0, 0, 0);
+            const isToday = lectureDate.getTime() === today.getTime();
+            const isFuture = lectureDate > today;
+            const isMakeup = lecture.is_makeup;
+            const isSelected = selectedLecture?.id === lecture.id;
+            
+            const modifyStatus = canModifyLecture(lecture);
+            const isLocked = !modifyStatus.canModify;
+            
+            const studentData = course?.is_dual && selectedStudentId 
+              ? getStudentAttendance(lecture, selectedStudentId) 
+              : { attendance: lecture.attendance, activity: lecture.activity, homework: lecture.homework };
+            
+            const studentIdKey = selectedStudentId ? String(selectedStudentId) : null;
+            const editedStudentData = course?.is_dual && studentIdKey && rawEdited.student_attendance?.[studentIdKey]
+              ? rawEdited.student_attendance[studentIdKey]
+              : {};
+            
+            const currentAttendance = course?.is_dual && selectedStudentId
+              ? (editedStudentData.attendance ?? studentData.attendance ?? 'pending')
+              : (rawEdited.attendance ?? studentData.attendance ?? 'pending');
+            const currentActivity = course?.is_dual && selectedStudentId
+              ? (editedStudentData.activity ?? studentData.activity)
+              : (rawEdited.activity ?? studentData.activity);
+            const currentHomework = course?.is_dual && selectedStudentId
+              ? (editedStudentData.homework ?? studentData.homework)
+              : (rawEdited.homework ?? studentData.homework);
+            
+            let isCompleted = false;
+            if (rawEdited.is_completed !== undefined && rawEdited.is_completed !== null) {
+                isCompleted = rawEdited.is_completed;
+            }
+            else if (lecture.is_completed !== undefined && lecture.is_completed !== null) {
+                isCompleted = lecture.is_completed;
+            }
+            else if (course?.is_dual) {
+                if (rawEdited.student_attendance) {
+                    const editedStudentAttendance = rawEdited.student_attendance;
+                    const hasEditedCompletedAttendance = Object.values(editedStudentAttendance).some(
+                        (studentData) => studentData && 
+                        typeof studentData === 'object' &&
+                        (studentData.attendance === 'present' || studentData.attendance === 'absent')
+                    );
+                    if (hasEditedCompletedAttendance) {
+                        isCompleted = true;
+                    }
+                }
+                if (!isCompleted && lecture.student_attendance) {
+                    const studentAttendanceObj = lecture.student_attendance;
+                    const attendanceValues = Array.isArray(studentAttendanceObj) 
+                        ? studentAttendanceObj 
+                        : Object.values(studentAttendanceObj);
+                    const hasCompletedAttendance = attendanceValues.some(
+                        (studentData) => studentData && 
+                        typeof studentData === 'object' &&
+                        (studentData.attendance === 'present' || studentData.attendance === 'absent')
+                    );
+                    isCompleted = hasCompletedAttendance;
+                }
+                if (!isCompleted && (currentAttendance === 'present' || currentAttendance === 'absent')) {
+                    isCompleted = true;
+                }
+            }
+            else {
+                isCompleted = currentAttendance === 'present' || currentAttendance === 'absent';
+            }
+
+            return (
+              <div
+                key={lecture.id}
+                className={`p-2.5 rounded-lg border-2 ${
+                  isCompleted 
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700' 
+                    : isToday && !isCompleted
+                      ? 'bg-primary-50 dark:bg-primary-900/10 border-primary-300 dark:border-primary-700'
+                      : isMakeup && !isCompleted
+                        ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-700'
+                        : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50'
+                }`}
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">رقم المحاضرة</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-bold text-gray-800 dark:text-white">{lecture.lecture_number}</span>
+                      {isMakeup && (
+                        <span className="text-[9px] text-green-600 dark:text-green-400">(تعويضية)</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">التاريخ</span>
+                    <div className="text-right">
+                      <p className="text-xs font-medium text-gray-800 dark:text-white">
+                        {formatDateShort(lecture.date)}
+                      </p>
+                      {isToday && (
+                        <span className="text-[9px] text-primary-600 dark:text-primary-400 font-medium">
+                          اليوم
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الوقت</span>
+                    <span className="text-xs font-medium text-gray-800 dark:text-white" dir="ltr">
+                      {formatTime12Hour(lecture.time || course?.lecture_time)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الحضور</span>
+                    {isLocked || isAccounting ? (
+                      <span className={`badge text-[9px] px-1 py-0.5 ${getAttendanceBadge(currentAttendance)}`}>
+                        {getAttendanceLabel(currentAttendance)}
+                      </span>
+                    ) : (
+                      <select
+                        value={currentAttendance}
+                        onChange={(e) => handleLectureChange(lecture.id, 'attendance', e.target.value)}
+                        className="text-[9px] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border border-[var(--color-border)]"
+                        disabled={isLocked}
+                        style={{ 
+                          fontSize: '9px', 
+                          paddingTop: '2px', 
+                          paddingBottom: '2px', 
+                          paddingLeft: '6px',
+                          paddingRight: '6px',
+                          height: '20px',
+                          width: '80px',
+                          borderRadius: '0.5rem'
+                        }}
+                      >
+                        <option value="pending">لم يحدد</option>
+                        <option value="present">حاضر</option>
+                        <option value="absent">غائب</option>
+                        <option value="postponed">مؤجل</option>
+                      </select>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">النشاط</span>
+                    {isLocked || isAccounting ? (
+                      <span className="text-[9px] text-gray-500">{getActivityLabel(currentActivity)}</span>
+                    ) : (
+                      <select
+                        value={currentActivity ?? ''}
+                        onChange={(e) => handleLectureChange(lecture.id, 'activity', e.target.value)}
+                        className="text-[9px] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border border-[var(--color-border)]"
+                        disabled={isLocked}
+                        style={{ 
+                          fontSize: '9px', 
+                          paddingTop: '2px', 
+                          paddingBottom: '2px', 
+                          paddingLeft: '6px',
+                          paddingRight: '6px',
+                          height: '20px',
+                          width: '80px',
+                          borderRadius: '0.5rem'
+                        }}
+                      >
+                        <option value="">-</option>
+                        <option value="engaged">Engaged</option>
+                        <option value="normal">Normal</option>
+                        <option value="not_engaged">Not Engaged</option>
+                      </select>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الواجب</span>
+                    {isLocked || isAccounting ? (
+                      <span className="text-[9px] text-gray-500">{getHomeworkLabel(currentHomework)}</span>
+                    ) : (
+                      <select
+                        value={currentHomework ?? ''}
+                        onChange={(e) => handleLectureChange(lecture.id, 'homework', e.target.value)}
+                        className="text-[9px] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border border-[var(--color-border)]"
+                        disabled={isLocked}
+                        style={{ 
+                          fontSize: '9px', 
+                          paddingTop: '2px', 
+                          paddingBottom: '2px', 
+                          paddingLeft: '6px',
+                          paddingRight: '6px',
+                          height: '20px',
+                          width: '80px',
+                          borderRadius: '0.5rem'
+                        }}
+                      >
+                        <option value="">-</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                        <option value="partial">Partial</option>
+                      </select>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">دفع المدرب</span>
+                    {(isCustomerService || isAccounting) ? (
+                      <select
+                        value={lecture.trainer_payment_status || 'unpaid'}
+                        onChange={(e) => handleTrainerPaymentChange(lecture.id, e.target.value)}
+                        className="text-[9px] border border-[var(--color-border)]"
+                        style={{ 
+                          fontSize: '9px', 
+                          paddingTop: '2px', 
+                          paddingBottom: '2px', 
+                          paddingLeft: '6px',
+                          paddingRight: '6px',
+                          height: '20px',
+                          width: '80px',
+                          borderRadius: '0.5rem',
+                          backgroundColor: lecture.trainer_payment_status === 'paid' 
+                            ? 'rgb(220 252 231)' 
+                            : 'rgb(254 226 226)',
+                          color: lecture.trainer_payment_status === 'paid' 
+                            ? 'rgb(22 163 74)' 
+                            : 'rgb(239 68 68)'
+                        }}
+                      >
+                        <option value="unpaid">غير مدفوع</option>
+                        <option value="paid">مدفوع</option>
+                      </select>
+                    ) : (
+                      <span className={`text-[9px] ${lecture.trainer_payment_status === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
+                        {lecture.trainer_payment_status === 'paid' ? 'مدفوع' : 'غير مدفوع'}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">ملاحظات</span>
+                    {isLocked || isAccounting ? (
+                      <span className="text-[9px] text-gray-500">
+                        {(rawEdited.notes ?? lecture.notes) ? (
+                          <button
+                            onClick={() => setReasonPopup({ 
+                              open: true, 
+                              reason: rawEdited.notes ?? lecture.notes 
+                            })}
+                            className="text-blue-500 hover:text-blue-600"
+                            title="عرض الملاحظة"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          </button>
+                        ) : '-'}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          const currentNotes = rawEdited.notes ?? lecture.notes ?? '';
+                          setNotesModal({
+                            open: true,
+                            lectureId: lecture.id,
+                            notes: currentNotes
+                          });
+                        }}
+                        className={`p-1 rounded-lg transition-colors ${
+                          (rawEdited.notes ?? lecture.notes)
+                            ? 'text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50'
+                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'
+                        }`}
+                        title={rawEdited.notes ?? lecture.notes ?? 'إضافة ملاحظة'}
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="table">
             <thead>
               <tr>
@@ -2275,25 +2562,25 @@ const CourseDetails = () => {
 
       {/* Renewal Reset Modal */}
       {renewalResetModal.open && course && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 overflow-y-auto" style={{ zIndex: 9999 }}>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6 my-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-800 dark:text-white">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-2 sm:p-4 overflow-y-auto" style={{ zIndex: 9999 }}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-3 sm:p-6 my-4 sm:my-8 max-h-[95vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3 sm:mb-6">
+              <h3 className="text-base sm:text-xl font-bold text-gray-800 dark:text-white">
                 إعادة تعيين الكورس
               </h3>
               <button
                 onClick={closeRenewalResetModal}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {/* Student Name (Read-only) */}
               <div>
-                <label className="label">الطالب</label>
-                <div className="input bg-gray-100 dark:bg-gray-700 cursor-not-allowed">
+                <label className="label text-[10px] sm:text-sm">الطالب</label>
+                <div className="input bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-xs sm:text-sm py-2 sm:py-2.5">
                   {course.is_dual && course.students?.length > 0
                     ? course.students.map(s => s.name).join(' و ')
                     : course.student?.name || course.students?.[0]?.name || 'غير محدد'}
@@ -2302,12 +2589,12 @@ const CourseDetails = () => {
 
               {/* Start Date */}
               <div>
-                <label className="label">تاريخ البدء *</label>
+                <label className="label text-[10px] sm:text-sm">تاريخ البدء *</label>
                 <input
                   type="date"
                   value={renewalResetModal.start_date}
                   onChange={(e) => setRenewalResetModal(prev => ({ ...prev, start_date: e.target.value }))}
-                  className="input"
+                  className="input text-xs sm:text-sm py-2 sm:py-2.5"
                   required
                   min={new Date().toISOString().split('T')[0]}
                 />
@@ -2315,11 +2602,11 @@ const CourseDetails = () => {
 
               {/* Package */}
               <div>
-                <label className="label">الباقة *</label>
+                <label className="label text-[10px] sm:text-sm">الباقة *</label>
                 <select
                   value={renewalResetModal.course_package_id}
                   onChange={(e) => handleRenewalPackageChange(e.target.value)}
-                  className="select"
+                  className="select text-xs sm:text-sm py-2 sm:py-2.5"
                   required
                 >
                   <option value="">اختر الباقة</option>
@@ -2334,12 +2621,12 @@ const CourseDetails = () => {
               {/* Lectures Count (auto-filled from package, but editable) */}
               {renewalResetModal.course_package_id && (
                 <div>
-                  <label className="label">عدد المحاضرات</label>
+                  <label className="label text-[10px] sm:text-sm">عدد المحاضرات</label>
                   <input
                     type="number"
                     value={renewalResetModal.lectures_count}
                     onChange={(e) => setRenewalResetModal(prev => ({ ...prev, lectures_count: e.target.value }))}
-                    className="input"
+                    className="input text-xs sm:text-sm py-2 sm:py-2.5"
                     min="1"
                     placeholder="سيتم ملؤه تلقائياً من الباقة"
                   />
@@ -2348,20 +2635,20 @@ const CourseDetails = () => {
 
               {/* Lecture Time */}
               <div>
-                <label className="label">وقت المحاضرة *</label>
+                <label className="label text-[10px] sm:text-sm">وقت المحاضرة *</label>
                 <input
                   type="time"
                   value={renewalResetModal.lecture_time}
                   onChange={(e) => setRenewalResetModal(prev => ({ ...prev, lecture_time: e.target.value }))}
-                  className="input"
+                  className="input text-xs sm:text-sm py-2 sm:py-2.5"
                   required
                 />
               </div>
 
               {/* Lecture Days */}
               <div>
-                <label className="label">أيام المحاضرات *</label>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <label className="label text-[10px] sm:text-sm mb-1.5 sm:mb-2">أيام المحاضرات *</label>
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
                   {[
                     { value: 'Sunday', label: 'الأحد' },
                     { value: 'Monday', label: 'الإثنين' },
@@ -2375,7 +2662,7 @@ const CourseDetails = () => {
                       key={day.value}
                       type="button"
                       onClick={() => toggleRenewalDay(day.value)}
-                      className={`px-4 py-2 rounded-lg border-2 transition-all font-medium ${
+                      className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg border-2 transition-all font-medium text-[10px] sm:text-sm ${
                         renewalResetModal.lecture_days.includes(day.value)
                           ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                           : 'border-gray-300 dark:border-gray-600 hover:border-primary-300'
@@ -2389,12 +2676,12 @@ const CourseDetails = () => {
 
               {/* Paid Amount */}
               <div>
-                <label className="label">مبلغ الدفع (د.ع)</label>
+                <label className="label text-[10px] sm:text-sm">مبلغ الدفع (د.ع)</label>
                 <input
                   type="number"
                   value={renewalResetModal.paid_amount}
                   onChange={(e) => handleRenewalPaidAmountChange(e.target.value)}
-                  className="input"
+                  className="input text-xs sm:text-sm py-2 sm:py-2.5"
                   min="0"
                   step="0.01"
                   placeholder="0"
@@ -2404,18 +2691,18 @@ const CourseDetails = () => {
               {/* Remaining Amount (Read-only) */}
               {renewalResetModal.remaining_amount && parseFloat(renewalResetModal.remaining_amount) > 0 && (
                 <div>
-                  <label className="label">المتبقي (د.ع)</label>
-                  <div className="input bg-gray-100 dark:bg-gray-700 cursor-not-allowed">
+                  <label className="label text-[10px] sm:text-sm">المتبقي (د.ع)</label>
+                  <div className="input bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-xs sm:text-sm py-2 sm:py-2.5">
                     {renewalResetModal.remaining_amount} د.ع
                   </div>
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4">
                 <button
                   onClick={closeRenewalResetModal}
-                  className="flex-1 py-2 rounded-lg border border-gray-300 dark:border-gray-600 font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="flex-1 py-2 sm:py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 font-medium text-xs sm:text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
                   disabled={saving}
                 >
                   إلغاء
@@ -2423,7 +2710,7 @@ const CourseDetails = () => {
                 <button
                   onClick={handleRenewalResetSubmit}
                   disabled={saving || !renewalResetModal.start_date || !renewalResetModal.course_package_id || !renewalResetModal.lecture_time || renewalResetModal.lecture_days.length === 0}
-                  className="flex-1 py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 py-2 sm:py-2.5 rounded-lg bg-primary-600 text-white font-medium text-xs sm:text-sm hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? 'جاري الحفظ...' : 'إنشاء الكورس الجديد'}
                 </button>

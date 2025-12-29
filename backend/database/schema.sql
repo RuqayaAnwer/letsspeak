@@ -347,3 +347,5 @@ users ||--o{ course_status_history : "changes"
 
 
 
+
+

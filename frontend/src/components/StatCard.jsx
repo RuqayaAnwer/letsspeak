@@ -11,24 +11,24 @@ const StatCard = ({ title, value, icon: Icon, color = 'blue', subtitle, trend })
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-2 sm:p-6 hover:shadow-xl transition-shadow max-w-full overflow-hidden">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{title}</p>
-          <p className="text-3xl font-bold text-gray-800 dark:text-white">{value}</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">{title}</p>
+          <p className="text-sm sm:text-3xl font-bold text-gray-800 dark:text-white truncate">{value}</p>
           {subtitle && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{subtitle}</p>
+            <p className="text-[9px] sm:text-xs text-gray-400 dark:text-gray-500 mt-0.5 sm:mt-1">{subtitle}</p>
           )}
           {trend && (
-            <div className={`flex items-center gap-1 mt-2 text-sm ${trend > 0 ? 'text-green-500' : 'text-red-500'}`}>
+            <div className={`flex items-center gap-1 mt-1.5 sm:mt-2 text-[10px] sm:text-sm ${trend > 0 ? 'text-green-500' : 'text-red-500'}`}>
               <span>{trend > 0 ? '↑' : '↓'}</span>
               <span>{Math.abs(trend)}%</span>
             </div>
           )}
         </div>
         {Icon && (
-          <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${colorClasses[color]} flex items-center justify-center`}>
-            <Icon className="w-7 h-7 text-white" />
+          <div className={`w-8 h-8 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br ${colorClasses[color]} flex items-center justify-center flex-shrink-0`}>
+            <Icon className="w-4 h-4 sm:w-7 sm:h-7 text-white" />
           </div>
         )}
       </div>

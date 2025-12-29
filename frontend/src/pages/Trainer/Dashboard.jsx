@@ -114,15 +114,15 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white pr-20">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h1 className="text-base sm:text-3xl font-bold text-gray-800 dark:text-white pr-2 sm:pr-20">
           جدول اليوم
         </h1>
         <Link
           to="/courses"
-          className="text-blue-600 dark:text-blue-400 hover:underline"
+          className="text-blue-600 dark:text-blue-400 hover:underline text-xs sm:text-base"
         >
           عرض جميع الكورسات ←
         </Link>
@@ -130,113 +130,207 @@ const Dashboard = () => {
 
       {/* Today's Lectures */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">محاضرات اليوم</h2>
+        <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-sm sm:text-xl font-semibold text-gray-800 dark:text-white">محاضرات اليوم</h2>
         </div>
         {todayLectures.length === 0 ? (
-          <div className="text-center py-12">
-            <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-500 dark:text-gray-400">لا توجد محاضرات اليوم</p>
+          <div className="text-center py-8 sm:py-12">
+            <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-gray-400" />
+            <p className="text-xs sm:text-base text-gray-500 dark:text-gray-400">لا توجد محاضرات اليوم</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {todayLectures.map((lecture) => (
-              <div
-                key={lecture.id}
-                className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                      <BookOpen className="w-6 h-6 text-white" />
+          <>
+            {/* Mobile Cards View */}
+            <div className="md:hidden space-y-2 p-2">
+              {todayLectures.map((lecture) => (
+                <div
+                  key={lecture.id}
+                  className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                        <BookOpen className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-xs font-semibold text-gray-800 dark:text-white truncate">
+                          {lecture.course?.course_package?.name || lecture.course?.coursePackage?.name || 'كورس بدون باقة'}
+                        </h3>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                          الطالب: {lecture.course?.student?.name || '-'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-800 dark:text-white">
-                        {lecture.course?.course_package?.name || lecture.course?.coursePackage?.name || 'كورس بدون باقة'}
-                      </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        الطالب: {lecture.course?.student?.name || '-'}
-                      </p>
+                    <div className="flex items-center justify-between pt-1 border-t border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center gap-1 text-[10px] text-gray-600 dark:text-gray-400">
+                        <Clock className="w-3 h-3" />
+                        <span dir="ltr">{formatTime12Hour(lecture.time || lecture.course?.lecture_time)}</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-medium ${getStatusBadge(lecture.status)}`}>
+                        {getStatusLabel(lecture.status)}
+                      </span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <Clock className="w-4 h-4" />
-                      <span dir="ltr">{formatTime12Hour(lecture.time || lecture.course?.lecture_time)}</span>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(lecture.status)}`}>
-                      {getStatusLabel(lecture.status)}
-                    </span>
                     <Link
                       to={`/courses/${lecture.course?.id}`}
-                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                      className="block w-full text-center px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-[10px]"
                     >
                       التفاصيل
                     </Link>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+
+            {/* Desktop View */}
+            <div className="hidden md:block divide-y divide-gray-200 dark:divide-gray-700">
+              {todayLectures.map((lecture) => (
+                <div
+                  key={lecture.id}
+                  className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                        <BookOpen className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-800 dark:text-white">
+                          {lecture.course?.course_package?.name || lecture.course?.coursePackage?.name || 'كورس بدون باقة'}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          الطالب: {lecture.course?.student?.name || '-'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                        <Clock className="w-4 h-4" />
+                        <span dir="ltr">{formatTime12Hour(lecture.time || lecture.course?.lecture_time)}</span>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(lecture.status)}`}>
+                        {getStatusLabel(lecture.status)}
+                      </span>
+                      <Link
+                        to={`/courses/${lecture.course?.id}`}
+                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                      >
+                        التفاصيل
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
       {/* Next Week's Lectures */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">محاضرات الأسبوع القادم</h2>
+        <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-sm sm:text-xl font-semibold text-gray-800 dark:text-white">محاضرات الأسبوع القادم</h2>
         </div>
         {nextWeekLectures.length === 0 ? (
-          <div className="text-center py-12">
-            <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-500 dark:text-gray-400">لا توجد محاضرات للأسبوع القادم</p>
+          <div className="text-center py-8 sm:py-12">
+            <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-gray-400" />
+            <p className="text-xs sm:text-base text-gray-500 dark:text-gray-400">لا توجد محاضرات للأسبوع القادم</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">التاريخ</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الوقت</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الباقة</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الطالب</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الحالة</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {nextWeekLectures.map((lecture) => (
-                  <tr key={lecture.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-gray-800 dark:text-white">
-                      {formatDateShort(lecture.date)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400" dir="ltr">
-                      {formatTime12Hour(lecture.time || lecture.course?.lecture_time)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-800 dark:text-white">
-                      {lecture.course?.course_package?.name || lecture.course?.coursePackage?.name || 'كورس بدون باقة'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                      {lecture.course?.student?.name || '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(lecture.status)}`}>
+          <>
+            {/* Mobile Cards View */}
+            <div className="md:hidden space-y-2 p-2">
+              {nextWeekLectures.map((lecture) => (
+                <div
+                  key={lecture.id}
+                  className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                        <BookOpen className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-xs font-semibold text-gray-800 dark:text-white truncate">
+                          {lecture.course?.course_package?.name || lecture.course?.coursePackage?.name || 'كورس بدون باقة'}
+                        </h3>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                          الطالب: {lecture.course?.student?.name || '-'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                      <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                        <Calendar className="w-3 h-3" />
+                        <span>{formatDateShort(lecture.date)}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400" dir="ltr">
+                        <Clock className="w-3 h-3" />
+                        <span>{formatTime12Hour(lecture.time || lecture.course?.lecture_time)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-gray-200 dark:border-gray-600">
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-medium ${getStatusBadge(lecture.status)}`}>
                         {getStatusLabel(lecture.status)}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
                       <Link
                         to={`/courses/${lecture.course?.id}`}
-                        className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                        className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-[10px]"
                       >
                         التفاصيل
                       </Link>
-                    </td>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">التاريخ</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الوقت</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الباقة</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الطالب</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الحالة</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الإجراءات</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {nextWeekLectures.map((lecture) => (
+                    <tr key={lecture.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <td className="px-4 py-3 text-sm text-gray-800 dark:text-white">
+                        {formatDateShort(lecture.date)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400" dir="ltr">
+                        {formatTime12Hour(lecture.time || lecture.course?.lecture_time)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-800 dark:text-white">
+                        {lecture.course?.course_package?.name || lecture.course?.coursePackage?.name || 'كورس بدون باقة'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                        {lecture.course?.student?.name || '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(lecture.status)}`}>
+                          {getStatusLabel(lecture.status)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          to={`/courses/${lecture.course?.id}`}
+                          className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                        >
+                          التفاصيل
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

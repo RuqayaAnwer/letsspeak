@@ -95,19 +95,19 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6">
-        <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white mb-3 sm:mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 sm:p-6">
+        <h2 className="text-base sm:text-xl font-bold text-gray-800 dark:text-white mb-2 sm:mb-4">
           إجراءات سريعة
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           {quickActions.map((action) => (
             <button
               key={action.label}
               onClick={() => navigate(action.path)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all"
+              className="flex flex-col items-center gap-1.5 sm:gap-2 p-2.5 sm:p-4 rounded-xl bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all"
             >
-              <action.icon className="w-6 h-6 text-blue-500" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <action.icon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
+              <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                 {action.label}
               </span>
             </button>

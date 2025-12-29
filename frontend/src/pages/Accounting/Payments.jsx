@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
-import { Plus, Search, CreditCard, X, Edit2, Info } from 'lucide-react';
+import { Plus, Search, CreditCard, X, Edit2, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDateSimple } from '../../utils/dateFormat';
 
 const Payments = () => {
@@ -57,12 +57,25 @@ const Payments = () => {
     coursesPayments: [], // Array of {courseId, courseName, payments: [{date, amount}]}
     loading: false,
   });
+  // Pagination states for mobile cards
+  const [singlePaymentsPage, setSinglePaymentsPage] = useState(1);
+  const [dualPaymentsPage, setDualPaymentsPage] = useState(1);
+  const [showAllSinglePayments, setShowAllSinglePayments] = useState(false);
+  const [showAllDualPayments, setShowAllDualPayments] = useState(false);
 
   useEffect(() => {
     fetchPayments();
     fetchStudentsAndCourses();
     fetchDualCourses(); // Fetch dual courses to show all students
   }, [search]);
+
+  // Reset pagination when payments change
+  useEffect(() => {
+    setSinglePaymentsPage(1);
+    setDualPaymentsPage(1);
+    setShowAllSinglePayments(false);
+    setShowAllDualPayments(false);
+  }, [payments]);
 
   // Ensure date is properly formatted when edit modal opens
   useEffect(() => {
@@ -992,13 +1005,13 @@ const Payments = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div>
-          <h1 className="page-title text-lg sm:text-2xl">إدارة المدفوعات</h1>
-          <p className="page-subtitle text-xs sm:text-sm">تسجيل ومتابعة المدفوعات</p>
+          <h1 className="page-title text-base sm:text-2xl">إدارة المدفوعات</h1>
+          <p className="page-subtitle text-[10px] sm:text-sm">تسجيل ومتابعة المدفوعات</p>
         </div>
-        <button onClick={() => openModal()} className="btn-primary flex items-center gap-2">
-          <Plus className="w-5 h-5" />
+        <button onClick={() => openModal()} className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-base px-3 sm:px-4 py-1.5 sm:py-2">
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
           إضافة دفعة
         </button>
       </div>
@@ -1044,15 +1057,176 @@ const Payments = () => {
 
             return singleCoursePayments.length > 0 ? (
               <div className="card">
-                <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-                  <h2 className="text-lg font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                <div className="mb-3 sm:mb-4 pb-2 sm:pb-3 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 sm:gap-2">
                     <span>الكورسات الفردية</span>
-                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-semibold">
+                    <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-[10px] sm:text-xs font-semibold">
                       {singleCoursePayments.length} دفعة
                     </span>
                   </h2>
                 </div>
-                <div className="overflow-x-auto -mx-4 sm:mx-0">
+                {/* Mobile Cards View */}
+                <div className="md:hidden">
+                  {(() => {
+                    const itemsPerPage = 5;
+                    
+                    // If not showing all, only show first 5
+                    const paymentsToShow = showAllSinglePayments ? singleCoursePayments : singleCoursePayments.slice(0, itemsPerPage);
+                    
+                    // Calculate pagination only when showing all
+                    const totalPages = showAllSinglePayments ? Math.ceil(singleCoursePayments.length / itemsPerPage) : 1;
+                    const startIndex = showAllSinglePayments ? (singlePaymentsPage - 1) * itemsPerPage : 0;
+                    const endIndex = showAllSinglePayments ? startIndex + itemsPerPage : itemsPerPage;
+                    const currentPayments = showAllSinglePayments 
+                      ? singleCoursePayments.slice(startIndex, endIndex)
+                      : paymentsToShow;
+                    
+                    return (
+                      <>
+                        <div className="space-y-2 p-2">
+                          {currentPayments.length === 0 ? (
+                            <div className="text-center py-6 text-[var(--color-text-muted)] text-xs">
+                              لا توجد مدفوعات
+                            </div>
+                          ) : (
+                            currentPayments.map((payment, index) => {
+                              const paymentStatus = getPaymentStatus(payment);
+                              const firstDate = getFirstPaymentDate(payment.student_id, payment.course_id);
+                              const displayIndex = showAllSinglePayments ? startIndex + index + 1 : index + 1;
+                              return (
+                                <div key={payment.id} className="p-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 max-w-full overflow-hidden">
+                                  <div className="grid grid-cols-2 gap-1.5">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[10px] font-bold text-gray-800 dark:text-white">{displayIndex}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center justify-end gap-1">
+                                      <button
+                                        onClick={() => openPaymentInfoModal(
+                                          payment.student_id,
+                                          payment.course_id,
+                                          payment.student?.name || '-',
+                                          payment
+                                        )}
+                                        className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
+                                        title="عرض معلومات الدفعات"
+                                      >
+                                        <Info className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => openEditModal(payment)}
+                                        className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                                        title="تعديل الدفعة"
+                                      >
+                                        <Edit2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                    
+                                    <div className="col-span-2 flex items-center gap-1">
+                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الطالب:</span>
+                                      <span className="text-[10px] font-semibold text-gray-800 dark:text-white truncate flex-1">{payment.student?.name || '-'}</span>
+                                    </div>
+                                    
+                                    <div className="col-span-2 flex items-center gap-1">
+                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الهاتف:</span>
+                                      <span className="text-[10px] text-gray-800 dark:text-white">{payment.student?.phone || '-'}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الباقة:</span>
+                                      <span className="text-[10px] font-medium text-gray-800 dark:text-white truncate">{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">التاريخ:</span>
+                                      <span className="text-[10px] text-gray-800 dark:text-white">
+                                        {firstDate ? formatDateSimple(firstDate) : '—'}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المدفوع:</span>
+                                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                        {formatCurrency(payment.amount)}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المتبقي:</span>
+                                      {paymentStatus.amount > 0 ? (
+                                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                                          {formatCurrency(paymentStatus.amount)}
+                                        </span>
+                                      ) : (
+                                        <span className={`badge ${paymentStatus.badge} text-[9px] px-1 py-0.5`}>
+                                          {paymentStatus.label}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                        
+                        {/* Show "عرض الكل" button if not showing all and there are more than 5 payments */}
+                        {!showAllSinglePayments && singleCoursePayments.length > itemsPerPage && (
+                          <div className="flex items-center justify-center p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                            <button
+                              onClick={() => {
+                                setShowAllSinglePayments(true);
+                                setSinglePaymentsPage(1);
+                              }}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] bg-blue-500 text-white hover:bg-blue-600"
+                            >
+                              عرض الكل
+                              <ChevronLeft className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                        
+                        {/* Pagination Controls - Only show when showing all */}
+                        {showAllSinglePayments && totalPages > 1 && (
+                          <div className="flex items-center justify-between p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                            <button
+                              onClick={() => setSinglePaymentsPage(prev => Math.max(1, prev - 1))}
+                              disabled={singlePaymentsPage === 1}
+                              className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
+                                singlePaymentsPage === 1
+                                  ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                                  : 'bg-blue-500 text-white hover:bg-blue-600'
+                              }`}
+                            >
+                              <ChevronRight className="w-3 h-3" />
+                              السابق
+                            </button>
+
+                            <span className="text-[9px] text-gray-600 dark:text-gray-400">
+                              صفحة {singlePaymentsPage} من {totalPages}
+                            </span>
+
+                            <button
+                              onClick={() => setSinglePaymentsPage(prev => Math.min(totalPages, prev + 1))}
+                              disabled={singlePaymentsPage === totalPages}
+                              className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
+                                singlePaymentsPage === totalPages
+                                  ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                                  : 'bg-blue-500 text-white hover:bg-blue-600'
+                              }`}
+                            >
+                              التالي
+                              <ChevronLeft className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0">
                   <table className="table text-sm min-w-[800px]">
                     <thead>
                       <tr>
@@ -1190,15 +1364,200 @@ const Payments = () => {
 
             return dualCoursesRows.length > 0 ? (
               <div className="card">
-                <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-                  <h2 className="text-lg font-bold text-purple-600 dark:text-purple-400 flex items-center gap-2">
+                <div className="mb-3 sm:mb-4 pb-2 sm:pb-3 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="text-sm sm:text-lg font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1.5 sm:gap-2">
                     <span>الكورسات الثنائية</span>
-                    <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-semibold">
+                    <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] sm:text-xs font-semibold">
                       {dualCoursesRows.length} طالب
                     </span>
                   </h2>
                 </div>
-                <div className="overflow-x-auto -mx-4 sm:mx-0">
+                {/* Mobile Cards View */}
+                <div className="md:hidden">
+                  {(() => {
+                    const itemsPerPage = 5;
+                    
+                    // If not showing all, only show first 5
+                    const rowsToShow = showAllDualPayments ? dualCoursesRows : dualCoursesRows.slice(0, itemsPerPage);
+                    
+                    // Calculate pagination only when showing all
+                    const totalPages = showAllDualPayments ? Math.ceil(dualCoursesRows.length / itemsPerPage) : 1;
+                    const startIndex = showAllDualPayments ? (dualPaymentsPage - 1) * itemsPerPage : 0;
+                    const endIndex = showAllDualPayments ? startIndex + itemsPerPage : itemsPerPage;
+                    const currentRows = showAllDualPayments 
+                      ? dualCoursesRows.slice(startIndex, endIndex)
+                      : rowsToShow;
+                    
+                    return (
+                      <>
+                        <div className="space-y-2 p-2">
+                          {currentRows.length === 0 ? (
+                            <div className="text-center py-6 text-[var(--color-text-muted)] text-xs">
+                              لا توجد مدفوعات
+                            </div>
+                          ) : (
+                            currentRows.map((row, index) => {
+                              // Calculate payment status for this student
+                              const totalPaid = row.allPayments
+                                .filter(p => p.status === 'completed' || p.status === 'paid')
+                                .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                              
+                              const studentPrice = getStudentPrice(row.course);
+                              const remaining = studentPrice > 0 ? Math.max(0, studentPrice - totalPaid) : 0;
+                              
+                              const paymentStatus = remaining > 0 
+                                ? { label: '', badge: 'badge-warning', amount: remaining }
+                                : { label: 'مكتمل', badge: 'badge-success', amount: 0 };
+
+                              // Get first payment date
+                              const firstPayment = row.allPayments
+                                .filter(p => p.status === 'completed' || p.status === 'paid')
+                                .sort((a, b) => {
+                                  const dateA = new Date(a.created_at || a.payment_date || 0);
+                                  const dateB = new Date(b.created_at || b.payment_date || 0);
+                                  return dateA - dateB;
+                                })[0];
+                              
+                              const firstDate = firstPayment 
+                                ? (firstPayment.payment_date || firstPayment.created_at) 
+                                : null;
+
+                              const displayIndex = showAllDualPayments ? startIndex + index + 1 : index + 1;
+
+                              return (
+                                <div key={`${row.courseId}-${row.studentId}`} className="p-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 max-w-full overflow-hidden">
+                                  <div className="grid grid-cols-2 gap-1.5">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[10px] font-bold text-gray-800 dark:text-white">{displayIndex}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center justify-end gap-1">
+                                      <button
+                                        onClick={() => openPaymentInfoModal(
+                                          row.studentId,
+                                          row.courseId,
+                                          row.studentName,
+                                          row.payment
+                                        )}
+                                        className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
+                                        title="عرض معلومات الدفعات"
+                                      >
+                                        <Info className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => openEditModal(row.payment)}
+                                        className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                                        title="تعديل الدفعة"
+                                      >
+                                        <Edit2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                    
+                                    <div className="col-span-2 flex items-center gap-1">
+                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الطالب:</span>
+                                      <span className="text-[10px] font-semibold text-gray-800 dark:text-white truncate flex-1">{row.studentName}</span>
+                                    </div>
+                                    
+                                    <div className="col-span-2 flex items-center gap-1">
+                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الهاتف:</span>
+                                      <span className="text-[10px] text-gray-800 dark:text-white">{row.studentPhone || '-'}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الباقة:</span>
+                                      <span className="text-[10px] font-medium text-gray-800 dark:text-white truncate">{row.course?.course_package?.name || row.course?.coursePackage?.name || '-'}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">التاريخ:</span>
+                                      <span className="text-[10px] text-gray-800 dark:text-white">
+                                        {firstDate ? formatDateSimple(firstDate) : '—'}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المدفوع:</span>
+                                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                        {formatCurrency(totalPaid)}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المتبقي:</span>
+                                      {paymentStatus.amount > 0 ? (
+                                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                                          {formatCurrency(paymentStatus.amount)}
+                                        </span>
+                                      ) : (
+                                        <span className={`badge ${paymentStatus.badge} text-[9px] px-1 py-0.5`}>
+                                          {paymentStatus.label}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                        
+                        {/* Show "عرض الكل" button if not showing all and there are more than 5 payments */}
+                        {!showAllDualPayments && dualCoursesRows.length > itemsPerPage && (
+                          <div className="flex items-center justify-center p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                            <button
+                              onClick={() => {
+                                setShowAllDualPayments(true);
+                                setDualPaymentsPage(1);
+                              }}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] bg-purple-500 text-white hover:bg-purple-600"
+                            >
+                              عرض الكل
+                              <ChevronLeft className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                        
+                        {/* Pagination Controls - Only show when showing all */}
+                        {showAllDualPayments && totalPages > 1 && (
+                          <div className="flex items-center justify-between p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                            <button
+                              onClick={() => setDualPaymentsPage(prev => Math.max(1, prev - 1))}
+                              disabled={dualPaymentsPage === 1}
+                              className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
+                                dualPaymentsPage === 1
+                                  ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                                  : 'bg-purple-500 text-white hover:bg-purple-600'
+                              }`}
+                            >
+                              <ChevronRight className="w-3 h-3" />
+                              السابق
+                            </button>
+
+                            <span className="text-[9px] text-gray-600 dark:text-gray-400">
+                              صفحة {dualPaymentsPage} من {totalPages}
+                            </span>
+
+                            <button
+                              onClick={() => setDualPaymentsPage(prev => Math.min(totalPages, prev + 1))}
+                              disabled={dualPaymentsPage === totalPages}
+                              className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
+                                dualPaymentsPage === totalPages
+                                  ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                                  : 'bg-purple-500 text-white hover:bg-purple-600'
+                              }`}
+                            >
+                              التالي
+                              <ChevronLeft className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0">
                   <table className="table text-sm min-w-[800px]">
                     <thead>
                       <tr>
@@ -1559,13 +1918,13 @@ const Payments = () => {
         onClose={closeEditModal}
         title="تعديل الدفعة"
       >
-        <form onSubmit={handleEditSubmit} className="space-y-4">
+        <form onSubmit={handleEditSubmit} className="space-y-3 sm:space-y-4">
           {/* Original Payment Info */}
-          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">معلومات الدفعة الأصلية</h3>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2.5 sm:p-4 border border-gray-200 dark:border-gray-600">
+            <h3 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">معلومات الدفعة الأصلية</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
               <div>
-                <label className="label" htmlFor="edit-payment-amount">المبلغ المدفوع (د.ع) *</label>
+                <label className="label text-[10px] sm:text-sm" htmlFor="edit-payment-amount">المبلغ المدفوع (د.ع) *</label>
                 <input
                   type="number"
                   id="edit-payment-amount"
@@ -1586,7 +1945,7 @@ const Payments = () => {
                       remaining_amount: newRemaining > 0 ? newRemaining.toFixed(2) : '0.00',
                     }));
                   }}
-                  className="input"
+                  className="input text-xs sm:text-sm py-1.5 sm:py-2"
                   placeholder="0"
                   min="0"
                   step="0.01"
@@ -1594,7 +1953,7 @@ const Payments = () => {
                 />
               </div>
               <div>
-                <label className="label" htmlFor="edit-payment-date">تاريخ الدفع *</label>
+                <label className="label text-[10px] sm:text-sm" htmlFor="edit-payment-date">تاريخ الدفع *</label>
                 <input
                   type="date"
                   id="edit-payment-date"
@@ -1605,27 +1964,27 @@ const Payments = () => {
                     console.log('First payment date changed to:', newDate);
                     setEditFormData({ ...editFormData, date: newDate });
                   }}
-                  className="input"
+                  className="input text-xs sm:text-sm py-1.5 sm:py-2"
                   required
                   min="2020-01-01"
                   max={new Date().toISOString().split('T')[0]}
                 />
                 {!editFormData.date && (
-                  <p className="text-red-500 text-xs mt-1">يرجى اختيار تاريخ الدفع</p>
+                  <p className="text-red-500 text-[9px] sm:text-xs mt-1">يرجى اختيار تاريخ الدفع</p>
                 )}
                 {editFormData.date && (
-                  <p className="text-gray-500 text-xs mt-1">تاريخ الدفعة الأولى: {editFormData.date}</p>
+                  <p className="text-gray-500 text-[9px] sm:text-xs mt-1">تاريخ الدفعة الأولى: {editFormData.date}</p>
                 )}
               </div>
             </div>
-            <div className="mt-3">
-              <label className="label" htmlFor="edit-payment-notes">ملاحظات</label>
+            <div className="mt-2 sm:mt-3">
+              <label className="label text-[10px] sm:text-sm" htmlFor="edit-payment-notes">ملاحظات</label>
               <textarea
                 id="edit-payment-notes"
                 name="edit-payment-notes"
                 value={editFormData.notes}
                 onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-                className="input min-h-[60px]"
+                className="input min-h-[50px] sm:min-h-[60px] text-xs sm:text-sm py-1.5 sm:py-2"
                 placeholder="أضف أي ملاحظات..."
               />
             </div>
@@ -1633,13 +1992,13 @@ const Payments = () => {
 
           {/* Remaining Payment Section */}
           {parseFloat(editFormData.remaining_amount) > 0 && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
-              <h3 className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-3">
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2.5 sm:p-4 border border-blue-200 dark:border-blue-700">
+              <h3 className="text-[10px] sm:text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2 sm:mb-3">
                 إضافة دفعة المتبقي
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                 <div>
-                  <label className="label">المبلغ المتبقي (د.ع)</label>
+                  <label className="label text-[10px] sm:text-sm">المبلغ المتبقي (د.ع)</label>
                   <input
                     type="number"
                     value={remainingPayment.amount}
@@ -1652,18 +2011,18 @@ const Payments = () => {
                         amount: numValue > maxAmount ? maxAmount.toString() : value 
                       });
                     }}
-                    className="input"
+                    className="input text-xs sm:text-sm py-1.5 sm:py-2"
                     placeholder={editFormData.remaining_amount}
                     min="0"
                     step="0.01"
                     max={editFormData.remaining_amount}
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1">
                     المتبقي الكلي: {formatCurrency(editFormData.remaining_amount)}
                   </p>
                 </div>
                 <div>
-                  <label className="label" htmlFor="remaining-payment-date">
+                  <label className="label text-[10px] sm:text-sm" htmlFor="remaining-payment-date">
                     تاريخ الدفعة الثانية {remainingPayment.amount && parseFloat(remainingPayment.amount) > 0 ? '*' : ''}
                   </label>
                   <input
@@ -1676,34 +2035,34 @@ const Payments = () => {
                       console.log('Second payment date changed to:', newDate);
                       setRemainingPayment({ ...remainingPayment, date: newDate });
                     }}
-                    className="input"
+                    className="input text-xs sm:text-sm py-1.5 sm:py-2"
                     required={remainingPayment.amount && parseFloat(remainingPayment.amount) > 0}
                     max={new Date().toISOString().split('T')[0]}
                   />
                   {remainingPayment.date && (
-                    <p className="text-gray-500 text-xs mt-1">تاريخ الدفعة الثانية: {remainingPayment.date}</p>
+                    <p className="text-gray-500 text-[9px] sm:text-xs mt-1">تاريخ الدفعة الثانية: {remainingPayment.date}</p>
                   )}
                 </div>
               </div>
-              <div className="mt-3">
-                <label className="label" htmlFor="remaining-payment-notes">ملاحظات دفعة المتبقي</label>
+              <div className="mt-2 sm:mt-3">
+                <label className="label text-[10px] sm:text-sm" htmlFor="remaining-payment-notes">ملاحظات دفعة المتبقي</label>
                 <textarea
                   id="remaining-payment-notes"
                   name="remaining-payment-notes"
                   value={remainingPayment.notes}
                   onChange={(e) => setRemainingPayment({ ...remainingPayment, notes: e.target.value })}
-                  className="input min-h-[60px]"
+                  className="input min-h-[50px] sm:min-h-[60px] text-xs sm:text-sm py-1.5 sm:py-2"
                   placeholder="أضف ملاحظات لدفعة المتبقي..."
                 />
               </div>
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
-            <button type="button" onClick={closeEditModal} className="btn-secondary">
+          <div className="flex justify-end gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-[var(--color-border)]">
+            <button type="button" onClick={closeEditModal} className="btn-secondary text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2">
               إلغاء
             </button>
-            <button type="submit" disabled={submitting} className="btn-primary">
+            <button type="submit" disabled={submitting} className="btn-primary text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2">
               {submitting ? 'جاري الحفظ...' : 'تحديث'}
             </button>
           </div>
@@ -1712,13 +2071,13 @@ const Payments = () => {
 
       {/* Payment Info Modal */}
       {paymentInfoModal.open && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h2 className="text-lg font-bold text-gray-800 dark:text-white">
+            <div className="flex items-center justify-between p-2.5 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2 flex-wrap">
+                  <h2 className="text-xs sm:text-lg font-bold text-gray-800 dark:text-white truncate">
                     معلومات الدفعات: {paymentInfoModal.studentName}
                   </h2>
                   {(() => {
@@ -1730,38 +2089,38 @@ const Payments = () => {
                                    paymentInfoModal.payments[0].studentId);
                     
                     return isDual ? (
-                      <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-semibold">
+                      <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] sm:text-xs font-semibold">
                         كورس ثنائي
                       </span>
                     ) : (
-                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-semibold">
+                      <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-[9px] sm:text-xs font-semibold">
                         كورس فردي
                       </span>
                     );
                   })()}
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400">
                   الكورس رقم: {paymentInfoModal.courseId}
                 </p>
                 {paymentInfoModal.course?.is_dual && paymentInfoModal.course?.students && paymentInfoModal.course.students.length > 1 && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1">
                     الطلاب: {paymentInfoModal.course.students.map(s => s.name).join(' - ')}
                   </p>
                 )}
               </div>
               <button
                 onClick={closePaymentInfoModal}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors flex-shrink-0 ml-2"
               >
-                <X className="w-6 h-6" />
+                <X className="w-4 h-4 sm:w-6 sm:h-6" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-2 sm:p-4">
               {paymentInfoModal.loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <div className="flex items-center justify-center py-6 sm:py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-500"></div>
                 </div>
               ) : (
                 <>
@@ -1772,12 +2131,12 @@ const Payments = () => {
                    typeof paymentInfoModal.payments[0] === 'object' && 
                    paymentInfoModal.payments[0].studentId ? (
                     // Dual course: Show payments for each student separately
-                    <div className="space-y-6">
+                    <div className="space-y-3 sm:space-y-6">
                       {paymentInfoModal.payments.map((studentData, studentIndex) => (
-                        <div key={studentData.studentId} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                        <div key={studentData.studentId} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2.5 sm:p-4 border border-blue-200 dark:border-blue-800">
                           {/* Student Header */}
-                          <div className="mb-4 pb-3 border-b border-blue-300 dark:border-blue-700">
-                            <h3 className="text-base font-bold text-blue-800 dark:text-blue-300">
+                          <div className="mb-2 sm:mb-4 pb-2 sm:pb-3 border-b border-blue-300 dark:border-blue-700">
+                            <h3 className="text-xs sm:text-base font-bold text-blue-800 dark:text-blue-300">
                               {studentIndex === 0 ? 'الطالب الأول' : 'الطالب الثاني'}: {studentData.studentName}
                             </h3>
                           </div>
@@ -1785,26 +2144,26 @@ const Payments = () => {
                           {/* Payments Summary for this student */}
                           {studentData.payments && studentData.payments.length > 0 ? (
                             <>
-                              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-3">
-                                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">ملخص الدفعات</h4>
-                                <div className="grid grid-cols-3 gap-3 text-xs">
+                              <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
+                                <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">ملخص الدفعات</h4>
+                                <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
                                   <div>
-                                    <p className="text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
-                                    <p className="text-lg font-bold text-gray-800 dark:text-white">
+                                    <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
+                                    <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white">
                                       {studentData.payments.length}
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
-                                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                    <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
+                                    <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
                                       {studentData.payments
                                         .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
                                         .toLocaleString('ar-EG')} د.ع
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-gray-500 dark:text-gray-400">المتبقي</p>
-                                    <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
+                                    <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المتبقي</p>
+                                    <p className="text-sm sm:text-lg font-bold text-amber-600 dark:text-amber-400">
                                       {(() => {
                                         const course = paymentInfoModal.course;
                                         const studentPrice = getStudentPrice(course);
@@ -1820,8 +2179,8 @@ const Payments = () => {
 
                               {/* Payments List for this student */}
                               <div>
-                                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">قائمة الدفعات</h4>
-                                <div className="space-y-3">
+                                <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">قائمة الدفعات</h4>
+                                <div className="space-y-2 sm:space-y-3">
                                   {studentData.payments.map((payment, index) => {
                                     const paymentDate = payment.payment_date || payment.date || payment.created_at;
                                     const formattedDate = paymentDate 
@@ -1829,29 +2188,29 @@ const Payments = () => {
                                       : '-';
 
                                     return (
-                                      <div key={payment.id || index} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                                        <div className="flex items-center justify-between mb-2">
-                                          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                      <div key={payment.id || index} className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-600">
+                                        <div className="grid grid-cols-2 gap-2 items-center mb-1.5 sm:mb-2">
+                                          <p className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300">
                                             الدفعة {index + 1}
                                           </p>
-                                          <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                                          <p className="text-[10px] sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 text-left">
                                             {formatCurrency(payment.amount)}
                                           </p>
                                         </div>
-                                        <div className="space-y-1">
-                                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            تاريخ الدفع:
-                                          </p>
-                                          <p className="text-sm font-semibold text-gray-800 dark:text-white">
-                                            {formattedDate}
-                                          </p>
-                                        </div>
-                                        {payment.notes && (
-                                          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">ملاحظات:</p>
-                                            <p className="text-xs text-gray-700 dark:text-gray-300">{payment.notes}</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div>
+                                            <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">تاريخ الدفع:</p>
+                                            <p className="text-[10px] sm:text-sm font-semibold text-gray-800 dark:text-white">
+                                              {formattedDate}
+                                            </p>
                                           </div>
-                                        )}
+                                          {payment.notes && (
+                                            <div>
+                                              <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">ملاحظات:</p>
+                                              <p className="text-[9px] sm:text-xs text-gray-700 dark:text-gray-300 truncate">{payment.notes}</p>
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
                                     );
                                   })}
@@ -1859,7 +2218,7 @@ const Payments = () => {
                               </div>
                             </>
                           ) : (
-                            <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                            <div className="text-center py-3 sm:py-4 text-gray-500 dark:text-gray-400 text-[10px] sm:text-sm">
                               لا توجد دفعات مسجلة لهذا الطالب في هذا الكورس
                             </div>
                           )}
@@ -1869,32 +2228,32 @@ const Payments = () => {
                   ) : (
                     // Single course: Show payments for one student
                     paymentInfoModal.payments.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <div className="text-center py-6 sm:py-8 text-gray-500 dark:text-gray-400 text-xs sm:text-base">
                         لا توجد دفعات مسجلة
                       </div>
                     ) : (
                       <>
                         {/* Payments Summary for single course */}
-                        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-4">
-                          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">ملخص الدفعات</h4>
-                          <div className="grid grid-cols-3 gap-3 text-xs">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 mb-3 sm:mb-4">
+                          <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">ملخص الدفعات</h4>
+                          <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
                             <div>
-                              <p className="text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
-                              <p className="text-lg font-bold text-gray-800 dark:text-white">
+                              <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
+                              <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white">
                                 {paymentInfoModal.payments.length}
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
-                              <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                              <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
+                              <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
                                 {paymentInfoModal.payments
                                   .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
                                   .toLocaleString('ar-EG')} د.ع
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-500 dark:text-gray-400">المتبقي</p>
-                              <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
+                              <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المتبقي</p>
+                              <p className="text-sm sm:text-lg font-bold text-amber-600 dark:text-amber-400">
                                 {(() => {
                                   const course = paymentInfoModal.course;
                                   const studentPrice = getStudentPrice(course);
@@ -1910,8 +2269,8 @@ const Payments = () => {
 
                         {/* Payments List */}
                         <div>
-                          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">قائمة الدفعات</h4>
-                          <div className="space-y-3">
+                          <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">قائمة الدفعات</h4>
+                          <div className="space-y-2 sm:space-y-3">
                             {paymentInfoModal.payments.map((payment, index) => {
                               const paymentDate = payment.payment_date || payment.date || payment.created_at;
                               const formattedDate = paymentDate 
@@ -1919,29 +2278,29 @@ const Payments = () => {
                                 : '-';
 
                               return (
-                                <div key={payment.id || index} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                <div key={payment.id || index} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-600">
+                                  <div className="grid grid-cols-2 gap-2 items-center mb-1.5 sm:mb-2">
+                                    <p className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300">
                                       الدفعة {index + 1}
                                     </p>
-                                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                                    <p className="text-[10px] sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 text-left">
                                       {formatCurrency(payment.amount)}
                                     </p>
                                   </div>
-                                  <div className="space-y-1">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                      تاريخ الدفع:
-                                    </p>
-                                    <p className="text-sm font-semibold text-gray-800 dark:text-white">
-                                      {formattedDate}
-                                    </p>
-                                  </div>
-                                  {payment.notes && (
-                                    <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                                      <p className="text-xs text-gray-500 dark:text-gray-400">ملاحظات:</p>
-                                      <p className="text-xs text-gray-700 dark:text-gray-300">{payment.notes}</p>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">تاريخ الدفع:</p>
+                                      <p className="text-[10px] sm:text-sm font-semibold text-gray-800 dark:text-white">
+                                        {formattedDate}
+                                      </p>
                                     </div>
-                                  )}
+                                    {payment.notes && (
+                                      <div>
+                                        <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">ملاحظات:</p>
+                                        <p className="text-[9px] sm:text-xs text-gray-700 dark:text-gray-300 truncate">{payment.notes}</p>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}
@@ -1955,10 +2314,10 @@ const Payments = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-end gap-2 p-2.5 sm:p-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 onClick={closePaymentInfoModal}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-[10px] sm:text-sm"
               >
                 إغلاق
               </button>

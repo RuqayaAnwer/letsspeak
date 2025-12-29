@@ -33,11 +33,35 @@
     @apply bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-300;
     direction: rtl;
   }
+
+  /* Mobile-only: Prevent horizontal overflow */
+  @media (max-width: 640px) {
+    html, body {
+      overflow-x: hidden;
+      max-width: 100vw;
+    }
+    
+    * {
+      max-width: 100%;
+    }
+    
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+  }
 }
 
 @layer components {
   .btn {
     @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Mobile-only: Smaller buttons */
+  @media (max-width: 640px) {
+    .btn {
+      @apply px-3 py-1.5 text-xs;
+    }
   }
 
   .btn-primary {
@@ -60,8 +84,22 @@
     @apply bg-[var(--color-bg-primary)] rounded-xl border border-[var(--color-border)] shadow-sm;
   }
 
+  /* Mobile-only: Smaller card padding */
+  @media (max-width: 640px) {
+    .card {
+      @apply p-3;
+    }
+  }
+
   .input {
     @apply w-full px-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
+  }
+
+  /* Mobile-only: Smaller input padding and text */
+  @media (max-width: 640px) {
+    .input {
+      @apply px-3 py-2 text-xs;
+    }
   }
 
   .select {
@@ -73,6 +111,13 @@
 
   .label {
     @apply block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5;
+  }
+
+  /* Mobile-only: Smaller label text */
+  @media (max-width: 640px) {
+    .label {
+      @apply text-xs mb-1;
+    }
   }
 
   .table-container {
@@ -89,6 +134,17 @@
 
   .table td {
     @apply px-4 py-3 text-sm text-[var(--color-text-secondary)] border-b border-[var(--color-border)];
+  }
+
+  /* Mobile-only: Smaller table padding and text */
+  @media (max-width: 640px) {
+    .table th {
+      @apply px-2 py-1.5 text-[10px];
+    }
+    
+    .table td {
+      @apply px-2 py-1.5 text-xs;
+    }
   }
 
   .table tr:hover td {
@@ -127,6 +183,13 @@
     @apply card p-6 hover:shadow-md transition-shadow duration-200;
   }
 
+  /* Mobile-only: Smaller stat-card padding */
+  @media (max-width: 640px) {
+    .stat-card {
+      @apply p-3;
+    }
+  }
+
   .sidebar-link {
     @apply flex items-center gap-3 px-4 py-3 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] transition-colors duration-200;
   }
@@ -147,9 +210,34 @@
     @apply text-[var(--color-text-muted)] mt-1;
   }
 
+  /* Mobile-only: Smaller page title and subtitle */
+  @media (max-width: 640px) {
+    .page-title {
+      @apply text-lg pr-2;
+    }
+    
+    .page-subtitle {
+      @apply text-xs;
+    }
+  }
+
   /* Add padding for main page titles to avoid burger menu overlap */
   main h1.text-3xl {
     padding-right: 5rem;
+  }
+
+  /* Mobile-only: Prevent horizontal overflow and adjust main padding */
+  @media (max-width: 640px) {
+    main h1.text-3xl {
+      padding-right: 1rem;
+      font-size: 1.25rem;
+    }
+    
+    main h1.text-xl,
+    main h1.text-2xl {
+      font-size: 1.125rem;
+      padding-right: 0.5rem;
+    }
   }
 }
 

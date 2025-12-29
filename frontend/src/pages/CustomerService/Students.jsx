@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
-import { Plus, Search, Edit2, Trash2, Users, Phone, GraduationCap } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Users, Phone, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const Students = () => {
   const [students, setStudents] = useState([]);
@@ -29,10 +29,16 @@ const Students = () => {
     { value: 'L8', label: 'المستوى 8' },
   ];
   const [submitting, setSubmitting] = useState(false);
+  const [studentsPage, setStudentsPage] = useState(1); // Pagination for mobile cards
 
   useEffect(() => {
     fetchStudents();
   }, [search]);
+
+  // Reset pagination when students change
+  useEffect(() => {
+    setStudentsPage(1);
+  }, [students]);
 
   const fetchStudents = async () => {
     try {
@@ -157,78 +163,200 @@ const Students = () => {
         />
       ) : (
         <div className="card">
-          <div className="overflow-x-auto">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>اسم الطالب</th>
-                  <th>رقم الهاتف</th>
-                  <th>المستوى</th>
-                  <th>عدد الكورسات</th>
-                  <th>ملاحظات</th>
-                  <th>الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((student, index) => (
-                  <tr key={student.id}>
-                    <td className="font-semibold">{index + 1}</td>
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-accent-400 flex items-center justify-center">
-                          <span className="text-white font-bold">
-                            {student.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <span className="font-semibold text-[var(--color-text-primary)]">
-                          {student.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-[var(--color-text-muted)]" />
-                        <span dir="ltr">{student.phone}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${getLevelBadgeColor(student.level)}`}>
-                        <GraduationCap className="w-3 h-3" />
-                        {student.level || 'L1'}
+          {/* Mobile Cards View */}
+          <div className="md:hidden">
+            {(() => {
+              const itemsPerPage = 5;
+              const totalPages = Math.ceil(students.length / itemsPerPage);
+              const startIndex = (studentsPage - 1) * itemsPerPage;
+              const endIndex = startIndex + itemsPerPage;
+              const currentStudents = students.slice(startIndex, endIndex);
+              
+              return (
+                <>
+                  <div className="space-y-2 p-2">
+                    {currentStudents.map((student, index) => {
+                      const displayIndex = startIndex + index + 1;
+                      return (
+                        <div key={student.id} className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">اسم الطالب</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
+                                <span className="text-xs font-semibold text-gray-800 dark:text-white">
+                                  {student.name}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">رقم الهاتف</span>
+                              <div className="flex items-center gap-1.5">
+                                <Phone className="w-3 h-3 text-gray-400" />
+                                <span dir="ltr" className="text-xs text-gray-800 dark:text-white">{student.phone}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">المستوى</span>
+                              <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold ${getLevelBadgeColor(student.level)}`}>
+                                <GraduationCap className="w-2.5 h-2.5" />
+                                {student.level || 'L1'}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">عدد الكورسات</span>
+                              <span className="badge badge-info text-[10px] px-1.5 py-0.5">
+                                {student.courses_count || 0} كورس
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-start justify-between">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">ملاحظات</span>
+                              <span className="text-[10px] text-gray-600 dark:text-gray-400 text-right max-w-[65%] leading-relaxed">
+                                {student.notes || '-'}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الإجراءات</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => openModal(student)}
+                                  className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 hover:text-primary-600"
+                                  title="تعديل"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(student.id)}
+                                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600"
+                                    title="حذف"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                  
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                      <button
+                        onClick={() => setStudentsPage(prev => Math.max(1, prev - 1))}
+                        disabled={studentsPage === 1}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
+                          studentsPage === 1
+                            ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                      >
+                        <ChevronRight className="w-3 h-3" />
+                        السابق
+                      </button>
+
+                      <span className="text-[9px] text-gray-600 dark:text-gray-400">
+                        صفحة {studentsPage} من {totalPages}
                       </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-info">
-                        {student.courses_count || 0} كورس
-                      </span>
-                    </td>
-                    <td className="text-[var(--color-text-muted)] max-w-xs truncate">
-                      {student.notes || '-'}
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => openModal(student)}
-                          className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
-                          title="تعديل"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(student.id)}
-                          className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[var(--color-text-muted)] hover:text-red-600"
-                          title="حذف"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+                      <button
+                        onClick={() => setStudentsPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={studentsPage === totalPages}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
+                          studentsPage === totalPages
+                            ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                      >
+                        التالي
+                        <ChevronLeft className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>اسم الطالب</th>
+                      <th>رقم الهاتف</th>
+                      <th>المستوى</th>
+                      <th>عدد الكورسات</th>
+                      <th>ملاحظات</th>
+                      <th>الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.map((student, index) => (
+                      <tr key={student.id}>
+                        <td className="font-semibold">{index + 1}</td>
+                        <td>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-accent-400 flex items-center justify-center">
+                              <span className="text-white font-bold">
+                                {student.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <span className="font-semibold text-[var(--color-text-primary)]">
+                              {student.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-[var(--color-text-muted)]" />
+                            <span dir="ltr">{student.phone}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${getLevelBadgeColor(student.level)}`}>
+                            <GraduationCap className="w-3 h-3" />
+                            {student.level || 'L1'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="badge badge-info">
+                            {student.courses_count || 0} كورس
+                          </span>
+                        </td>
+                        <td className="text-[var(--color-text-muted)] max-w-xs truncate">
+                          {student.notes || '-'}
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => openModal(student)}
+                              className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
+                              title="تعديل"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(student.id)}
+                              className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[var(--color-text-muted)] hover:text-red-600"
+                              title="حذف"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
         </div>
       )}
 

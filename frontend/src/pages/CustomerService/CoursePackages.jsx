@@ -102,13 +102,13 @@ const CoursePackages = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div>
-          <h1 className="page-title">باقات الكورسات</h1>
-          <p className="page-subtitle">إدارة الباقات المتاحة</p>
+          <h1 className="page-title text-base sm:text-2xl">باقات الكورسات</h1>
+          <p className="page-subtitle text-[10px] sm:text-sm">إدارة الباقات المتاحة</p>
         </div>
-        <button onClick={() => openModal()} className="btn-primary flex items-center gap-2">
-          <Plus className="w-5 h-5" />
+        <button onClick={() => openModal()} className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-base px-3 sm:px-4 py-1.5 sm:py-2">
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
           إضافة باقة
         </button>
       </div>
@@ -127,35 +127,96 @@ const CoursePackages = () => {
         />
       ) : (
         <div className="card">
-          <div className="overflow-x-auto">
-            <table className="table">
+          {/* Mobile Cards View */}
+          <div className="md:hidden space-y-2 p-2">
+            {packages.map((pkg, index) => (
+              <div key={pkg.id} className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">اسم الباقة</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 ml-1">{index + 1}</span>
+                      <span className="text-xs font-semibold text-gray-800 dark:text-white">
+                        {pkg.name}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">عدد المحاضرات</span>
+                    <span className="badge badge-info text-[10px] px-1.5 py-0.5">
+                      {pkg.lectures_count} محاضرة
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">السعر</span>
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(pkg.price)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الكورسات النشطة</span>
+                    <span className="badge badge-gray text-[10px] px-1.5 py-0.5">
+                      {pkg.courses_count || 0} كورس
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الإجراءات</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => openModal(pkg)}
+                        className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 hover:text-primary-600"
+                        title="تعديل"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(pkg.id)}
+                        className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600"
+                        title="حذف"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="table text-xs">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>اسم الباقة</th>
-                  <th>عدد المحاضرات</th>
-                  <th>السعر</th>
-                  <th>الكورسات النشطة</th>
-                  <th>الإجراءات</th>
+                  <th className="text-[10px] sm:text-xs">#</th>
+                  <th className="text-[10px] sm:text-xs">اسم الباقة</th>
+                  <th className="text-[10px] sm:text-xs">عدد المحاضرات</th>
+                  <th className="text-[10px] sm:text-xs">السعر</th>
+                  <th className="text-[10px] sm:text-xs">الكورسات النشطة</th>
+                  <th className="text-[10px] sm:text-xs">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {packages.map((pkg, index) => (
                   <tr key={pkg.id}>
-                    <td className="font-semibold">{index + 1}</td>
-                    <td className="font-semibold text-[var(--color-text-primary)]">
+                    <td className="font-semibold text-[10px] sm:text-sm">{index + 1}</td>
+                    <td className="font-semibold text-[var(--color-text-primary)] text-[10px] sm:text-sm">
                       {pkg.name}
                     </td>
                     <td>
-                      <span className="badge badge-info">
+                      <span className="badge badge-info text-[10px] sm:text-xs">
                         {pkg.lectures_count} محاضرة
                       </span>
                     </td>
-                    <td className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    <td className="font-semibold text-emerald-600 dark:text-emerald-400 text-[10px] sm:text-sm">
                       {formatCurrency(pkg.price)}
                     </td>
                     <td>
-                      <span className="badge badge-gray">
+                      <span className="badge badge-gray text-[10px] sm:text-xs">
                         {pkg.courses_count || 0} كورس
                       </span>
                     </td>
@@ -163,17 +224,17 @@ const CoursePackages = () => {
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => openModal(pkg)}
-                          className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
+                          className="p-1.5 sm:p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
                           title="تعديل"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(pkg.id)}
-                          className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[var(--color-text-muted)] hover:text-red-600"
+                          className="p-1.5 sm:p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[var(--color-text-muted)] hover:text-red-600"
                           title="حذف"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                       </div>
                     </td>

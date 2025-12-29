@@ -91,7 +91,7 @@ const Login = () => {
             {/* Theme Toggle */}
             <button
                 onClick={toggleTheme}
-                className="absolute top-4 left-4 p-3 rounded-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all text-2xl"
+                className="absolute top-2 sm:top-4 left-2 sm:left-4 p-1.5 sm:p-3 rounded-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all text-base sm:text-xl"
             >
                 {theme === 'dark' ? '☀️' : '🌙'}
             </button>
@@ -99,17 +99,17 @@ const Login = () => {
             <div className="w-full max-w-4xl">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <div className="flex items-center justify-center gap-4 mb-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-4">
                         <img 
                             src="/Letspeak logo.png" 
                             alt="LetSpeak Logo" 
-                            className="w-16 h-16"
+                            className="w-12 h-12 sm:w-16 sm:h-16"
                         />
-                        <h1 className="text-4xl font-bold text-gray-800 dark:text-white">
+                        <h1 className="text-2xl sm:text-4xl font-bold text-gray-800 dark:text-white">
                             LetSpeak
                         </h1>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                         نظام إدارة التدريب
                     </p>
                 </div>
