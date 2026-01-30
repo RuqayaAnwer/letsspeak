@@ -1,0 +1,75 @@
+[90m= [39m[
+    {#5400
+      +"[1mTables_in_letspeak2026[22m": "[32mactivity_logs[39m",
+    },
+    {#5401
+      +"[1mTables_in_letspeak2026[22m": "[32mcache[39m",
+    },
+    {#5402
+      +"[1mTables_in_letspeak2026[22m": "[32mcache_locks[39m",
+    },
+    {#5397
+      +"[1mTables_in_letspeak2026[22m": "[32mcourse_packages[39m",
+    },
+    {#5373
+      +"[1mTables_in_letspeak2026[22m": "[32mcourse_status_history[39m",
+    },
+    {#5395
+      +"[1mTables_in_letspeak2026[22m": "[32mcourse_students[39m",
+    },
+    {#682
+      +"[1mTables_in_letspeak2026[22m": "[32mcourse_types[39m",
+    },
+    {#5393
+      +"[1mTables_in_letspeak2026[22m": "[32mcourses[39m",
+    },
+    {#6081
+      +"[1mTables_in_letspeak2026[22m": "[32mfailed_jobs[39m",
+    },
+    {#6082
+      +"[1mTables_in_letspeak2026[22m": "[32mjob_batches[39m",
+    },
+    {#6083
+      +"[1mTables_in_letspeak2026[22m": "[32mjobs[39m",
+    },
+    {#6084
+      +"[1mTables_in_letspeak2026[22m": "[32mlecture_edit_logs[39m",
+    },
+    {#6085
+      +"[1mTables_in_letspeak2026[22m": "[32mlecture_students[39m",
+    },
+    {#6086
+      +"[1mTables_in_letspeak2026[22m": "[32mlectures[39m",
+    },
+    {#6087
+      +"[1mTables_in_letspeak2026[22m": "[32mmigrations[39m",
+    },
+    {#6088
+      +"[1mTables_in_letspeak2026[22m": "[32mpassword_reset_tokens[39m",
+    },
+    {#6089
+      +"[1mTables_in_letspeak2026[22m": "[32mpayments[39m",
+    },
+    {#6090
+      +"[1mTables_in_letspeak2026[22m": "[32msessions[39m",
+    },
+    {#6091
+      +"[1mTables_in_letspeak2026[22m": "[32msettings[39m",
+    },
+    {#6092
+      +"[1mTables_in_letspeak2026[22m": "[32mstudents[39m",
+    },
+    {#6093
+      +"[1mTables_in_letspeak2026[22m": "[32mtrainer_payroll[39m",
+    },
+    {#6094
+      +"[1mTables_in_letspeak2026[22m": "[32mtrainer_unavailability[39m",
+    },
+    {#6095
+      +"[1mTables_in_letspeak2026[22m": "[32mtrainers[39m",
+    },
+    {#6096
+      +"[1mTables_in_letspeak2026[22m": "[32musers[39m",
+    },
+  ]
+

@@ -22,7 +22,7 @@ return new class extends Migration
             // Create new table with string role
             DB::statement("
                 CREATE TABLE users_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id INTEGER PRIMARY KEY AUTO_INCREMENT,
                     name VARCHAR(255) NOT NULL,
                     email VARCHAR(255) UNIQUE NOT NULL,
                     email_verified_at TIMESTAMP NULL,
@@ -70,7 +70,7 @@ return new class extends Migration
             
             DB::statement("
                 CREATE TABLE users_old (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id INTEGER PRIMARY KEY AUTO_INCREMENT,
                     name VARCHAR(255) NOT NULL,
                     email VARCHAR(255) UNIQUE NOT NULL,
                     email_verified_at TIMESTAMP NULL,

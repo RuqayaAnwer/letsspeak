@@ -101,8 +101,7 @@ class TrainerController extends Controller
 /**
      * Store a newly created trainer.
      */
-
-public function store(Request $request)
+    public function store(Request $request)
     {
         // 1. التحقق من البيانات
         $request->validate([
@@ -111,23 +110,22 @@ public function store(Request $request)
         ]);
 
         return DB::transaction(function () use ($request) {
-            
-            // 2. تجهيز بيانات الدخول
+
+            // 2. تجهيز البيانات
             $generatedEmail = 'trainer_' . time() . '@letspeak.online';
             $email = $request->email ?? $generatedEmail;
-            
-            // ✅ تصحيح سطر كلمة السر (إعطاء قيمة افتراضية 123456 في حال عدم وجودها)
-            $hashedPassword = $request->password ? Hash::make($request->password) : Hash::make('123456');
+            $password = $request->password ? Hash::make($request->password) : Hash::make('123456');
 
-            // 3. إنشاء المستخدم في جدول users (المخزن الأول: لا يحوي username)
+            // 3. إنشاء حساب المستخدم
             $user = User::create([
                 'name' => $request->name,
+                'username' => $email,  // استخدام الإيميل كيوزر نيم
                 'email' => $email,
-                'password' => $hashedPassword,
-                'status' => 'active',
+                'password' => $password,
+                'status' => 'active',  // يفضل إضافتها لضمان تفعيل الحساب
             ]);
 
-            // 4. إنشاء المدرب في جدول trainers (المخزن الثاني: يحوي username ويطلب البيانات مكررة)
+            // 4. إنشاء ملف المدرب
             $trainer = Trainer::create([
                 'user_id' => $user->id,
                 'name' => $request->name,
@@ -136,16 +134,15 @@ public function store(Request $request)
                 'max_level' => $request->max_level,
                 'notes' => $request->notes,
                 'status' => 'active',
-
-                // 👇 البيانات الإضافية التي يطلبها هذا الجدول تحديداً
-                'username' => $email,          // نستخدم الإيميل كاسم مستخدم
-                'email' => $email,             // تكرار الإيميل
-                'password' => $hashedPassword, // تكرار كلمة السر
             ]);
 
             return response()->json($trainer, 201);
         });
     }
+
+
+
+
     /**
      * Display the specified trainer.
      */

@@ -16,15 +16,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->use([
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
-        
+
         // Disable CSRF for API
         $middleware->validateCsrfTokens(except: [
             'api/*',
         ]);
-        
+
         // Register custom middleware
         $middleware->alias([
             'simple.auth' => \App\Http\Middleware\SimpleAuth::class,
+            'dev.access'  => \App\Http\Middleware\DevAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

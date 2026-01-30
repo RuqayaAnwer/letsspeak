@@ -22,7 +22,7 @@ return new class extends Migration
             // Recreate table without payment_status
             DB::statement('
                 CREATE TABLE lectures_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id INTEGER PRIMARY KEY AUTO_INCREMENT,
                     course_id INTEGER NOT NULL,
                     lecture_number INTEGER NOT NULL,
                     date DATE NOT NULL,

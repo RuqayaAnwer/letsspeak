@@ -14,7 +14,7 @@ return new class extends Migration
     {
         if (DB::getDriverName() === 'sqlite') {
             // For SQLite, we need to add the column
-            DB::statement("ALTER TABLE lectures ADD COLUMN trainer_payment_status TEXT DEFAULT 'unpaid' CHECK(trainer_payment_status IN ('unpaid', 'paid'))");
+            DB::statement("ALTER TABLE lectures ADD COLUMN trainer_payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid' )");
         } else {
             Schema::table('lectures', function (Blueprint $table) {
                 $table->enum('trainer_payment_status', ['unpaid', 'paid'])->default('unpaid')->after('homework');
@@ -31,7 +31,7 @@ return new class extends Migration
             // For SQLite, we need to recreate the table without the column
             DB::statement('
                 CREATE TABLE lectures_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id INTEGER PRIMARY KEY AUTO_INCREMENT,
                     course_id INTEGER NOT NULL,
                     lecture_number INTEGER NOT NULL,
                     date DATE NOT NULL,

@@ -15,7 +15,7 @@ return new class extends Migration
     {
         if (DB::getDriverName() === 'sqlite') {
             // For SQLite, use raw SQL
-            DB::statement("ALTER TABLE trainers ADD COLUMN payment_method TEXT CHECK(payment_method IN ('zain_cash', 'qi_card'))");
+            DB::statement("ALTER TABLE trainers ADD COLUMN payment_method TEXT )");
             DB::statement("ALTER TABLE trainers ADD COLUMN payment_account_number TEXT(50)");
         } else {
             Schema::table('trainers', function (Blueprint $table) {

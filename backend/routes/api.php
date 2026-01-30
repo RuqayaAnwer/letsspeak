@@ -12,6 +12,7 @@ use App\Http\Controllers\CoursePackageController;
 use App\Http\Controllers\Api\CustomerServiceController;
 use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\ActivityLogController;
+use App\Models\Trainer;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,6 +49,10 @@ Route::post('/trainers/available', [TrainerController::class, 'available']);
 Route::post('/trainers/available-monthly', [TrainerController::class, 'availableMonthly']);
 
 // Courses - Protected routes (require authentication)
+
+Route::get('/ping', fn () => response()->json(['ok' => true]));
+
+
 Route::middleware('simple.auth')->group(function () {
 Route::get('/courses', [CourseController::class, 'index']);
 Route::post('/courses', [CourseController::class, 'store']);

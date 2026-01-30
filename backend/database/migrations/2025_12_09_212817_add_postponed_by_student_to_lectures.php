@@ -16,18 +16,23 @@ return new class extends Migration
         // First, create a temporary table with the new structure
         DB::statement("
             CREATE TABLE lectures_new (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                course_id INTEGER NOT NULL,
-                lecture_number INTEGER NOT NULL,
-                date DATE NOT NULL,
-                attendance TEXT CHECK(attendance IN ('pending', 'present', 'partially', 'absent', 'excused', 'postponed_by_trainer', 'postponed_by_student')) DEFAULT 'pending',
-                activity TEXT CHECK(activity IN ('engaged', 'normal', 'not_engaged')) DEFAULT NULL,
-                homework TEXT CHECK(homework IN ('yes', 'partial', 'no')) DEFAULT NULL,
-                payment_status TEXT CHECK(payment_status IN ('unpaid', 'paid', 'partial')) DEFAULT 'unpaid',
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+
+                course_id BIGINT UNSIGNED NULL,
+                lecture_number INTEGER NULL,
+                date DATE NULL,
+                attendance TEXT ,
+
+                activity   TEXT ,
+
+                homework   TEXT ,
+
+                payment_status TEXT ,
+
                 is_makeup INTEGER DEFAULT 0,
-                notes TEXT DEFAULT NULL,
-                created_at TIMESTAMP DEFAULT NULL,
-                updated_at TIMESTAMP DEFAULT NULL,
+                notes TEXT NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
                 FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
             )
         ");
@@ -53,18 +58,19 @@ return new class extends Migration
         // Revert to original enum without postponed_by_student
         DB::statement("
             CREATE TABLE lectures_old (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                course_id INTEGER NOT NULL,
-                lecture_number INTEGER NOT NULL,
-                date DATE NOT NULL,
-                attendance TEXT CHECK(attendance IN ('pending', 'present', 'partially', 'absent', 'excused', 'postponed_by_trainer')) DEFAULT 'pending',
-                activity TEXT CHECK(activity IN ('engaged', 'normal', 'not_engaged')) DEFAULT NULL,
-                homework TEXT CHECK(homework IN ('yes', 'partial', 'no')) DEFAULT NULL,
-                payment_status TEXT CHECK(payment_status IN ('unpaid', 'paid', 'partial')) DEFAULT 'unpaid',
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+                course_id BIGINT UNSIGNED NULL,
+                lecture_number INTEGER NULL,
+                date DATE NULL,
+                attendance TEXT,
+                activity TEXT,
+                homework TEXT,
+                payment_status TEXT,
                 is_makeup INTEGER DEFAULT 0,
-                notes TEXT DEFAULT NULL,
-                created_at TIMESTAMP DEFAULT NULL,
-                updated_at TIMESTAMP DEFAULT NULL,
+                notes TEXT NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
                 FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
             )
         ");
