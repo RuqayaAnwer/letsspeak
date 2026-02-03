@@ -192,38 +192,38 @@ const Trainers = () => {
               
               return (
                 <>
-                  <div className="space-y-2 p-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
                     {currentTrainers.map((trainer, index) => {
                       const displayIndex = startIndex + index + 1;
                       return (
                         <div key={trainer.id} className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">اسم المدرب</span>
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">اسم المدرب</span>
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
-                                <span className="text-xs font-semibold text-gray-800 dark:text-white">
+                                <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
+                                <span className="text-sm font-semibold text-gray-800 dark:text-white">
                                   {trainer.user?.name || trainer.name}
                                 </span>
                               </div>
                             </div>
                             
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">رقم الهاتف</span>
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">رقم الهاتف</span>
                               <div className="flex items-center gap-1.5">
-                                <Phone className="w-3 h-3 text-gray-400" />
-                                <span dir="ltr" className="text-xs text-gray-800 dark:text-white">{trainer.phone || '-'}</span>
+                                <Phone className="w-3.5 h-3.5 text-gray-400" />
+                                <span dir="ltr" className="text-sm text-gray-800 dark:text-white">{trainer.phone || '-'}</span>
                               </div>
                             </div>
                             
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">البريد الإلكتروني</span>
-                              <span dir="ltr" className="text-[10px] text-gray-600 dark:text-gray-400 truncate max-w-[60%]">{trainer.user?.email || trainer.email || '-'}</span>
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">البريد الإلكتروني</span>
+                              <span dir="ltr" className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[60%]">{trainer.user?.email || trainer.email || '-'}</span>
                             </div>
                             
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">المستوى</span>
-                              <span className="text-[10px] text-gray-800 dark:text-white font-medium">
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">المستوى</span>
+                              <span className="text-xs text-gray-800 dark:text-white font-medium">
                                 {trainer.min_level && trainer.max_level 
                                   ? `${trainer.min_level} - ${trainer.max_level}` 
                                   : trainer.min_level || trainer.max_level || '-'}
@@ -231,15 +231,15 @@ const Trainers = () => {
                             </div>
                             
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الكورسات</span>
-                              <span className="badge badge-info text-[10px] px-1.5 py-0.5">
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الكورسات</span>
+                              <span className="badge badge-info text-xs px-1.5 py-0.5">
                                 {trainer.courses_count || 0}
                               </span>
                             </div>
                             
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">محاضرات الأسبوع</span>
-                              <span className={`badge text-[10px] px-1.5 py-0.5 ${
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">محاضرات الأسبوع</span>
+                              <span className={`badge text-xs px-1.5 py-0.5 ${
                                 trainer.weekly_lectures_count >= 3 
                                   ? 'badge-success' 
                                   : trainer.weekly_lectures_count > 0 

@@ -343,16 +343,31 @@ const Courses = () => {
     );
   }
 
+  // Helper function to check if course is dual
+  const isDualCourse = (course) => {
+    if (!course) return false;
+    return course.is_dual || (course.students && Array.isArray(course.students) && course.students.length > 1);
+  };
+
   const coursesArray = Array.isArray(courses) ? courses : [];
   
-  // Filter courses by status (all courses, including those with alerts)
-  const activeCourses = coursesArray.filter(c => c.status === 'active');
-  const pausedCourses = coursesArray.filter(c => c.status === 'paused');
-  const finishedCourses = coursesArray.filter(c => c.status === 'finished');
+  // Filter courses by status and type (single vs dual)
+  const activeSingleCourses = coursesArray.filter(c => c.status === 'active' && !isDualCourse(c));
+  const activeDualCourses = coursesArray.filter(c => c.status === 'active' && isDualCourse(c));
+  const pausedSingleCourses = coursesArray.filter(c => c.status === 'paused' && !isDualCourse(c));
+  const pausedDualCourses = coursesArray.filter(c => c.status === 'paused' && isDualCourse(c));
+  const finishedSingleCourses = coursesArray.filter(c => c.status === 'finished' && !isDualCourse(c));
+  const finishedDualCourses = coursesArray.filter(c => c.status === 'finished' && isDualCourse(c));
   // عرض الكورسات بحالات أخرى (paid, cancelled, إلخ)
-  const otherCourses = coursesArray.filter(c => 
+  const otherSingleCourses = coursesArray.filter(c => 
     c.status && 
-    !['active', 'paused', 'finished'].includes(c.status)
+    !['active', 'paused', 'finished'].includes(c.status) &&
+    !isDualCourse(c)
+  );
+  const otherDualCourses = coursesArray.filter(c => 
+    c.status && 
+    !['active', 'paused', 'finished'].includes(c.status) &&
+    isDualCourse(c)
   );
 
   const renderCourseTable = (coursesList, title, titleColor, sectionKey) => {
@@ -379,7 +394,7 @@ const Courses = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
           {/* Mobile Cards View */}
           <div className="md:hidden">
-            <div className="space-y-2 p-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
               {currentCourses.map((course) => {
               const completionPercentage = calculateCompletionPercentage(course);
               const is75Percent = isAt75Percent(course);
@@ -395,46 +410,53 @@ const Courses = () => {
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الباقة</span>
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الباقة</span>
                       <div className="text-right flex items-center gap-1.5">
-                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 ml-1">{course.id}</span>
+                        <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{course.id}</span>
                         {(course.course_package || course.coursePackage) ? (
                           <>
-                            <div className="text-xs font-medium text-gray-800 dark:text-white">
-                              {(course.course_package || course.coursePackage)?.name || '-'}
+                            <div className="flex items-center gap-1">
+                              <div className="text-sm font-medium text-gray-800 dark:text-white">
+                                {(course.course_package || course.coursePackage)?.name || '-'}
+                              </div>
+                              {isDualCourse(course) && (
+                                <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
+                                  ثنائي
+                                </span>
+                              )}
                             </div>
-                            <div className="text-[10px] text-gray-500 dark:text-gray-400">
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
                               ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
                             </div>
                           </>
                         ) : (
-                          <span className="text-gray-400 text-xs">-</span>
+                          <span className="text-gray-400 text-sm">-</span>
                         )}
                       </div>
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الطالب</span>
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الطالب</span>
                       <div className="flex items-center gap-1 flex-wrap justify-end max-w-[65%]">
                         {course.is_dual && course.students && course.students.length > 1 ? (
                           course.students.map((student, index) => (
                             <div key={student.id} className="flex items-center gap-1">
-                              <span className="text-xs text-gray-800 dark:text-white">{student.name}</span>
+                              <span className="text-sm text-gray-800 dark:text-white">{student.name}</span>
                               {!isFinance && !isTrainer && (
                                 <button
                                   onClick={() => fetchStudentPayments(student.id, student.name, course.id, course)}
                                   className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
                                   title={`عرض تفاصيل دفعات ${student.name}`}
                                 >
-                                  <HelpCircle className="w-3 h-3" />
+                                  <HelpCircle className="w-3.5 h-3.5" />
                                 </button>
                               )}
-                              {index < course.students.length - 1 && <span className="text-gray-400 text-[10px]">،</span>}
+                              {index < course.students.length - 1 && <span className="text-gray-400 text-xs">،</span>}
                             </div>
                           ))
                         ) : (
                           <>
-                            <span className="text-xs text-gray-800 dark:text-white">
+                            <span className="text-sm text-gray-800 dark:text-white">
                               {course.student_name || 
                                (course.students && course.students.length > 0 
                                  ? course.students.map(s => s.name).join(', ') 
@@ -446,7 +468,7 @@ const Courses = () => {
                                 className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
                                 title="عرض تفاصيل الدفعات والاشتراك"
                               >
-                                <HelpCircle className="w-3 h-3" />
+                                <HelpCircle className="w-3.5 h-3.5" />
                               </button>
                             )}
                           </>
@@ -455,15 +477,15 @@ const Courses = () => {
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">المدرب</span>
-                      <span className="text-xs text-gray-800 dark:text-white truncate max-w-[65%]">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">المدرب</span>
+                      <span className="text-sm text-gray-800 dark:text-white truncate max-w-[65%]">
                         {course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'}
                       </span>
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الحالة</span>
-                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getStatusBadge(course.status)}`}>
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الحالة</span>
+                      <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(course.status)}`}>
                         {getStatusLabel(course.status)}
                       </span>
                     </div>
@@ -553,7 +575,14 @@ const Courses = () => {
                     <td className="px-2 py-2 text-center text-gray-800 dark:text-white">
                       {(course.course_package || course.coursePackage) ? (
                         <div className="flex flex-col items-center gap-0.5">
-                          <span className="text-[10px] font-medium">{(course.course_package || course.coursePackage)?.name || '-'}</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-medium">{(course.course_package || course.coursePackage)?.name || '-'}</span>
+                            {isDualCourse(course) && (
+                              <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold">
+                                ثنائي
+                              </span>
+                            )}
+                          </div>
                           <span className="text-[9px] text-gray-500 dark:text-gray-400">
                             ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
                           </span>
@@ -655,16 +684,31 @@ const Courses = () => {
         )}
       </div>
 
-      {activeCourses.length === 0 && pausedCourses.length === 0 && finishedCourses.length === 0 && otherCourses.length === 0 && !loading && (
+      {activeSingleCourses.length === 0 && activeDualCourses.length === 0 && 
+       pausedSingleCourses.length === 0 && pausedDualCourses.length === 0 && 
+       finishedSingleCourses.length === 0 && finishedDualCourses.length === 0 && 
+       otherSingleCourses.length === 0 && otherDualCourses.length === 0 && !loading && (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-xs bg-white dark:bg-gray-800 rounded-xl shadow-lg">
           لا توجد كورسات
         </div>
       )}
 
-      {renderCourseTable(activeCourses, 'الكورسات النشطة', 'text-green-600 dark:text-green-400', 'active')}
-      {renderCourseTable(pausedCourses, 'الكورسات المتوقفة', 'text-yellow-600 dark:text-yellow-400', 'paused')}
-      {renderCourseTable(finishedCourses, 'الكورسات المنتهية', 'text-blue-600 dark:text-blue-400', 'finished')}
-      {renderCourseTable(otherCourses, 'كورسات أخرى', 'text-gray-600 dark:text-gray-400', 'other')}
+      {/* Active Courses - Single */}
+      {renderCourseTable(activeSingleCourses, 'الكورسات النشطة - الفردية', 'text-green-600 dark:text-green-400', 'active-single')}
+      {/* Active Courses - Dual */}
+      {renderCourseTable(activeDualCourses, 'الكورسات النشطة - الثنائية', 'text-purple-600 dark:text-purple-400', 'active-dual')}
+      {/* Paused Courses - Single */}
+      {renderCourseTable(pausedSingleCourses, 'الكورسات المتوقفة - الفردية', 'text-yellow-600 dark:text-yellow-400', 'paused-single')}
+      {/* Paused Courses - Dual */}
+      {renderCourseTable(pausedDualCourses, 'الكورسات المتوقفة - الثنائية', 'text-purple-600 dark:text-purple-400', 'paused-dual')}
+      {/* Finished Courses - Single */}
+      {renderCourseTable(finishedSingleCourses, 'الكورسات المنتهية - الفردية', 'text-blue-600 dark:text-blue-400', 'finished-single')}
+      {/* Finished Courses - Dual */}
+      {renderCourseTable(finishedDualCourses, 'الكورسات المنتهية - الثنائية', 'text-purple-600 dark:text-purple-400', 'finished-dual')}
+      {/* Other Courses - Single */}
+      {renderCourseTable(otherSingleCourses, 'كورسات أخرى - الفردية', 'text-gray-600 dark:text-gray-400', 'other-single')}
+      {/* Other Courses - Dual */}
+      {renderCourseTable(otherDualCourses, 'كورسات أخرى - الثنائية', 'text-purple-600 dark:text-purple-400', 'other-dual')}
 
       {/* Student Payments Modal */}
       {studentPaymentsModal.open && (

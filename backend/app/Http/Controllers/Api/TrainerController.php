@@ -504,3 +504,4 @@ class TrainerController extends Controller
         return $this->available($request); 
     }
 }
+

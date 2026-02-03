@@ -51,6 +51,7 @@ const TrainerPayroll = () => {
     trainerName: '',
     paymentMethod: '',
     accountNumber: '',
+    paymentPin: '',
   });
   const [paymentStatusModal, setPaymentStatusModal] = useState({
     open: false,
@@ -60,6 +61,7 @@ const TrainerPayroll = () => {
     newStatus: 'paid',
   });
   const [copiedAccount, setCopiedAccount] = useState(null);
+  const [copiedPin, setCopiedPin] = useState(null);
   const [mobilePage, setMobilePage] = useState(1); // Pagination for mobile cards
 
   const months = [
@@ -190,9 +192,10 @@ const TrainerPayroll = () => {
         trainer_id: paymentModal.trainerId,
         payment_method: paymentModal.paymentMethod,
         payment_account_number: paymentModal.accountNumber,
+        payment_pin: paymentModal.paymentPin || null,
       });
       
-      setPaymentModal({ open: false, trainerId: null, trainerName: '', paymentMethod: '', accountNumber: '' });
+      setPaymentModal({ open: false, trainerId: null, trainerName: '', paymentMethod: '', accountNumber: '', paymentPin: '' });
       fetchPayrollData(); // Refresh data
     } catch (error) {
       console.error('Error saving payment method:', error);
@@ -266,6 +269,29 @@ const TrainerPayroll = () => {
       setCopiedAccount(trainerId);
       setTimeout(() => {
         setCopiedAccount(null);
+      }, 2000);
+    }
+  };
+
+  const handleCopyPin = async (pin, trainerId) => {
+    try {
+      await navigator.clipboard.writeText(pin);
+      setCopiedPin(trainerId);
+      setTimeout(() => {
+        setCopiedPin(null);
+      }, 2000);
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = pin;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopiedPin(trainerId);
+      setTimeout(() => {
+        setCopiedPin(null);
       }, 2000);
     }
   };
@@ -864,79 +890,122 @@ const TrainerPayroll = () => {
                     </div>
                     
                     <div className="col-span-2 flex items-center gap-1">
-                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المدرب:</span>
-                      <span className="text-[10px] font-semibold text-gray-800 dark:text-white truncate flex-1">{payroll.trainer_name}</span>
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">المدرب:</span>
+                      <span className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1">{payroll.trainer_name}</span>
                     </div>
                     
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المحاضرات:</span>
-                      <span className="badge badge-info text-[9px] px-1 py-0.5">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">المحاضرات:</span>
+                      <span className="badge badge-info text-xs px-1 py-0.5">
                         {payroll.completed_lectures}
                       </span>
                     </div>
                     
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الراتب:</span>
-                      <span className="text-[10px] font-medium text-gray-800 dark:text-white truncate">{formatCurrency(payroll.base_pay)}</span>
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الراتب:</span>
+                      <span className="text-sm font-medium text-gray-800 dark:text-white truncate" title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع = ${formatCurrency(payroll.base_pay)}`}>
+                        {formatCurrency(payroll.base_pay)}
+                      </span>
                     </div>
                     
-                    <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">التحويل:</span>
-                      {payroll.payment_method ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPaymentModal({
-                              open: true,
-                              trainerId: payroll.trainer_id,
-                              trainerName: payroll.trainer_name,
-                              paymentMethod: payroll.payment_method || '',
-                              accountNumber: payroll.payment_account_number || '',
-                            });
-                          }}
-                          className={`px-1 py-0.5 rounded-md font-medium text-[9px] transition-all flex items-center gap-0.5 ${
-                            payroll.payment_method === 'zain_cash'
-                              ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
-                              : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                          }`}
-                        >
-                          {payroll.payment_method === 'zain_cash' ? (
-                            <>
-                              <Smartphone className="w-2.5 h-2.5" />
-                              <span>زين</span>
-                            </>
-                          ) : (
-                            <>
-                              <CreditCard className="w-2.5 h-2.5" />
-                              <span>بنك</span>
-                            </>
-                          )}
-                        </button>
-                      ) : (
-                        <span className="text-[9px] text-gray-400">—</span>
+                    <div className="col-span-2 flex flex-col gap-1">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">التحويل:</span>
+                        {payroll.payment_method ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPaymentModal({
+                                open: true,
+                                trainerId: payroll.trainer_id,
+                                trainerName: payroll.trainer_name,
+                                paymentMethod: payroll.payment_method || '',
+                                accountNumber: payroll.payment_account_number || '',
+                                paymentPin: payroll.payment_pin || '',
+                              });
+                            }}
+                            className={`px-1 py-0.5 rounded-md font-medium text-xs transition-all flex items-center gap-0.5 ${
+                              payroll.payment_method === 'zain_cash'
+                                ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
+                                : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            }`}
+                          >
+                            {payroll.payment_method === 'zain_cash' ? (
+                              <>
+                                <Smartphone className="w-3 h-3" />
+                                <span>زين</span>
+                              </>
+                            ) : (
+                              <>
+                                <CreditCard className="w-3 h-3" />
+                                <span>كي كارد</span>
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </div>
+                      {payroll.payment_account_number && (
+                        <div className="flex items-center gap-1 text-xs">
+                          <span className="text-gray-500 dark:text-gray-400">الرقم:</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyAccountNumber(payroll.payment_account_number, payroll.trainer_id);
+                            }}
+                            className="flex items-center gap-0.5 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+                          >
+                            <span>{payroll.payment_account_number}</span>
+                            {copiedAccount === payroll.trainer_id ? (
+                              <Check className="w-3 h-3 text-green-600" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
+                      )}
+                      {payroll.payment_pin && (
+                        <div className="flex items-center gap-1 text-xs">
+                          <span className="text-gray-500 dark:text-gray-400">PIN:</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyPin(payroll.payment_pin, payroll.trainer_id);
+                            }}
+                            className="flex items-center gap-0.5 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                          >
+                            <span>{payroll.payment_pin}</span>
+                            {copiedPin === payroll.trainer_id ? (
+                              <Check className="w-3 h-3 text-green-600" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
                       )}
                     </div>
                     
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">التجديدات:</span>
-                      <span className="text-[10px] text-gray-800 dark:text-white">{payroll.renewals_count || 0}</span>
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">التجديدات:</span>
+                      <span className="text-sm text-gray-800 dark:text-white">{payroll.renewals_count || 0}</span>
                     </div>
                     
                     <div className="col-span-2 flex items-center gap-1 flex-wrap">
-                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المكافآت:</span>
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">المكافآت:</span>
                       <div className="flex flex-wrap gap-0.5">
                         {payroll.include_renewal_bonus && (payroll.renewals_count > 0 || (payroll.renewal_total && payroll.renewal_total > 0)) && (
-                          <span className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border border-yellow-400 dark:border-yellow-500 rounded text-[9px]">
+                          <span className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border border-yellow-400 dark:border-yellow-500 rounded text-[10px]">
                             تجديد
                           </span>
                         )}
                         {payroll.include_volume_bonus && volumeBonus > 0 && (
-                          <span className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border border-yellow-400 dark:border-yellow-500 rounded text-[9px]">
+                          <span className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border border-yellow-400 dark:border-yellow-500 rounded text-[10px]">
                             كمية
                           </span>
                         )}
                         {isWinner && (
-                          <span className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border border-yellow-400 dark:border-yellow-500 rounded text-[9px]">
+                          <span className="px-1 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border border-yellow-400 dark:border-yellow-500 rounded text-[10px]">
                             منافسة
                           </span>
                         )}
@@ -944,8 +1013,8 @@ const TrainerPayroll = () => {
                     </div>
                     
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">بونص/خصم:</span>
-                      <span className={`text-[10px] font-medium ${
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">بونص/خصم:</span>
+                      <span className={`text-sm font-medium ${
                         (payroll.bonus_deduction || 0) >= 0 
                           ? 'text-green-600 dark:text-green-400' 
                           : 'text-red-600 dark:text-red-400'
@@ -955,12 +1024,12 @@ const TrainerPayroll = () => {
                     </div>
                     
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الإجمالي:</span>
-                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400 truncate">{formatCurrency(payroll.total)}</span>
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الإجمالي:</span>
+                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400 truncate">{formatCurrency(payroll.total)}</span>
                     </div>
                     
                     <div className="col-span-2 flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
-                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">حالة الدفع:</span>
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">حالة الدفع:</span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1100,7 +1169,9 @@ const TrainerPayroll = () => {
                           {payroll.completed_lectures} محاضرة
                         </span>
                       </td>
-                      <td className="font-medium py-2 px-2 text-xs text-center">{formatCurrency(payroll.base_pay)}</td>
+                      <td className="font-medium py-2 px-2 text-xs text-center" title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع = ${formatCurrency(payroll.base_pay)}`}>
+                        {formatCurrency(payroll.base_pay)}
+                      </td>
                       <td className="py-2 px-2 payment-method-cell text-center">
                         {payroll.payment_method ? (
                           <div className="flex flex-col gap-1.5 items-center">
@@ -1134,31 +1205,61 @@ const TrainerPayroll = () => {
                               )}
                             </button>
                             {payroll.payment_account_number && (
-                              <div className="relative group">
-                                <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-medium w-fit">
-                                  <span>{payroll.payment_account_number}</span>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleCopyAccountNumber(payroll.payment_account_number, payroll.trainer_id);
-                                    }}
-                                    className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                                    title="نسخ الرقم"
-                                  >
-                                    {copiedAccount === payroll.trainer_id ? (
-                                      <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
-                                    ) : (
-                                      <Copy className="w-3 h-3" />
-                                    )}
-                                  </button>
-                                </div>
-                                {/* Tooltip on hover */}
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-50">
-                                  <div className="bg-gray-900 dark:bg-gray-700 text-white text-[10px] rounded-md py-1 px-2 shadow-lg whitespace-nowrap">
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900 dark:border-b-gray-700"></div>
-                                    اضغط لنسخ الرقم
+                              <div className="flex flex-col gap-1.5 items-center">
+                                <div className="relative group">
+                                  <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-medium w-fit">
+                                    <span>{payroll.payment_account_number}</span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopyAccountNumber(payroll.payment_account_number, payroll.trainer_id);
+                                      }}
+                                      className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                      title="نسخ الرقم"
+                                    >
+                                      {copiedAccount === payroll.trainer_id ? (
+                                        <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                      ) : (
+                                        <Copy className="w-3 h-3" />
+                                      )}
+                                    </button>
+                                  </div>
+                                  {/* Tooltip on hover */}
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-50">
+                                    <div className="bg-gray-900 dark:bg-gray-700 text-white text-[10px] rounded-md py-1 px-2 shadow-lg whitespace-nowrap">
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900 dark:border-b-gray-700"></div>
+                                      اضغط لنسخ الرقم
+                                    </div>
                                   </div>
                                 </div>
+                                {payroll.payment_pin && (
+                                  <div className="relative group">
+                                    <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-[10px] font-medium w-fit border border-red-200 dark:border-red-800">
+                                      <span>PIN: {payroll.payment_pin}</span>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopyPin(payroll.payment_pin, payroll.trainer_id);
+                                        }}
+                                        className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                                        title="نسخ الرقم السري"
+                                      >
+                                        {copiedPin === payroll.trainer_id ? (
+                                          <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                        ) : (
+                                          <Copy className="w-3 h-3" />
+                                        )}
+                                      </button>
+                                    </div>
+                                    {/* Tooltip on hover */}
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-50">
+                                      <div className="bg-gray-900 dark:bg-gray-700 text-white text-[10px] rounded-md py-1 px-2 shadow-lg whitespace-nowrap">
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900 dark:border-b-gray-700"></div>
+                                        اضغط لنسخ الرقم السري
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -1508,6 +1609,21 @@ const TrainerPayroll = () => {
                   maxLength={50}
                   required
                 />
+              </div>
+
+              <div>
+                <label className="label">الرقم السري (PIN)</label>
+                <input
+                  type="text"
+                  value={paymentModal.paymentPin}
+                  onChange={(e) => setPaymentModal({ ...paymentModal, paymentPin: e.target.value })}
+                  className="input"
+                  placeholder="أدخل الرقم السري للبطاقة (اختياري)"
+                  maxLength={20}
+                />
+                <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                  الرقم السري للبطاقة (Q كارد فقط)
+                </p>
               </div>
             </div>
 

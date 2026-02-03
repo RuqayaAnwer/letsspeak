@@ -11,11 +11,16 @@ const Students = () => {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
+  const [packages, setPackages] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     level: 'L1',
     notes: '',
+    course_package_id: '',
+    paid_amount: '',
+    remaining_amount: '',
   });
 
   const levels = [
@@ -33,7 +38,61 @@ const Students = () => {
 
   useEffect(() => {
     fetchStudents();
+    fetchPackages();
+    fetchCourses();
   }, [search]);
+
+  const fetchPackages = async () => {
+    try {
+      const response = await api.get('/course-packages');
+      setPackages(response.data.data || response.data || []);
+    } catch (error) {
+      console.error('Error fetching packages:', error);
+    }
+  };
+
+  const fetchCourses = async () => {
+    try {
+      let allCourses = [];
+      let currentPage = 1;
+      let hasMorePages = true;
+
+      while (hasMorePages) {
+        const response = await api.get('/courses', { params: { page: currentPage } });
+        const responseData = response.data;
+        const coursesData = responseData?.data || responseData || [];
+        
+        if (Array.isArray(coursesData) && coursesData.length > 0) {
+          allCourses = [...allCourses, ...coursesData];
+          hasMorePages = responseData?.current_page < responseData?.last_page;
+          currentPage++;
+        } else {
+          hasMorePages = false;
+        }
+      }
+
+      setCourses(allCourses);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+    }
+  };
+
+  // Check if student has dual courses
+  const hasDualCourses = (studentId) => {
+    return courses.some(course => {
+      const isDual = course.is_dual || (course.students && Array.isArray(course.students) && course.students.length > 1);
+      if (!isDual) return false;
+      
+      // Check if student is in this dual course
+      if (course.students && Array.isArray(course.students)) {
+        return course.students.some(s => {
+          const studentIdFromArray = typeof s === 'object' ? s.id?.toString() : s?.toString();
+          return studentIdFromArray === studentId.toString();
+        });
+      }
+      return false;
+    });
+  };
 
   // Reset pagination when students change
   useEffect(() => {
@@ -81,6 +140,32 @@ const Students = () => {
     }
   };
 
+  const handlePackageChange = (packageId) => {
+    const selectedPackage = packages.find((p) => p.id.toString() === packageId);
+    const packagePrice = selectedPackage ? (selectedPackage.price || 0) : 0;
+    const paidAmount = parseFloat(formData.paid_amount) || 0;
+    const remainingAmount = packagePrice - paidAmount;
+    
+    setFormData({
+      ...formData,
+      course_package_id: packageId,
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+    });
+  };
+
+  const handlePaidAmountChange = (value) => {
+    const selectedPackage = packages.find((p) => p.id.toString() === formData.course_package_id);
+    const packagePrice = selectedPackage ? (selectedPackage.price || 0) : 0;
+    const paidAmount = parseFloat(value) || 0;
+    const remainingAmount = packagePrice - paidAmount;
+    
+    setFormData({
+      ...formData,
+      paid_amount: value,
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+    });
+  };
+
   const openModal = (student = null) => {
     if (student) {
       setEditingStudent(student);
@@ -89,10 +174,21 @@ const Students = () => {
         phone: student.phone,
         level: student.level || 'L1',
         notes: student.notes || '',
+        course_package_id: '',
+        paid_amount: '',
+        remaining_amount: '',
       });
     } else {
       setEditingStudent(null);
-      setFormData({ name: '', phone: '', level: 'L1', notes: '' });
+      setFormData({ 
+        name: '', 
+        phone: '', 
+        level: 'L1', 
+        notes: '',
+        course_package_id: '',
+        paid_amount: '',
+        remaining_amount: '',
+      });
     }
     setIsModalOpen(true);
   };
@@ -100,7 +196,15 @@ const Students = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingStudent(null);
-    setFormData({ name: '', phone: '', level: 'L1', notes: '' });
+    setFormData({ 
+      name: '', 
+      phone: '', 
+      level: 'L1', 
+      notes: '',
+      course_package_id: '',
+      paid_amount: '',
+      remaining_amount: '',
+    });
   };
 
   const getLevelBadgeColor = (level) => {
@@ -174,54 +278,61 @@ const Students = () => {
               
               return (
                 <>
-                  <div className="space-y-2 p-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
                     {currentStudents.map((student, index) => {
                       const displayIndex = startIndex + index + 1;
                       return (
                         <div key={student.id} className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">اسم الطالب</span>
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">اسم الطالب</span>
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
-                                <span className="text-xs font-semibold text-gray-800 dark:text-white">
+                                <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
+                                <span className="text-sm font-semibold text-gray-800 dark:text-white">
                                   {student.name}
                                 </span>
                               </div>
                             </div>
                             
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">رقم الهاتف</span>
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">رقم الهاتف</span>
                               <div className="flex items-center gap-1.5">
-                                <Phone className="w-3 h-3 text-gray-400" />
-                                <span dir="ltr" className="text-xs text-gray-800 dark:text-white">{student.phone}</span>
+                                <Phone className="w-3.5 h-3.5 text-gray-400" />
+                                <span dir="ltr" className="text-sm text-gray-800 dark:text-white">{student.phone}</span>
                               </div>
                             </div>
                             
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">المستوى</span>
-                              <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold ${getLevelBadgeColor(student.level)}`}>
-                                <GraduationCap className="w-2.5 h-2.5" />
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">المستوى</span>
+                              <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold ${getLevelBadgeColor(student.level)}`}>
+                                <GraduationCap className="w-3 h-3" />
                                 {student.level || 'L1'}
                               </span>
                             </div>
                             
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">عدد الكورسات</span>
-                              <span className="badge badge-info text-[10px] px-1.5 py-0.5">
-                                {student.courses_count || 0} كورس
-                              </span>
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">عدد الكورسات</span>
+                              <div className="flex items-center gap-1">
+                                <span className="badge badge-info text-xs px-1.5 py-0.5">
+                                  {student.courses_count || 0} كورس
+                                </span>
+                                {hasDualCourses(student.id) && (
+                                  <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
+                                    ثنائي
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             
                             <div className="flex items-start justify-between">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">ملاحظات</span>
-                              <span className="text-[10px] text-gray-600 dark:text-gray-400 text-right max-w-[65%] leading-relaxed">
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">ملاحظات</span>
+                              <span className="text-xs text-gray-600 dark:text-gray-400 text-right max-w-[65%] leading-relaxed">
                                 {student.notes || '-'}
                               </span>
                             </div>
                             
                             <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الإجراءات</span>
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الإجراءات</span>
                               <div className="flex items-center gap-1">
                                 <button
                                   onClick={() => openModal(student)}
@@ -327,9 +438,16 @@ const Students = () => {
                           </span>
                         </td>
                         <td>
-                          <span className="badge badge-info">
-                            {student.courses_count || 0} كورس
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="badge badge-info">
+                              {student.courses_count || 0} كورس
+                            </span>
+                            {hasDualCourses(student.id) && (
+                              <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
+                                ثنائي
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="text-[var(--color-text-muted)] max-w-xs truncate">
                           {student.notes || '-'}
@@ -416,6 +534,54 @@ const Students = () => {
               placeholder="أضف أي ملاحظات عن الطالب..."
             />
           </div>
+
+          {!editingStudent && (
+            <>
+              <div>
+                <label className="label">الباقة</label>
+                <select
+                  value={formData.course_package_id}
+                  onChange={(e) => handlePackageChange(e.target.value)}
+                  className="select"
+                >
+                  <option value="">اختر الباقة</option>
+                  {packages.map((pkg) => (
+                    <option key={pkg.id} value={pkg.id}>
+                      {pkg.name} ({pkg.price} د.ع - {pkg.lectures_count} محاضرة)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {formData.course_package_id && (
+                <>
+                  <div>
+                    <label className="label">المبلغ المدفوع</label>
+                    <input
+                      type="number"
+                      value={formData.paid_amount}
+                      onChange={(e) => handlePaidAmountChange(e.target.value)}
+                      className="input"
+                      placeholder="أدخل المبلغ المدفوع"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">المبلغ المتبقي</label>
+                    <input
+                      type="text"
+                      value={formData.remaining_amount ? `${formData.remaining_amount} د.ع` : '0.00 د.ع'}
+                      className="input"
+                      readOnly
+                      style={{ backgroundColor: 'var(--color-bg-secondary)', cursor: 'not-allowed' }}
+                    />
+                  </div>
+                </>
+              )}
+            </>
+          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
             <button type="button" onClick={closeModal} className="btn-secondary">

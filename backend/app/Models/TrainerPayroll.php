@@ -33,6 +33,7 @@ class TrainerPayroll extends Model
         'bonus_deduction_notes',
         'payment_method',
         'payment_account_number',
+        'payment_pin',
         'total_pay',
         'status',
         'paid_at',

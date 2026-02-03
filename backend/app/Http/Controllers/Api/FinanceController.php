@@ -225,6 +225,7 @@ class FinanceController extends Controller
             // استخدام طريقة التحويل من المدرب (ثابتة لكل الأشهر)
             $paymentMethod = $trainer->payment_method ?? ($existingPayroll ? ($existingPayroll->payment_method ?? null) : null);
             $paymentAccountNumber = $trainer->payment_account_number ?? ($existingPayroll ? ($existingPayroll->payment_account_number ?? null) : null);
+            $paymentPin = $existingPayroll ? ($existingPayroll->payment_pin ?? null) : null;
             $status = $existingPayroll ? ($existingPayroll->status ?? 'draft') : 'draft';
             $paidAt = $existingPayroll ? ($existingPayroll->paid_at ? $existingPayroll->paid_at->format('Y-m-d H:i:s') : null) : null;
             
@@ -304,6 +305,7 @@ class FinanceController extends Controller
                 'bonus_deduction_notes' => $bonusDeductionNotes,
                 'payment_method' => $paymentMethod,
                 'payment_account_number' => $paymentAccountNumber,
+                'payment_pin' => $paymentPin,
                 'total_pay' => $calculatedTotalPay,
                 'status' => $status,
                 'paid_at' => $paidAt,
@@ -1133,11 +1135,13 @@ class FinanceController extends Controller
             'trainer_id' => 'required|exists:trainers,id',
             'payment_method' => 'required|in:zain_cash,qi_card',
             'payment_account_number' => 'required|string|max:50',
+            'payment_pin' => 'nullable|string|max:20',
         ]);
 
         $trainerId = $request->input('trainer_id');
         $paymentMethod = $request->input('payment_method');
         $paymentAccountNumber = $request->input('payment_account_number');
+        $paymentPin = $request->input('payment_pin');
 
         // Find trainer and update payment method (ثابت لكل الأشهر)
         $trainer = Trainer::findOrFail($trainerId);
@@ -1150,6 +1154,12 @@ class FinanceController extends Controller
         $trainer->payment_method = $paymentMethod;
         $trainer->payment_account_number = $paymentAccountNumber;
         $trainer->save();
+
+        // Update payment_pin in all payroll records for this trainer (if provided)
+        if ($paymentPin !== null) {
+            TrainerPayroll::where('trainer_id', $trainerId)
+                ->update(['payment_pin' => $paymentPin]);
+        }
 
         // Log the change in ActivityLog
         try {
@@ -1165,6 +1175,7 @@ class FinanceController extends Controller
                 'new_values' => [
                     'payment_method' => $paymentMethod,
                     'payment_account_number' => $paymentAccountNumber,
+                    'payment_pin' => $paymentPin ?? null,
                 ],
                 'description' => "تم تحديث طريقة التحويل للمدرب {$trainer->name} من '{$oldPaymentMethod}' إلى '{$paymentMethod}'",
                 'ip_address' => $request->ip(),

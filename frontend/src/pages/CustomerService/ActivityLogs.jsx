@@ -20,7 +20,39 @@ const ActivityLogs = () => {
       setLoading(true);
       const response = await api.get('/activity-logs');
       if (response.data.success) {
-        setLogs(response.data.data);
+        // Parse old_values and new_values if they are strings
+        const parsedLogs = response.data.data.map(log => {
+          let oldValues = log.old_values;
+          let newValues = log.new_values;
+          
+          // If old_values is a string, parse it
+          if (typeof oldValues === 'string') {
+            try {
+              oldValues = JSON.parse(oldValues);
+            } catch (e) {
+              console.error('Error parsing old_values:', e);
+              oldValues = null;
+            }
+          }
+          
+          // If new_values is a string, parse it
+          if (typeof newValues === 'string') {
+            try {
+              newValues = JSON.parse(newValues);
+            } catch (e) {
+              console.error('Error parsing new_values:', e);
+              newValues = null;
+            }
+          }
+          
+          return {
+            ...log,
+            old_values: oldValues,
+            new_values: newValues,
+          };
+        });
+        
+        setLogs(parsedLogs);
       }
     } catch (error) {
       console.error('Error fetching activity logs:', error);
@@ -124,14 +156,14 @@ const ActivityLogs = () => {
                           <FileText className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
                         </div>
                         <span
-                          className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium flex-shrink-0 ${getActionColor(
+                          className={`px-1.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getActionColor(
                             log.action
                           )}`}
                         >
                           {getActionLabel(log.action)}
                         </span>
                         {log.model_type && (
-                          <span className="text-[8px] text-gray-500 dark:text-gray-400 truncate max-w-[60%]">
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[60%]">
                             {log.model_type.replace('App\\Models\\', '')} #{log.model_id}
                           </span>
                         )}
@@ -139,25 +171,32 @@ const ActivityLogs = () => {
                     </div>
                     
                     <div className="min-w-0">
-                      <p className="text-[10px] text-gray-800 dark:text-white leading-relaxed break-words">
+                      <p className="text-xs text-gray-800 dark:text-white leading-relaxed break-words">
                         {log.description}
                       </p>
                     </div>
                     
-                    {log.old_values && log.new_values && (
+                    {log.old_values && log.new_values && typeof log.old_values === 'object' && typeof log.new_values === 'object' && (
                       <div className="mt-1.5 space-y-1">
-                        {Object.keys(log.new_values).map((key) => (
-                          <div key={key} className="text-[8px] text-gray-600 dark:text-gray-400 break-words">
-                            <span className="font-medium">{key}:</span>{' '}
-                            <span className="text-red-500 line-through">
-                              {String(log.old_values[key]).length > 20 ? String(log.old_values[key]).substring(0, 20) + '...' : log.old_values[key]}
-                            </span>{' '}
-                            →{' '}
-                            <span className="text-green-500">
-                              {String(log.new_values[key]).length > 20 ? String(log.new_values[key]).substring(0, 20) + '...' : log.new_values[key]}
-                            </span>
-                          </div>
-                        ))}
+                        {Object.keys(log.new_values).map((key) => {
+                          const oldValue = log.old_values[key];
+                          const newValue = log.new_values[key];
+                          const oldValueStr = oldValue !== null && oldValue !== undefined ? String(oldValue) : '';
+                          const newValueStr = newValue !== null && newValue !== undefined ? String(newValue) : '';
+                          
+                          return (
+                            <div key={key} className="text-[10px] text-gray-600 dark:text-gray-400 break-words">
+                              <span className="font-medium">{key}:</span>{' '}
+                              <span className="text-red-500 line-through">
+                                {oldValueStr.length > 20 ? oldValueStr.substring(0, 20) + '...' : oldValueStr}
+                              </span>{' '}
+                              →{' '}
+                              <span className="text-green-500">
+                                {newValueStr.length > 20 ? newValueStr.substring(0, 20) + '...' : newValueStr}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                     
@@ -208,21 +247,28 @@ const ActivityLogs = () => {
                         <p className="text-gray-800 dark:text-white">
                           {log.description}
                         </p>
-                        {log.old_values && log.new_values && (
+                        {log.old_values && log.new_values && typeof log.old_values === 'object' && typeof log.new_values === 'object' && (
                           <div className="mt-2 text-sm">
-                            <div className="flex gap-4">
-                              {Object.keys(log.new_values).map((key) => (
-                                <div key={key} className="text-gray-600 dark:text-gray-400">
-                                  <span className="font-medium">{key}:</span>{' '}
-                                  <span className="text-red-500 line-through">
-                                    {log.old_values[key]}
-                                  </span>{' '}
-                                  →{' '}
-                                  <span className="text-green-500">
-                                    {log.new_values[key]}
-                                  </span>
-                                </div>
-                              ))}
+                            <div className="flex flex-wrap gap-4">
+                              {Object.keys(log.new_values).map((key) => {
+                                const oldValue = log.old_values[key];
+                                const newValue = log.new_values[key];
+                                const oldValueStr = oldValue !== null && oldValue !== undefined ? String(oldValue) : '';
+                                const newValueStr = newValue !== null && newValue !== undefined ? String(newValue) : '';
+                                
+                                return (
+                                  <div key={key} className="text-gray-600 dark:text-gray-400">
+                                    <span className="font-medium">{key}:</span>{' '}
+                                    <span className="text-red-500 line-through">
+                                      {oldValueStr}
+                                    </span>{' '}
+                                    →{' '}
+                                    <span className="text-green-500">
+                                      {newValueStr}
+                                    </span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         )}

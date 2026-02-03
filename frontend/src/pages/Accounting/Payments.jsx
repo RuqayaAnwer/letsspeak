@@ -344,16 +344,41 @@ const Payments = () => {
     closeModal();
   };
 
-  const openModal = () => {
-    setFormData({
-      student_id: '',
-      course_id: '',
-      course_package_id: '',
-      amount: '',
-      remaining_amount: '',
-      date: new Date().toISOString().split('T')[0],
-      notes: '',
-    });
+  const openModal = (payment = null) => {
+    if (payment) {
+      // Open modal with pre-filled data for adding remaining payment
+      const course = payment.course;
+      const packageId = course?.course_package_id || course?.coursePackage?.id || '';
+      const rawPrice = course?.course_package?.price || course?.coursePackage?.price || 0;
+      const packagePrice = getPackagePrice(rawPrice);
+      
+      // Calculate total paid for this course and student
+      const totalPaid = payments
+        .filter(p => p.course_id === payment.course_id && p.student_id === payment.student_id && p.status === 'completed')
+        .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      
+      const remainingAmount = packagePrice - totalPaid;
+      
+      setFormData({
+        student_id: payment.student_id.toString(),
+        course_id: payment.course_id.toString(),
+        course_package_id: packageId.toString(),
+        amount: remainingAmount > 0 ? remainingAmount.toString() : '',
+        remaining_amount: '0.00',
+        date: new Date().toISOString().split('T')[0],
+        notes: 'دفعة المتبقي',
+      });
+    } else {
+      setFormData({
+        student_id: '',
+        course_id: '',
+        course_package_id: '',
+        amount: '',
+        remaining_amount: '',
+        date: new Date().toISOString().split('T')[0],
+        notes: '',
+      });
+    }
     setIsModalOpen(true);
   };
 
@@ -383,6 +408,14 @@ const Payments = () => {
     return badges[status] || 'badge-gray';
   };
 
+  // Get package price (multiply by 1000 if less than 1000 to match display format)
+  const getPackagePrice = (packagePrice) => {
+    if (!packagePrice && packagePrice !== 0) return 0;
+    const price = parseFloat(packagePrice);
+    // If price is less than 1000, multiply by 1000 (e.g., 250 -> 250000)
+    return price < 1000 ? price * 1000 : price;
+  };
+
   // Calculate remaining amount for a course (total paid vs package price)
   // Calculate price per student for dual courses
   const getStudentPrice = (course) => {
@@ -402,8 +435,9 @@ const Payments = () => {
       }
     }
     
-    // For single courses, use the full package price
-    return course.course_package?.price || course.coursePackage?.price || 0;
+    // For single courses, use the full package price (with conversion if needed)
+    const rawPrice = course.course_package?.price || course.coursePackage?.price || 0;
+    return getPackagePrice(rawPrice);
   };
 
   // CRITICAL: Each course+student combination is calculated independently
@@ -471,7 +505,8 @@ const Payments = () => {
   const openEditModal = (payment) => {
     const course = payment.course;
     const packageId = course?.course_package_id || course?.coursePackage?.id || '';
-    const packagePrice = course?.course_package?.price || course?.coursePackage?.price || 0;
+    const rawPrice = course?.course_package?.price || course?.coursePackage?.price || 0;
+    const packagePrice = getPackagePrice(rawPrice);
     
     // Calculate total paid for this course
     const totalPaid = payments
@@ -992,8 +1027,41 @@ const Payments = () => {
   };
 
   const getStudentCourses = () => {
-    if (!formData.student_id) return courses;
-    return courses.filter((c) => c.student_id?.toString() === formData.student_id);
+    if (!formData.student_id) return [];
+    const studentId = formData.student_id.toString();
+    
+    // Combine courses from both sources (regular courses and dual courses data)
+    const allCourses = [...courses];
+    
+    // Add dual courses from dualCoursesData if they're not already in courses
+    dualCoursesData.forEach(dualCourse => {
+      const exists = allCourses.some(c => c.id === dualCourse.id);
+      if (!exists) {
+        allCourses.push(dualCourse);
+      }
+    });
+    
+    return allCourses.filter((c) => {
+      // For single courses: check student_id directly
+      if (c.student_id?.toString() === studentId) {
+        return true;
+      }
+      
+      // For dual courses: check if student is in students array
+      if (c.students && Array.isArray(c.students)) {
+        return c.students.some(s => {
+          const studentIdFromArray = typeof s === 'object' ? s.id?.toString() : s?.toString();
+          return studentIdFromArray === studentId;
+        });
+      }
+      
+      // Also check if course has student object (for backward compatibility)
+      if (c.student && typeof c.student === 'object' && c.student.id?.toString() === studentId) {
+        return true;
+      }
+      
+      return false;
+    });
   };
 
 
@@ -1123,44 +1191,55 @@ const Payments = () => {
                                     </div>
                                     
                                     <div className="col-span-2 flex items-center gap-1">
-                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الطالب:</span>
-                                      <span className="text-[10px] font-semibold text-gray-800 dark:text-white truncate flex-1">{payment.student?.name || '-'}</span>
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الطالب:</span>
+                                      <span className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1">{payment.student?.name || '-'}</span>
                                     </div>
                                     
                                     <div className="col-span-2 flex items-center gap-1">
-                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الهاتف:</span>
-                                      <span className="text-[10px] text-gray-800 dark:text-white">{payment.student?.phone || '-'}</span>
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الهاتف:</span>
+                                      <span className="text-sm text-gray-800 dark:text-white">{payment.student?.phone || '-'}</span>
                                     </div>
                                     
                                     <div className="flex items-center gap-1">
-                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الباقة:</span>
-                                      <span className="text-[10px] font-medium text-gray-800 dark:text-white truncate">{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</span>
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الباقة:</span>
+                                      <span className="text-sm font-medium text-gray-800 dark:text-white truncate">{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</span>
                                     </div>
                                     
                                     <div className="flex items-center gap-1">
-                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">التاريخ:</span>
-                                      <span className="text-[10px] text-gray-800 dark:text-white">
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">التاريخ:</span>
+                                      <span className="text-sm text-gray-800 dark:text-white">
                                         {firstDate ? formatDateSimple(firstDate) : '—'}
                                       </span>
                                     </div>
                                     
                                     <div className="flex items-center gap-1">
-                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المدفوع:</span>
-                                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">المدفوع:</span>
+                                      <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                                         {formatCurrency(payment.amount)}
                                       </span>
                                     </div>
                                     
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المتبقي:</span>
-                                      {paymentStatus.amount > 0 ? (
-                                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                                          {formatCurrency(paymentStatus.amount)}
-                                        </span>
-                                      ) : (
-                                        <span className={`badge ${paymentStatus.badge} text-[9px] px-1 py-0.5`}>
-                                          {paymentStatus.label}
-                                        </span>
+                                    <div className="flex items-center justify-between gap-1">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">المتبقي:</span>
+                                        {paymentStatus.amount > 0 ? (
+                                          <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                                            {formatCurrency(paymentStatus.amount)}
+                                          </span>
+                                        ) : (
+                                          <span className={`badge ${paymentStatus.badge} text-xs px-1 py-0.5`}>
+                                            {paymentStatus.label}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {paymentStatus.amount > 0 && (
+                                        <button
+                                          onClick={() => openModal(payment)}
+                                          className="text-[10px] px-1.5 py-0.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                                          title="إضافة المتبقي"
+                                        >
+                                          إضافة
+                                        </button>
                                       )}
                                     </div>
                                   </div>
@@ -1289,9 +1368,18 @@ const Payments = () => {
                             </td>
                             <td className="text-center text-xs py-2 px-2">
                               {paymentStatus.amount > 0 ? (
-                                <span className="text-amber-600 dark:text-amber-400 font-medium text-xs">
-                                  {formatCurrency(paymentStatus.amount)}
-                                </span>
+                                <div className="flex items-center justify-center gap-2">
+                                  <span className="text-amber-600 dark:text-amber-400 font-medium text-xs">
+                                    {formatCurrency(paymentStatus.amount)}
+                                  </span>
+                                  <button
+                                    onClick={() => openModal(payment)}
+                                    className="text-[9px] px-2 py-0.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                                    title="إضافة المتبقي"
+                                  >
+                                    إضافة
+                                  </button>
+                                </div>
                               ) : (
                                 <span className={`badge ${paymentStatus.badge} text-xs`}>
                                   {paymentStatus.label}
@@ -1454,42 +1542,42 @@ const Payments = () => {
                                     </div>
                                     
                                     <div className="col-span-2 flex items-center gap-1">
-                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الطالب:</span>
-                                      <span className="text-[10px] font-semibold text-gray-800 dark:text-white truncate flex-1">{row.studentName}</span>
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الطالب:</span>
+                                      <span className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1">{row.studentName}</span>
                                     </div>
                                     
                                     <div className="col-span-2 flex items-center gap-1">
-                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الهاتف:</span>
-                                      <span className="text-[10px] text-gray-800 dark:text-white">{row.studentPhone || '-'}</span>
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الهاتف:</span>
+                                      <span className="text-sm text-gray-800 dark:text-white">{row.studentPhone || '-'}</span>
                                     </div>
                                     
                                     <div className="flex items-center gap-1">
-                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الباقة:</span>
-                                      <span className="text-[10px] font-medium text-gray-800 dark:text-white truncate">{row.course?.course_package?.name || row.course?.coursePackage?.name || '-'}</span>
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الباقة:</span>
+                                      <span className="text-sm font-medium text-gray-800 dark:text-white truncate">{row.course?.course_package?.name || row.course?.coursePackage?.name || '-'}</span>
                                     </div>
                                     
                                     <div className="flex items-center gap-1">
-                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">التاريخ:</span>
-                                      <span className="text-[10px] text-gray-800 dark:text-white">
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">التاريخ:</span>
+                                      <span className="text-sm text-gray-800 dark:text-white">
                                         {firstDate ? formatDateSimple(firstDate) : '—'}
                                       </span>
                                     </div>
                                     
                                     <div className="flex items-center gap-1">
-                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المدفوع:</span>
-                                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">المدفوع:</span>
+                                      <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                                         {formatCurrency(totalPaid)}
                                       </span>
                                     </div>
                                     
                                     <div className="flex items-center gap-1">
-                                      <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المتبقي:</span>
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">المتبقي:</span>
                                       {paymentStatus.amount > 0 ? (
-                                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                                        <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">
                                           {formatCurrency(paymentStatus.amount)}
                                         </span>
                                       ) : (
-                                        <span className={`badge ${paymentStatus.badge} text-[9px] px-1 py-0.5`}>
+                                        <span className={`badge ${paymentStatus.badge} text-xs px-1 py-0.5`}>
                                           {paymentStatus.label}
                                         </span>
                                       )}
@@ -1699,7 +1787,10 @@ const Payments = () => {
                 id="payment-student"
                 name="payment-student"
                 value={formData.student_id}
-                onChange={(e) => setFormData({ ...formData, student_id: e.target.value, course_id: '' })}
+                onChange={(e) => {
+                  const studentId = e.target.value;
+                  setFormData({ ...formData, student_id: studentId, course_id: '', course_package_id: '', amount: '', remaining_amount: '' });
+                }}
                 className="select"
                 required
               >
@@ -1713,24 +1804,66 @@ const Payments = () => {
             </div>
 
             <div>
-              <label className="label" htmlFor="payment-package">الباقة *</label>
+              <label className="label" htmlFor="payment-course">الكورس *</label>
               <select
-                id="payment-package"
-                name="payment-package"
-                value={formData.course_package_id}
-                onChange={(e) => handlePackageChange(e.target.value)}
+                id="payment-course"
+                name="payment-course"
+                value={formData.course_id}
+                onChange={(e) => {
+                  const courseId = e.target.value;
+                  const selectedCourse = courses.find(c => c.id.toString() === courseId);
+                  const packageId = selectedCourse?.course_package_id || selectedCourse?.coursePackage?.id || '';
+                  const rawPrice = selectedCourse?.course_package?.price || selectedCourse?.coursePackage?.price || 0;
+                  const packagePrice = getPackagePrice(rawPrice);
+                  
+                  // Calculate total paid for this course and student
+                  const totalPaid = payments
+                    .filter(p => p.course_id?.toString() === courseId && p.student_id?.toString() === formData.student_id && p.status === 'completed')
+                    .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                  
+                  const remainingAmount = packagePrice - totalPaid;
+                  
+                  setFormData({
+                    ...formData,
+                    course_id: courseId,
+                    course_package_id: packageId.toString(),
+                    remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+                  });
+                }}
                 className="select"
                 required
+                disabled={!formData.student_id}
               >
-                <option value="">اختر الباقة</option>
-                {packages.map((pkg) => (
-                  <option key={pkg.id} value={pkg.id}>
-                    {pkg.name} {pkg.price > 0 ? `(${pkg.price} د.ع)` : ''}
-                  </option>
-                ))}
+                <option value="">اختر الكورس</option>
+                {formData.student_id && getStudentCourses().map((course) => {
+                  const isDual = course.is_dual || (course.students && Array.isArray(course.students) && course.students.length > 1);
+                  const courseName = course.course_package?.name || course.coursePackage?.name || `كورس #${course.id}`;
+                  return (
+                    <option key={course.id} value={course.id}>
+                      {courseName} {isDual ? '(ثنائي)' : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
+
+          {formData.course_id && (
+            <div>
+              <label className="label" htmlFor="payment-package">الباقة</label>
+              <input
+                type="text"
+                id="payment-package"
+                value={(() => {
+                  const selectedCourse = courses.find(c => c.id.toString() === formData.course_id);
+                  return selectedCourse?.course_package?.name || selectedCourse?.coursePackage?.name || '-';
+                })()}
+                className="input bg-[var(--color-bg-secondary)] cursor-not-allowed"
+                readOnly
+                disabled
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -1935,7 +2068,8 @@ const Payments = () => {
                     setEditFormData({ ...editFormData, amount: value });
                     // Recalculate remaining amount
                     const course = editingPayment?.course;
-                    const packagePrice = course?.course_package?.price || course?.coursePackage?.price || 0;
+                    const rawPrice = course?.course_package?.price || course?.coursePackage?.price || 0;
+    const packagePrice = getPackagePrice(rawPrice);
                     const totalPaid = payments
                       .filter(p => p.course_id === editingPayment?.course_id && p.student_id === editingPayment?.student_id && p.status === 'completed' && p.id !== editingPayment?.id)
                       .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0) + (parseFloat(value) || 0);

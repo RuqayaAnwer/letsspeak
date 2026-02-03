@@ -38,3 +38,4 @@ class UpdateCoursesPackageSeeder extends Seeder
 
 
 
+

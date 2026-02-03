@@ -47,7 +47,7 @@ class CoursePackageController extends Controller
     /**
      * Update the specified course package.
      */
-    public function update(Request $request, CoursePackage $coursePackage)
+    public function update(Request $request, $id)
     {
         $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -56,9 +56,24 @@ class CoursePackageController extends Controller
             'price' => 'nullable|numeric|min:0',
         ]);
 
-        $coursePackage->update($request->only([
+        $coursePackage = CoursePackage::findOrFail($id);
+        
+        $updateData = $request->only([
             'name', 'lectures_count', 'description', 'price'
-        ]));
+        ]);
+        
+        // Log the update data for debugging
+        \Log::info('Updating course package', [
+            'id' => $id,
+            'data' => $updateData,
+            'price' => $request->input('price'),
+            'price_type' => gettype($request->input('price'))
+        ]);
+        
+        $coursePackage->update($updateData);
+        
+        // Refresh the model to get the updated data
+        $coursePackage->refresh();
 
         return response()->json($coursePackage);
     }
@@ -66,13 +81,15 @@ class CoursePackageController extends Controller
     /**
      * Remove the specified course package.
      */
-    public function destroy(CoursePackage $coursePackage)
+    public function destroy($id)
     {
+        $coursePackage = CoursePackage::findOrFail($id);
         $coursePackage->delete();
 
         return response()->json(null, 204);
     }
 }
+
 
 
 

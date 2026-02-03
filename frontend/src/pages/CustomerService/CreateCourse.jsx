@@ -45,12 +45,25 @@ const CreateCourse = () => {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  // Re-fetch packages when window gains focus (in case packages were updated in another tab/page)
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchData(true); // Skip loading state when refetching on focus
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  const fetchData = async (skipLoading = false) => {
     try {
+      if (!skipLoading) {
+        setLoading(true);
+      }
       const [studentsRes, trainersRes, packagesRes] = await Promise.all([
         api.get('/students'),
         api.get('/trainers-list'),
-        api.get('/course-packages'),
+        api.get('/course-packages', { params: { _t: Date.now() } }), // Add timestamp to prevent caching
       ]);
       
       // Handle paginated response for students
@@ -64,13 +77,27 @@ const CreateCourse = () => {
       // Handle packages response
       const packagesData = packagesRes.data?.data || packagesRes.data || [];
       setPackages(Array.isArray(packagesData) ? packagesData : []);
+      console.log('Packages fetched in CreateCourse:', packagesData);
     } catch (error) {
       console.error('Error fetching data:', error);
       console.error('Error response:', error.response);
-      alert('حدث خطأ أثناء تحميل البيانات: ' + (error.response?.data?.message || error.message));
+      if (!skipLoading) {
+        alert('حدث خطأ أثناء تحميل البيانات: ' + (error.response?.data?.message || error.message));
+      }
     } finally {
-      setLoading(false);
+      if (!skipLoading) {
+        setLoading(false);
+      }
     }
+  };
+
+  // Get package price (multiply by 1000 if less than 1000 to match display format)
+  const getPackagePrice = (packagePrice) => {
+    if (!packagePrice && packagePrice !== 0) return 0;
+    const price = parseFloat(packagePrice);
+    // If price is less than 1000, multiply by 1000 (e.g., 225 -> 225000)
+    // But if price is already >= 1000, use it as is
+    return price < 1000 ? price * 1000 : price;
   };
 
   // Calculate price per student for dual courses
@@ -99,9 +126,12 @@ const CreateCourse = () => {
     
     // Calculate price based on course type (dual or single)
     const studentPrice = getStudentPrice(selectedPackage?.name, isDual);
-    const packagePrice = isDual && studentPrice > 0 
-      ? studentPrice 
-      : (selectedPackage ? (selectedPackage.price || 0) : 0);
+    let packagePrice = 0;
+    if (isDual && studentPrice > 0) {
+      packagePrice = studentPrice;
+    } else if (selectedPackage) {
+      packagePrice = getPackagePrice(selectedPackage.price);
+    }
     
     if (isDual) {
       // For dual courses, update remaining amounts for both students
@@ -139,9 +169,12 @@ const CreateCourse = () => {
     
     // Calculate price based on course type (dual or single)
     const studentPrice = getStudentPrice(selectedPackage?.name, isDual);
-    const packagePrice = isDual && studentPrice > 0 
-      ? studentPrice 
-      : (selectedPackage ? (selectedPackage.price || 0) : 0);
+    let packagePrice = 0;
+    if (isDual && studentPrice > 0) {
+      packagePrice = studentPrice;
+    } else if (selectedPackage) {
+      packagePrice = getPackagePrice(selectedPackage.price);
+    }
     
     if (isDual) {
       // This should not be called for dual courses, but handle it just in case
