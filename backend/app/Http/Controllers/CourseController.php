@@ -138,13 +138,15 @@ class CourseController extends Controller
      */
     public function store(Request $request)
     {
+        $isCustom = $request->input('is_custom', false);
+        
         $request->validate([
             'trainer_id' => 'required|exists:trainers,id',
             'student_id' => 'required_without:student_ids|exists:students,id',
             'student_ids' => 'required_without:student_id|array|min:1',
             'student_ids.*' => 'exists:students,id',
-            'course_package_id' => 'required|exists:course_packages,id',
-            'lectures_count' => 'sometimes|integer|min:1',
+            'course_package_id' => $isCustom ? 'nullable' : 'required|exists:course_packages,id',
+            'lectures_count' => 'required|integer|min:1',
             'start_date' => 'required|date',
             'lecture_time' => 'required|date_format:H:i',
             'lecture_days' => 'required|array|min:1',
@@ -153,11 +155,18 @@ class CourseController extends Controller
             'renewed_with_trainer' => 'sometimes|boolean',
             'paid_amount' => 'sometimes|numeric|min:0',
             'remaining_amount' => 'sometimes|numeric|min:0',
+            'payment_method' => 'nullable|in:zain_cash,qi_card,delivery',
+            'is_custom' => 'sometimes|boolean',
+            'custom_total_amount' => $isCustom ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
         ]);
 
-        // Get lectures count from package
-        $package = CoursePackage::find($request->course_package_id);
-        $lecturesCount = $request->lectures_count ?? $package->lectures_count;
+        // Get lectures count from package or custom
+        if ($isCustom) {
+            $lecturesCount = $request->lectures_count;
+        } else {
+            $package = CoursePackage::find($request->course_package_id);
+            $lecturesCount = $request->lectures_count ?? $package->lectures_count;
+        }
 
         // Determine if dual course and get primary student
         $isDual = $request->is_dual ?? false;
@@ -198,17 +207,39 @@ class CourseController extends Controller
             }
         }
 
-        $course = Course::create([
+        $courseData = [
             'trainer_id' => $request->trainer_id,
-            'course_package_id' => $request->course_package_id,
+            'course_package_id' => $isCustom ? null : $request->course_package_id,
             'lectures_count' => $lecturesCount,
             'start_date' => $request->start_date,
             'lecture_time' => $request->lecture_time,
             'lecture_days' => $request->lecture_days,
             'is_dual' => $isDual,
             'renewed_with_trainer' => $renewedWithTrainer,
+            'payment_method' => $request->payment_method,
             'status' => 'active',
-        ]);
+        ];
+        
+        // For custom courses, set total_amount and amount_paid
+        if ($isCustom) {
+            $customTotalAmount = floatval($request->input('custom_total_amount', 0));
+            $courseData['total_amount'] = $customTotalAmount;
+            
+            if ($isDual) {
+                // For dual courses, sum all paid amounts
+                $studentPayments = $request->input('student_payments', []);
+                $totalPaid = 0;
+                foreach ($studentPayments as $payment) {
+                    $totalPaid += floatval($payment['paid_amount'] ?? 0);
+                }
+                $courseData['amount_paid'] = $totalPaid;
+            } else {
+                // For single courses, use paid_amount
+                $courseData['amount_paid'] = floatval($request->input('paid_amount', 0));
+            }
+        }
+        
+        $course = Course::create($courseData);
 
         // Attach students to course (for dual courses)
         foreach ($studentIds as $index => $studentId) {
@@ -781,6 +812,88 @@ class CourseController extends Controller
                                     'lecture_id' => $lecture->id,
                                     'error' => $logError->getMessage()
                                 ]);
+                            }
+                            
+                            // Recalculate trainer payroll automatically when payment status changes
+                            if ($updateData['trainer_payment_status'] === 'paid' || ($oldData['trainer_payment_status'] ?? 'unpaid') === 'paid') {
+                                try {
+                                    $course = $lecture->course;
+                                    if ($course && $course->trainer_id) {
+                                        $lectureDate = \Carbon\Carbon::parse($lecture->date);
+                                        $month = $lectureDate->month;
+                                        $year = $lectureDate->year;
+                                        
+                                        // Recalculate payroll for this trainer and month
+                                        $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
+                                        $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();
+                                        
+                                        // Calculate completed paid lectures
+                                        $completedLectures = \App\Models\Lecture::whereHas('course', function ($query) use ($course) {
+                                                $query->where('trainer_id', $course->trainer_id);
+                                            })
+                                            ->whereBetween('date', [$startDate, $endDate])
+                                            ->where('trainer_payment_status', 'paid')
+                                            ->get()
+                                            ->filter(function ($l) {
+                                                if ($l->student_attendance && is_array($l->student_attendance)) {
+                                                    foreach ($l->student_attendance as $studentData) {
+                                                        if (is_array($studentData)) {
+                                                            $attendance = $studentData['attendance'] ?? null;
+                                                            if ($attendance === 'present' || $attendance === 'absent') {
+                                                                return true;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                return $l->is_completed || in_array($l->attendance, ['present', 'partially', 'absent']);
+                                            })
+                                            ->count();
+                                        
+                                        // Find or create payroll record
+                                        $lectureRate = 4000;
+                                        $basePay = $completedLectures * $lectureRate;
+                                        
+                                        $payroll = \App\Models\TrainerPayroll::firstOrCreate(
+                                            [
+                                                'trainer_id' => $course->trainer_id,
+                                                'month' => $month,
+                                                'year' => $year,
+                                            ],
+                                            [
+                                                'lecture_rate' => $lectureRate,
+                                                'renewal_bonus_rate' => 0,
+                                                'completed_lectures' => $completedLectures,
+                                                'base_pay' => $basePay,
+                                                'renewals_count' => 0,
+                                                'renewal_total' => 0,
+                                                'volume_bonus' => 0,
+                                                'competition_bonus' => 0,
+                                                'status' => 'draft',
+                                            ]
+                                        );
+                                        
+                                        // Update and recalculate
+                                        $payroll->completed_lectures = $completedLectures;
+                                        $payroll->base_pay = $basePay;
+                                        $payroll->recalculate();
+                                        $payroll->save();
+                                        
+                                        \Log::info('Trainer payroll recalculated automatically', [
+                                            'trainer_id' => $course->trainer_id,
+                                            'month' => $month,
+                                            'year' => $year,
+                                            'completed_lectures' => $completedLectures,
+                                            'base_pay' => $payroll->base_pay,
+                                            'payroll_id' => $payroll->id,
+                                        ]);
+                                    }
+                                } catch (\Exception $recalcError) {
+                                    // Log error but don't fail the update
+                                    \Log::error('Failed to recalculate trainer payroll', [
+                                        'lecture_id' => $lecture->id,
+                                        'error' => $recalcError->getMessage()
+                                    ]);
+                                }
                             }
                         }
                         

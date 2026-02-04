@@ -119,7 +119,16 @@ class TrainerPayroll extends Model
     public function recalculate(): void
     {
         $this->base_pay = $this->completed_lectures * $this->lecture_rate;
-        $this->renewal_total = $this->renewals_count * $this->renewal_bonus_rate;
+        
+        // Calculate renewal bonus using tiered system
+        // 5 renewals = 50,000 د.ع, 7 renewals = 100,000 د.ع
+        $this->renewal_total = 0;
+        if ($this->renewals_count >= 7) {
+            $this->renewal_total = 100000;
+        } elseif ($this->renewals_count >= 5) {
+            $this->renewal_total = 50000;
+        }
+        
         $this->total_pay = $this->calculateTotalPay();
     }
 

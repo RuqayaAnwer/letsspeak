@@ -84,10 +84,18 @@ class FinanceController extends Controller
 
         // Financial rates
         $lectureRate = 4000; // د.ع per completed lecture
-        $renewalBonusRate = 5000; // د.ع per renewal
         $volumeBonus60 = 30000; // د.ع for 60+ lectures
         $volumeBonus80 = 80000; // د.ع for 80+ lectures (replaces 30k)
         $competitionBonus = 20000; // د.ع for top 3 trainers in renewals
+        
+        /**
+         * Renewal Bonus System (Tiered):
+         * - 5 renewals = 50,000 د.ع
+         * - 7 renewals = 100,000 د.ع
+         * 
+         * Note: The old system (renewal_bonus_rate * renewals_count) is deprecated.
+         * All renewal bonus calculations now use this tiered system.
+         */
 
         // Get all trainers
         $trainers = Trainer::with('user')->get();
@@ -111,10 +119,9 @@ class FinanceController extends Controller
                 'trainer_name' => $trainer->name,
             ]);
             // Get completed lectures for this trainer in the month
-            // A lecture is considered completed if:
-            // 1. is_completed = true, OR
-            // 2. attendance = 'present' or 'partially', OR
-            // 3. For dual courses: student_attendance contains 'present' or 'absent' for any student
+            // A lecture is considered completed and payable if:
+            // 1. trainer_payment_status = 'paid', AND
+            // 2. (is_completed = true OR attendance = 'present'/'partially'/'absent' OR student_attendance contains 'present'/'absent')
             
             // Use date range for SQLite compatibility
             $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->format('Y-m-d');
@@ -124,6 +131,7 @@ class FinanceController extends Controller
                 $query->where('trainer_id', $trainer->id);
             })
             ->whereBetween('date', [$startDate, $endDate])
+            ->where('trainer_payment_status', 'paid') // Only count paid lectures
             ->where(function ($query) {
                 $query->where('is_completed', true)
                       ->orWhereIn('attendance', ['present', 'partially', 'absent'])
@@ -194,8 +202,14 @@ class FinanceController extends Controller
                 })
                 ->count();
 
-            // Calculate renewal bonus
-            $renewalTotal = $renewalsCount * $renewalBonusRate;
+            // Calculate renewal bonus using tiered system
+            // 5 renewals = 50,000 د.ع, 7 renewals = 100,000 د.ع
+            $renewalTotal = 0;
+            if ($renewalsCount >= 7) {
+                $renewalTotal = 100000;
+            } elseif ($renewalsCount >= 5) {
+                $renewalTotal = 50000;
+            }
 
             // Calculate volume bonus
             $volumeBonus = 0;
@@ -740,7 +754,7 @@ class FinanceController extends Controller
             ],
             [
                 'lecture_rate' => 4000,
-                'renewal_bonus_rate' => 5000,
+                'renewal_bonus_rate' => 0, // Using tiered system: 5 renewals = 50k, 7 renewals = 100k
                 'status' => 'draft',
             ]
         );
@@ -789,7 +803,6 @@ class FinanceController extends Controller
         $selectedVolumeBonus = $request->input('selected_volume_bonus');
 
         // Calculate renewal bonus - verify previous course was with same trainer
-        $renewalBonusRate = 5000;
         $renewalsCount = Course::where('trainer_id', $trainerId)
             ->where('renewed_with_trainer', true)
             ->whereMonth('start_date', $month)
@@ -816,7 +829,15 @@ class FinanceController extends Controller
                 return false;
             })
             ->count();
-        $renewalTotal = $renewalsCount * $renewalBonusRate;
+        
+        // Calculate renewal bonus using tiered system
+        // 5 renewals = 50,000 د.ع, 7 renewals = 100,000 د.ع
+        $renewalTotal = 0;
+        if ($renewalsCount >= 7) {
+            $renewalTotal = 100000;
+        } elseif ($renewalsCount >= 5) {
+            $renewalTotal = 50000;
+        }
 
         // Calculate competition bonus (check if trainer is in top 3)
         $competitionBonus = 20000;
@@ -848,7 +869,7 @@ class FinanceController extends Controller
             }
         }
 
-        // Calculate completed lectures
+        // Calculate completed lectures (only paid ones)
         $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();
         
@@ -856,6 +877,7 @@ class FinanceController extends Controller
                 $query->where('trainer_id', $trainerId);
             })
             ->whereBetween('date', [$startDate, $endDate])
+            ->where('trainer_payment_status', 'paid') // Only count paid lectures
             ->get()
             ->filter(function ($lecture) {
                 if ($lecture->student_attendance && is_array($lecture->student_attendance)) {
@@ -885,7 +907,7 @@ class FinanceController extends Controller
             ],
             [
                 'lecture_rate' => $lectureRate,
-                'renewal_bonus_rate' => $renewalBonusRate,
+                'renewal_bonus_rate' => 0, // Using tiered system: 5 renewals = 50k, 7 renewals = 100k
                 'completed_lectures' => $completedLectures,
                 'base_pay' => $basePay,
                 'renewals_count' => $renewalsCount,
@@ -944,7 +966,6 @@ class FinanceController extends Controller
         $year = $request->input('year');
 
         // Calculate renewal bonus - verify previous course was with same trainer
-        $renewalBonusRate = 5000;
         $renewalsCount = Course::where('trainer_id', $trainerId)
             ->where('renewed_with_trainer', true)
             ->whereMonth('start_date', $month)
@@ -971,7 +992,15 @@ class FinanceController extends Controller
                 return false;
             })
             ->count();
-        $renewalTotal = $renewalsCount * $renewalBonusRate;
+        
+        // Calculate renewal bonus using tiered system
+        // 5 renewals = 50,000 د.ع, 7 renewals = 100,000 د.ع
+        $renewalTotal = 0;
+        if ($renewalsCount >= 7) {
+            $renewalTotal = 100000;
+        } elseif ($renewalsCount >= 5) {
+            $renewalTotal = 50000;
+        }
 
         // Calculate competition bonus (check if trainer is in top 3)
         // First, get all renewals for all trainers in this month
@@ -1008,7 +1037,7 @@ class FinanceController extends Controller
             }
         }
 
-        // Calculate completed lectures for volume bonus
+        // Calculate completed lectures for volume bonus (only paid ones)
         $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();
         
@@ -1016,6 +1045,7 @@ class FinanceController extends Controller
                 $query->where('trainer_id', $trainerId);
             })
             ->whereBetween('date', [$startDate, $endDate])
+            ->where('trainer_payment_status', 'paid') // Only count paid lectures
             ->get()
             ->filter(function ($lecture) {
                 if ($lecture->student_attendance && is_array($lecture->student_attendance)) {
@@ -1053,7 +1083,7 @@ class FinanceController extends Controller
             ],
             [
                 'lecture_rate' => $lectureRate,
-                'renewal_bonus_rate' => $renewalBonusRate,
+                'renewal_bonus_rate' => 0, // Using tiered system: 5 renewals = 50k, 7 renewals = 100k
                 'completed_lectures' => $completedLectures,
                 'base_pay' => $basePay,
                 'renewals_count' => $renewalsCount,
@@ -1220,7 +1250,7 @@ class FinanceController extends Controller
             ],
             [
                 'lecture_rate' => 4000,
-                'renewal_bonus_rate' => 5000,
+                'renewal_bonus_rate' => 0, // Using tiered system: 5 renewals = 50k, 7 renewals = 100k
                 'status' => 'draft',
             ]
         );

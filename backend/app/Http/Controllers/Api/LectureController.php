@@ -343,7 +343,95 @@ class LectureController extends Controller
             'is_completed' => 'sometimes|boolean',
         ]);
 
+        // Save old status for payroll recalculation
+        $oldTrainerPaymentStatus = $lecture->trainer_payment_status ?? 'unpaid';
+        
         $lecture->update($validated);
+        
+        // Recalculate trainer payroll automatically when payment status changes
+        if (isset($validated['trainer_payment_status']) && 
+            $oldTrainerPaymentStatus !== $validated['trainer_payment_status'] &&
+            ($validated['trainer_payment_status'] === 'paid' || $oldTrainerPaymentStatus === 'paid')) {
+            try {
+                $course = $lecture->course;
+                if ($course && $course->trainer_id) {
+                    $lectureDate = \Carbon\Carbon::parse($lecture->date);
+                    $month = $lectureDate->month;
+                    $year = $lectureDate->year;
+                    
+                    // Recalculate payroll for this trainer and month
+                    $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
+                    $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();
+                    
+                    // Calculate completed paid lectures
+                    $completedLectures = Lecture::whereHas('course', function ($query) use ($course) {
+                            $query->where('trainer_id', $course->trainer_id);
+                        })
+                        ->whereBetween('date', [$startDate, $endDate])
+                        ->where('trainer_payment_status', 'paid')
+                        ->get()
+                        ->filter(function ($l) {
+                            if ($l->student_attendance && is_array($l->student_attendance)) {
+                                foreach ($l->student_attendance as $studentData) {
+                                    if (is_array($studentData)) {
+                                        $attendance = $studentData['attendance'] ?? null;
+                                        if ($attendance === 'present' || $attendance === 'absent') {
+                                            return true;
+                                        }
+                                    }
+                                }
+                            }
+                            return $l->is_completed || in_array($l->attendance, ['present', 'partially', 'absent']);
+                        })
+                        ->count();
+                    
+                    // Find or create payroll record
+                    $lectureRate = 4000;
+                    $basePay = $completedLectures * $lectureRate;
+                    
+                    $payroll = \App\Models\TrainerPayroll::firstOrCreate(
+                        [
+                            'trainer_id' => $course->trainer_id,
+                            'month' => $month,
+                            'year' => $year,
+                        ],
+                        [
+                            'lecture_rate' => $lectureRate,
+                            'renewal_bonus_rate' => 0,
+                            'completed_lectures' => $completedLectures,
+                            'base_pay' => $basePay,
+                            'renewals_count' => 0,
+                            'renewal_total' => 0,
+                            'volume_bonus' => 0,
+                            'competition_bonus' => 0,
+                            'status' => 'draft',
+                        ]
+                    );
+                    
+                    // Update and recalculate
+                    $payroll->completed_lectures = $completedLectures;
+                    $payroll->base_pay = $basePay;
+                    $payroll->recalculate();
+                    $payroll->save();
+                    
+                    \Log::info('Trainer payroll recalculated automatically from LectureController', [
+                        'trainer_id' => $course->trainer_id,
+                        'month' => $month,
+                        'year' => $year,
+                        'completed_lectures' => $completedLectures,
+                        'base_pay' => $payroll->base_pay,
+                        'payroll_id' => $payroll->id,
+                    ]);
+                }
+            } catch (\Exception $recalcError) {
+                // Log error but don't fail the update
+                \Log::error('Failed to recalculate trainer payroll from LectureController', [
+                    'lecture_id' => $lecture->id,
+                    'error' => $recalcError->getMessage(),
+                    'trace' => $recalcError->getTraceAsString()
+                ]);
+            }
+        }
 
         return response()->json([
             'success' => true,

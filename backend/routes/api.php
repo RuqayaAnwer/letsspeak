@@ -11,6 +11,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\CoursePackageController;
 use App\Http\Controllers\Api\CustomerServiceController;
 use App\Http\Controllers\Api\FinanceController;
+use App\Http\Controllers\Api\TrainerController as ApiTrainerController;
 use App\Http\Controllers\ActivityLogController;
 use App\Models\Trainer;
 
@@ -104,11 +105,12 @@ Route::get('/activity-logs', [ActivityLogController::class, 'index']);
 
 // Trainer Dashboard & Unavailability
 Route::prefix('trainer')->middleware('simple.auth')->group(function () {
-    Route::get('/dashboard', [TrainerController::class, 'dashboard']);
-    Route::get('/today-lectures', [TrainerController::class, 'todayLectures']);
-    Route::get('/next-week-lectures', [TrainerController::class, 'nextWeekLectures']);
-    Route::get('/unavailability', [TrainerController::class, 'getUnavailability']);
-    Route::post('/unavailability', [TrainerController::class, 'saveUnavailability']);
+    Route::get('/dashboard', [ApiTrainerController::class, 'dashboard']);
+    Route::get('/today-lectures', [ApiTrainerController::class, 'todayLectures']);
+    Route::get('/next-week-lectures', [ApiTrainerController::class, 'nextWeekLectures']);
+    Route::get('/achievements', [ApiTrainerController::class, 'achievements']);
+    Route::get('/unavailability', [ApiTrainerController::class, 'getUnavailability']);
+    Route::post('/unavailability', [ApiTrainerController::class, 'saveUnavailability']);
 });
 
 // Courses Nearing Completion

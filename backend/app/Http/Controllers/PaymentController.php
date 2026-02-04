@@ -49,6 +49,14 @@ class PaymentController extends Controller
         }
 
         $payments = $query->latest('payment_date')->paginate(15);
+        
+        // Ensure payment_method is included from course if not in payment
+        $payments->getCollection()->transform(function ($payment) {
+            if (!$payment->payment_method && $payment->course) {
+                $payment->payment_method = $payment->course->payment_method;
+            }
+            return $payment;
+        });
 
         return response()->json($payments);
     }
@@ -118,6 +126,11 @@ class PaymentController extends Controller
     public function show(Payment $payment)
     {
         $payment->load(['course.trainer.user', 'student']);
+        
+        // Ensure payment_method is included from course if not in payment
+        if (!$payment->payment_method && $payment->course) {
+            $payment->payment_method = $payment->course->payment_method;
+        }
         
         return response()->json($payment);
     }
@@ -236,6 +249,11 @@ class PaymentController extends Controller
         }
 
         $payment->load(['course', 'student']);
+        
+        // Ensure payment_method is included from course if not in payment
+        if (!$payment->payment_method && $payment->course) {
+            $payment->payment_method = $payment->course->payment_method;
+        }
 
         return response()->json($payment);
     }
