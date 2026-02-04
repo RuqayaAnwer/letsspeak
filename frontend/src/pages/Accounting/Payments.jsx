@@ -5,10 +5,12 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { Plus, Search, CreditCard, X, Edit2, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDateSimple } from '../../utils/dateFormat';
+import { formatCurrency } from '../../utils/currencyFormat';
 
 const Payments = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -94,6 +96,8 @@ const Payments = () => {
 
   const fetchPayments = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const params = {};
       if (search) params.search = search;
 
@@ -138,8 +142,12 @@ const Payments = () => {
       });
       
       setPayments(sortedPayments);
-    } catch (error) {
-      console.error('Error fetching payments:', error);
+      console.log('Payments fetched:', sortedPayments.length);
+    } catch (err) {
+      console.error('Error fetching payments:', err);
+      console.error('Error details:', err.response?.data || err.message);
+      setPayments([]); // Set empty array on error
+      setError(err.response?.data?.message || err.message || 'حدث خطأ أثناء جلب البيانات');
     } finally {
       setLoading(false);
     }
@@ -396,7 +404,16 @@ const Payments = () => {
     setSubmitting(false);
   };
 
-  const formatCurrency = (amount) => `${Number(amount || 0).toLocaleString('en-US')} د.ع`;
+
+  const getPaymentMethodLabel = (method) => {
+    if (!method) return '-';
+    const methods = {
+      'zain_cash': 'زين كاش',
+      'qi_card': 'بطاقة كي',
+      'delivery': 'توصيل',
+    };
+    return methods[method] || method;
+  };
 
   const getStatusLabel = (status) => {
     const labels = { completed: 'مكتمل', pending: 'معلق' };
@@ -1070,6 +1087,26 @@ const Payments = () => {
     return <LoadingSpinner size="lg" />;
   }
 
+  if (error) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
+          <p className="font-semibold">خطأ</p>
+          <p>{error}</p>
+          <button 
+            onClick={() => {
+              setError(null);
+              fetchPayments();
+            }}
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -1315,8 +1352,8 @@ const Payments = () => {
                         <th className="text-center text-xs py-2 px-2">الباقة</th>
                         <th className="text-center text-xs py-2 px-2">تاريخ الدفع</th>
                         <th className="text-center text-xs py-2 px-2">المبلغ المدفوع</th>
+                        <th className="text-center text-xs py-2 px-2">طريقة الدفع</th>
                         <th className="text-center text-xs py-2 px-2">المتبقي</th>
-                        <th className="text-center text-xs py-2 px-2">إجراءات</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1366,6 +1403,11 @@ const Payments = () => {
                             <td className="font-bold text-emerald-600 dark:text-emerald-400 text-center text-xs py-2 px-2">
                               {formatCurrency(payment.amount)}
                             </td>
+                            <td className="text-center text-[10px] py-2 px-2">
+                              <span className="text-[var(--color-text-primary)]">
+                                {getPaymentMethodLabel(payment.payment_method || payment.course?.payment_method)}
+                              </span>
+                            </td>
                             <td className="text-center text-xs py-2 px-2">
                               {paymentStatus.amount > 0 ? (
                                 <div className="flex items-center justify-center gap-2">
@@ -1385,15 +1427,6 @@ const Payments = () => {
                                   {paymentStatus.label}
                                 </span>
                               )}
-                            </td>
-                            <td className="text-center text-xs py-2 px-2">
-                              <button
-                                onClick={() => openEditModal(payment)}
-                                className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                                title="تعديل الدفعة"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
                             </td>
                           </tr>
                         );
@@ -1582,6 +1615,13 @@ const Payments = () => {
                                         </span>
                                       )}
                                     </div>
+                                    
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">طريقة الدفع:</span>
+                                      <span className="text-sm text-gray-800 dark:text-white">
+                                        {getPaymentMethodLabel(payment.payment_method || payment.course?.payment_method)}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
                               );
@@ -1655,8 +1695,8 @@ const Payments = () => {
                         <th className="text-center text-xs py-2 px-2">الباقة</th>
                         <th className="text-center text-xs py-2 px-2">تاريخ الدفع</th>
                         <th className="text-center text-xs py-2 px-2">المبلغ المدفوع</th>
+                        <th className="text-center text-xs py-2 px-2">طريقة الدفع</th>
                         <th className="text-center text-xs py-2 px-2">المتبقي</th>
-                        <th className="text-center text-xs py-2 px-2">إجراءات</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1737,6 +1777,11 @@ const Payments = () => {
                             <td className="font-bold text-emerald-600 dark:text-emerald-400 text-center text-xs py-2 px-2">
                               {totalPaid > 0 ? formatCurrency(totalPaid) : '—'}
                             </td>
+                            <td className="text-center text-[10px] py-2 px-2">
+                              <span className="text-[var(--color-text-primary)]">
+                                {getPaymentMethodLabel(row.payment?.payment_method || row.course?.payment_method)}
+                              </span>
+                            </td>
                             <td className="text-center text-xs py-2 px-2">
                               {paymentStatus.amount > 0 ? (
                                 <span className="text-amber-600 dark:text-amber-400 font-medium text-xs">
@@ -1746,19 +1791,6 @@ const Payments = () => {
                                 <span className={`badge ${paymentStatus.badge} text-xs`}>
                                   {paymentStatus.label}
                                 </span>
-                              )}
-                            </td>
-                            <td className="text-center text-xs py-2 px-2">
-                              {row.payment ? (
-                                <button
-                                  onClick={() => openEditModal(row.payment)}
-                                  className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                                  title="تعديل الدفعة"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                              ) : (
-                                <span className="text-gray-400 text-xs">—</span>
                               )}
                             </td>
                           </tr>
@@ -2011,7 +2043,7 @@ const Payments = () => {
                                   الدفعة {paymentIndex + 1}
                                 </p>
                                 <p className="text-xs font-bold text-green-600 dark:text-green-400">
-                                  {payment.amount.toLocaleString('ar-EG')} د.ع
+                                  {formatCurrency(payment.amount)}
                                 </p>
                               </div>
                               <div className="space-y-1">
@@ -2280,7 +2312,7 @@ const Payments = () => {
                             <>
                               <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
                                 <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">ملخص الدفعات</h4>
-                                <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-3">
                                   <div>
                                     <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
                                     <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white">
@@ -2290,9 +2322,9 @@ const Payments = () => {
                                   <div>
                                     <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
                                     <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
-                                      {studentData.payments
-                                        .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
-                                        .toLocaleString('ar-EG')} د.ع
+                                        {formatCurrency(studentData.payments
+                                          .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                                          )}
                                     </p>
                                   </div>
                                   <div>
@@ -2306,6 +2338,16 @@ const Payments = () => {
                                         const remaining = studentPrice - totalPaid;
                                         return remaining > 0 ? remaining.toLocaleString('ar-EG') + ' د.ع' : '0 د.ع';
                                       })()}
+                                    </p>
+                                  </div>
+                                  <div className="col-span-2 sm:col-span-1">
+                                    <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">طريقة الدفع</p>
+                                    <p className="text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-400">
+                                      {getPaymentMethodLabel(
+                                        paymentInfoModal.course?.payment_method || 
+                                        studentData.payments[0]?.payment_method || 
+                                        studentData.payments[0]?.course?.payment_method
+                                      )}
                                     </p>
                                   </div>
                                 </div>
@@ -2344,6 +2386,12 @@ const Payments = () => {
                                               <p className="text-[9px] sm:text-xs text-gray-700 dark:text-gray-300 truncate">{payment.notes}</p>
                                             </div>
                                           )}
+                                          <div>
+                                            <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">طريقة الدفع:</p>
+                                            <p className="text-[10px] sm:text-sm font-semibold text-gray-800 dark:text-white">
+                                              {getPaymentMethodLabel(payment.payment_method || payment.course?.payment_method)}
+                                            </p>
+                                          </div>
                                         </div>
                                       </div>
                                     );
@@ -2370,7 +2418,7 @@ const Payments = () => {
                         {/* Payments Summary for single course */}
                         <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 mb-3 sm:mb-4">
                           <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">ملخص الدفعات</h4>
-                          <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-3">
                             <div>
                               <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
                               <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white">
@@ -2380,9 +2428,9 @@ const Payments = () => {
                             <div>
                               <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
                               <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
-                                {paymentInfoModal.payments
+                                {formatCurrency(paymentInfoModal.payments
                                   .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
-                                  .toLocaleString('ar-EG')} د.ع
+                                  )}
                               </p>
                             </div>
                             <div>
@@ -2396,6 +2444,16 @@ const Payments = () => {
                                   const remaining = studentPrice - totalPaid;
                                   return remaining > 0 ? remaining.toLocaleString('ar-EG') + ' د.ع' : '0 د.ع';
                                 })()}
+                              </p>
+                            </div>
+                            <div className="col-span-2 sm:col-span-1">
+                              <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">طريقة الدفع</p>
+                              <p className="text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-400">
+                                {getPaymentMethodLabel(
+                                  paymentInfoModal.course?.payment_method || 
+                                  paymentInfoModal.payments[0]?.payment_method || 
+                                  paymentInfoModal.payments[0]?.course?.payment_method
+                                )}
                               </p>
                             </div>
                           </div>
@@ -2428,8 +2486,14 @@ const Payments = () => {
                                         {formattedDate}
                                       </p>
                                     </div>
+                                    <div>
+                                      <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">طريقة الدفع:</p>
+                                      <p className="text-[10px] sm:text-sm font-semibold text-gray-800 dark:text-white">
+                                        {getPaymentMethodLabel(payment.payment_method || payment.course?.payment_method)}
+                                      </p>
+                                    </div>
                                     {payment.notes && (
-                                      <div>
+                                      <div className="col-span-2">
                                         <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">ملاحظات:</p>
                                         <p className="text-[9px] sm:text-xs text-gray-700 dark:text-gray-300 truncate">{payment.notes}</p>
                                       </div>

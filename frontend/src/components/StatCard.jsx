@@ -14,10 +14,10 @@ const StatCard = ({ title, value, icon: Icon, color = 'blue', subtitle, trend })
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-2 sm:p-6 hover:shadow-xl transition-shadow max-w-full overflow-hidden">
       <div className="flex items-center justify-between">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">{title}</p>
-          <p className="text-sm sm:text-3xl font-bold text-gray-800 dark:text-white truncate">{value}</p>
+          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">{title}</p>
+          <p className="text-xs sm:text-lg font-bold text-gray-800 dark:text-white truncate">{value}</p>
           {subtitle && (
-            <p className="text-[9px] sm:text-xs text-gray-400 dark:text-gray-500 mt-0.5 sm:mt-1">{subtitle}</p>
+            <p className="text-[9px] sm:text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 sm:mt-1">{subtitle}</p>
           )}
           {trend && (
             <div className={`flex items-center gap-1 mt-1.5 sm:mt-2 text-[10px] sm:text-sm ${trend > 0 ? 'text-green-500' : 'text-red-500'}`}>

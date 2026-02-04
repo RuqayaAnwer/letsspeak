@@ -181,13 +181,6 @@ const CoursePackages = () => {
     setEditingPackage(null);
   };
 
-  const formatCurrency = (amount) => {
-    if (!amount && amount !== 0) return '-';
-    // Always display with 3 zeros (multiply by 1000 if less than 1000)
-    const numAmount = Number(amount);
-    const formattedAmount = numAmount < 1000 ? numAmount * 1000 : numAmount;
-    return `${formattedAmount.toLocaleString('en-US')} د.ع`;
-  };
 
   if (loading) {
     return <LoadingSpinner size="lg" />;

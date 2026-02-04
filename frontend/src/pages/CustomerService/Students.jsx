@@ -154,15 +154,12 @@ const Students = () => {
   };
 
   const handlePaidAmountChange = (value) => {
-    const selectedPackage = packages.find((p) => p.id.toString() === formData.course_package_id);
-    const packagePrice = selectedPackage ? (selectedPackage.price || 0) : 0;
     const paidAmount = parseFloat(value) || 0;
-    const remainingAmount = packagePrice - paidAmount;
     
     setFormData({
       ...formData,
       paid_amount: value,
-      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+      remaining_amount: '',
     });
   };
 
@@ -535,53 +532,6 @@ const Students = () => {
             />
           </div>
 
-          {!editingStudent && (
-            <>
-              <div>
-                <label className="label">الباقة</label>
-                <select
-                  value={formData.course_package_id}
-                  onChange={(e) => handlePackageChange(e.target.value)}
-                  className="select"
-                >
-                  <option value="">اختر الباقة</option>
-                  {packages.map((pkg) => (
-                    <option key={pkg.id} value={pkg.id}>
-                      {pkg.name} ({pkg.price} د.ع - {pkg.lectures_count} محاضرة)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {formData.course_package_id && (
-                <>
-                  <div>
-                    <label className="label">المبلغ المدفوع</label>
-                    <input
-                      type="number"
-                      value={formData.paid_amount}
-                      onChange={(e) => handlePaidAmountChange(e.target.value)}
-                      className="input"
-                      placeholder="أدخل المبلغ المدفوع"
-                      min="0"
-                      step="0.01"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="label">المبلغ المتبقي</label>
-                    <input
-                      type="text"
-                      value={formData.remaining_amount ? `${formData.remaining_amount} د.ع` : '0.00 د.ع'}
-                      className="input"
-                      readOnly
-                      style={{ backgroundColor: 'var(--color-bg-secondary)', cursor: 'not-allowed' }}
-                    />
-                  </div>
-                </>
-              )}
-            </>
-          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
             <button type="button" onClick={closeModal} className="btn-secondary">

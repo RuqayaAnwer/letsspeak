@@ -15,10 +15,12 @@ import FinanceDashboard from './pages/Accounting/Dashboard';
 import Payments from './pages/Accounting/Payments';
 import TrainerPayroll from './pages/Accounting/TrainerPayroll';
 import Courses from './pages/shared/Courses';
-import CourseDetails from './pages/shared/CourseDetails';
+import CourseDetailsShared from './pages/shared/CourseDetails';
 import ActivityLogs from './pages/CustomerService/ActivityLogs';
 import CourseAlerts from './pages/CustomerService/CourseAlerts';
+import CourseDetails from './pages/CustomerService/CourseDetails';
 import MyTimes from './pages/Trainer/MyTimes';
+import Achievements from './pages/Trainer/Achievements';
 
 // Components
 import Layout from './components/Layout';
@@ -124,14 +126,22 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/customer-service/alerts"
-        element={
-          <ProtectedRoute allowedRoles={['customer_service']}>
-            <CourseAlerts />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/customer-service/alerts"
+          element={
+            <ProtectedRoute allowedRoles={['customer_service']}>
+              <CourseAlerts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer-service/course-details"
+          element={
+            <ProtectedRoute allowedRoles={['customer_service']}>
+              <CourseDetails />
+            </ProtectedRoute>
+          }
+        />
 
       {/* Trainer Routes */}
       <Route
@@ -147,6 +157,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['trainer']}>
             <MyTimes />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trainer/achievements"
+        element={
+          <ProtectedRoute allowedRoles={['trainer']}>
+            <Achievements />
           </ProtectedRoute>
         }
       />
@@ -190,7 +208,7 @@ const AppRoutes = () => {
         path="/courses/:id"
         element={
           <ProtectedRoute allowedRoles={['customer_service', 'trainer', 'finance']}>
-            <CourseDetails />
+            <CourseDetailsShared />
           </ProtectedRoute>
         }
       />

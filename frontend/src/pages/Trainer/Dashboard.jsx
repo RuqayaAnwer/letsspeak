@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, BookOpen, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, BookOpen, CheckCircle, Trophy, Target, TrendingUp } from 'lucide-react';
 import api from '../../api/axios';
 import { formatDateShort } from '../../utils/dateFormat';
 
@@ -16,13 +16,15 @@ const formatTime12Hour = (time24) => {
 
 const Dashboard = () => {
   const [todayLectures, setTodayLectures] = useState([]);
-  const [nextWeekLectures, setNextWeekLectures] = useState([]);
+  const [next7DaysLectures, setNext7DaysLectures] = useState([]);
+  const [achievements, setAchievements] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchTodayLectures();
-    fetchNextWeekLectures();
+    fetchNext7DaysLectures();
+    fetchAchievements();
   }, []);
 
   const fetchTodayLectures = async () => {
@@ -59,18 +61,32 @@ const Dashboard = () => {
     }
   };
 
-  const fetchNextWeekLectures = async () => {
+  const fetchNext7DaysLectures = async () => {
     try {
       const response = await api.get('/trainer/next-week-lectures');
       if (response?.data?.success) {
-        setNextWeekLectures(response.data.data || []);
+        setNext7DaysLectures(response.data.data || []);
       } else {
-        setNextWeekLectures([]);
+        setNext7DaysLectures([]);
       }
     } catch (error) {
-      console.error('Error fetching next week lectures:', error);
+      console.error('Error fetching next 7 days lectures:', error);
       console.error('Error response:', error.response?.data);
-      setNextWeekLectures([]);
+      setNext7DaysLectures([]);
+    }
+  };
+
+  const fetchAchievements = async () => {
+    try {
+      const response = await api.get('/trainer/achievements');
+      if (response?.data?.success) {
+        setAchievements(response.data.data);
+      } else {
+        setAchievements(null);
+      }
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
+      setAchievements(null);
     }
   };
 
@@ -127,6 +143,143 @@ const Dashboard = () => {
           عرض جميع الكورسات ←
         </Link>
       </div>
+
+      {/* Achievements Section */}
+      {achievements && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+          <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
+              <h2 className="text-sm sm:text-xl font-semibold text-gray-800 dark:text-white">إنجازاتي</h2>
+            </div>
+          </div>
+          <div className="p-3 sm:p-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+              {/* Completed Lectures */}
+              <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-3 sm:p-4 rounded-lg border border-green-200 dark:border-green-700">
+                <div className="flex items-center justify-between mb-2">
+                  <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
+                  <span className="text-xs sm:text-sm text-green-600 dark:text-green-400 font-medium">المكتملة</span>
+                </div>
+                <p className="text-lg sm:text-2xl font-bold text-gray-800 dark:text-white">
+                  {achievements.completed_lectures}
+                </p>
+                <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 mt-1">محاضرة مكتملة</p>
+              </div>
+
+              {/* Courses Count */}
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-3 sm:p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                <div className="flex items-center justify-between mb-2">
+                  <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 font-medium">الكورسات</span>
+                </div>
+                <p className="text-lg sm:text-2xl font-bold text-gray-800 dark:text-white">
+                  {achievements.courses_count}
+                </p>
+                <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 mt-1">كورس هذا الشهر</p>
+              </div>
+
+              {/* Remaining Lectures */}
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-3 sm:p-4 rounded-lg border border-orange-200 dark:border-orange-700">
+                <div className="flex items-center justify-between mb-2">
+                  <Target className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" />
+                  <span className="text-xs sm:text-sm text-orange-600 dark:text-orange-400 font-medium">المتبقية</span>
+                </div>
+                <p className="text-lg sm:text-2xl font-bold text-gray-800 dark:text-white">
+                  {achievements.remaining_lectures}
+                </p>
+                <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 mt-1">محاضرة متبقية</p>
+              </div>
+            </div>
+
+            {/* Bonus Progress Bars */}
+            {achievements.bonuses?.volume?.levels && (
+              <div className="space-y-4">
+                {/* Bonus 60 Lectures */}
+                {achievements.bonuses.volume.levels[0] && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
+                        <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          مكافأة {achievements.bonuses.volume.levels[0].label}
+                        </span>
+                      </div>
+                      <div className="text-left">
+                        <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-white">
+                          {achievements.bonuses.volume.levels[0].current}
+                        </span>
+                        <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400"> / {achievements.bonuses.volume.levels[0].target}</span>
+                        {achievements.bonuses.volume.levels[0].remaining > 0 && (
+                          <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 block">
+                            متبقي: {achievements.bonuses.volume.levels[0].remaining}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 sm:h-4 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          achievements.bonuses.volume.levels[0].achieved
+                            ? 'bg-gradient-to-r from-green-500 to-green-600'
+                            : 'bg-gradient-to-r from-purple-500 to-purple-600'
+                        }`}
+                        style={{ width: `${Math.min(100, achievements.bonuses.volume.levels[0].progress_percentage || 0)}%` }}
+                      ></div>
+                    </div>
+                    {achievements.bonuses.volume.levels[0].achieved && (
+                      <p className="text-[10px] sm:text-xs text-green-600 dark:text-green-400 mt-1 text-center">
+                        ✓ تم تحقيق الهدف!
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Bonus 80 Lectures */}
+                {achievements.bonuses.volume.levels[1] && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600 dark:text-yellow-400" />
+                        <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                          مكافأة {achievements.bonuses.volume.levels[1].label}
+                        </span>
+                      </div>
+                      <div className="text-left">
+                        <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-white">
+                          {achievements.bonuses.volume.levels[1].current}
+                        </span>
+                        <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400"> / {achievements.bonuses.volume.levels[1].target}</span>
+                        {achievements.bonuses.volume.levels[1].remaining > 0 && (
+                          <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 block">
+                            متبقي: {achievements.bonuses.volume.levels[1].remaining}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 sm:h-4 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          achievements.bonuses.volume.levels[1].achieved
+                            ? 'bg-gradient-to-r from-yellow-500 to-yellow-600'
+                            : 'bg-gradient-to-r from-yellow-400 to-yellow-500'
+                        }`}
+                        style={{ width: `${Math.min(100, achievements.bonuses.volume.levels[1].progress_percentage || 0)}%` }}
+                      ></div>
+                    </div>
+                    {achievements.bonuses.volume.levels[1].achieved && (
+                      <p className="text-[10px] sm:text-xs text-yellow-600 dark:text-yellow-400 mt-1 text-center">
+                        ✓ تم تحقيق الهدف!
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Today's Lectures */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
@@ -225,21 +378,21 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Next Week's Lectures */}
+      {/* Next 7 Days Lectures */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
         <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-sm sm:text-xl font-semibold text-gray-800 dark:text-white">محاضرات الأسبوع القادم</h2>
+          <h2 className="text-sm sm:text-xl font-semibold text-gray-800 dark:text-white">محاضرات الـ 7 أيام القادمة</h2>
         </div>
-        {nextWeekLectures.length === 0 ? (
+        {next7DaysLectures.length === 0 ? (
           <div className="text-center py-8 sm:py-12">
             <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-gray-400" />
-            <p className="text-xs sm:text-base text-gray-500 dark:text-gray-400">لا توجد محاضرات للأسبوع القادم</p>
+            <p className="text-xs sm:text-base text-gray-500 dark:text-gray-400">لا توجد محاضرات للـ 7 أيام القادمة</p>
           </div>
         ) : (
           <>
             {/* Mobile Cards View */}
             <div className="md:hidden space-y-2 p-2">
-              {nextWeekLectures.map((lecture) => (
+              {next7DaysLectures.map((lecture) => (
                 <div
                   key={lecture.id}
                   className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50"
@@ -298,7 +451,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {nextWeekLectures.map((lecture) => (
+                  {next7DaysLectures.map((lecture) => (
                     <tr key={lecture.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                       <td className="px-4 py-3 text-sm text-gray-800 dark:text-white">
                         {formatDateShort(lecture.date)}

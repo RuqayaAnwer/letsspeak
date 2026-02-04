@@ -58,6 +58,7 @@ const Layout = ({ children }) => {
           { path: '/customer-service/students', label: 'الطلاب', icon: '👥' },
           { path: '/customer-service/trainers', label: 'المدربين', icon: '🎓' },
           { path: '/courses', label: 'الكورسات', icon: '📚' },
+          { path: '/customer-service/course-details', label: 'تفاصيل الكورسات', icon: '📋' },
           { path: '/customer-service/alerts', label: 'التنبيهات', icon: '⚠️' },
           { path: '/customer-service/packages', label: 'الباقات', icon: '📦' },
           { path: '/customer-service/find-time', label: 'أوقات التدريب', icon: '🕐' },
@@ -66,6 +67,7 @@ const Layout = ({ children }) => {
       case 'trainer':
         return [
           { path: '/trainer', label: 'لوحة التحكم', icon: '📊' },
+          { path: '/trainer/achievements', label: 'إنجازاتي', icon: '🏆' },
           { path: '/courses', label: 'الكورسات', icon: '📚' },
           { path: '/trainer/my-times', label: 'أوقاتي', icon: '🕐' },
         ];

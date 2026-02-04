@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Plus, AlertTriangle, Info, X, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../api/axios';
+import { formatCurrency } from '../../utils/currencyFormat';
 
 // Updated: 2025-12-21 - Courses separated by status with smaller fonts
 const Courses = () => {
@@ -442,7 +443,7 @@ const Courses = () => {
                           course.students.map((student, index) => (
                             <div key={student.id} className="flex items-center gap-1">
                               <span className="text-sm text-gray-800 dark:text-white">{student.name}</span>
-                              {!isFinance && !isTrainer && (
+                              {!isTrainer && (
                                 <button
                                   onClick={() => fetchStudentPayments(student.id, student.name, course.id, course)}
                                   className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
@@ -462,7 +463,7 @@ const Courses = () => {
                                  ? course.students.map(s => s.name).join(', ') 
                                  : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
                             </span>
-                            {getStudentId(course) && !isFinance && !isTrainer && (
+                            {getStudentId(course) && !isTrainer && (
                               <button
                                 onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id, course)}
                                 className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
@@ -597,7 +598,7 @@ const Courses = () => {
                           course.students.map((student, index) => (
                             <div key={student.id} className="flex items-center gap-1">
                               <span>{student.name}</span>
-                              {!isFinance && !isTrainer && (
+                              {!isTrainer && (
                                 <button
                                   onClick={() => fetchStudentPayments(student.id, student.name, course.id, course)}
                                   className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
@@ -617,7 +618,7 @@ const Courses = () => {
                                  ? course.students.map(s => s.name).join(', ') 
                                  : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
                             </span>
-                            {getStudentId(course) && !isFinance && !isTrainer && (
+                            {getStudentId(course) && !isTrainer && (
                               <button
                                 onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id, course)}
                                 className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
@@ -788,7 +789,7 @@ const Courses = () => {
                             <>
                               <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
                                 <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">ملخص الدفعات</h4>
-                                <div className="grid grid-cols-2 gap-2 sm:gap-3 text-[10px] sm:text-xs">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 text-[10px] sm:text-xs">
                                   <div>
                                     <p className="text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
                                     <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white">
@@ -798,9 +799,24 @@ const Courses = () => {
                                   <div>
                                     <p className="text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
                                     <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
-                                      {studentData.payments
+                                      {formatCurrency(studentData.payments
                                         .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
-                                        .toLocaleString('ar-EG')} د.ع
+                                        )}
+                                    </p>
+                                  </div>
+                                  <div className="col-span-2 sm:col-span-1">
+                                    <p className="text-gray-500 dark:text-gray-400">طريقة الدفع</p>
+                                    <p className="text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-400">
+                                      {(() => {
+                                        const method = studentPaymentsModal.course?.payment_method || studentData.payments[0]?.payment_method || studentData.payments[0]?.course?.payment_method;
+                                        if (!method) return '-';
+                                        const methods = {
+                                          'zain_cash': 'زين كاش',
+                                          'qi_card': 'بطاقة كي',
+                                          'delivery': 'توصيل',
+                                        };
+                                        return methods[method] || method;
+                                      })()}
                                     </p>
                                   </div>
                                 </div>
@@ -815,6 +831,7 @@ const Courses = () => {
                                       <tr>
                                         <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">المبلغ</th>
                                         <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ الدفع</th>
+                                        <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">طريقة الدفع</th>
                                         <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
                                         <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">ملاحظات</th>
                                       </tr>
@@ -849,10 +866,22 @@ const Courses = () => {
                                         return (
                                           <tr key={payment.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                             <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-800 dark:text-white text-[9px] sm:text-[10px] font-medium whitespace-nowrap">
-                                              {parseFloat(payment.amount || 0).toLocaleString('ar-EG')} د.ع
+                                              {formatCurrency(payment.amount || 0)}
                                             </td>
                                             <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-600 dark:text-gray-400 text-[9px] sm:text-[10px] whitespace-nowrap">
                                               {formattedDate}
+                                            </td>
+                                            <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-600 dark:text-gray-400 text-[9px] sm:text-[10px] whitespace-nowrap">
+                                              {(() => {
+                                                const method = payment.payment_method || payment.course?.payment_method || studentPaymentsModal.course?.payment_method;
+                                                if (!method) return '-';
+                                                const methods = {
+                                                  'zain_cash': 'زين كاش',
+                                                  'qi_card': 'بطاقة كي',
+                                                  'delivery': 'توصيل',
+                                                };
+                                                return methods[method] || method;
+                                              })()}
                                             </td>
                                             <td className="px-1.5 sm:px-3 py-1 sm:py-2">
                                               <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[9px] font-medium ${
@@ -908,7 +937,7 @@ const Courses = () => {
                                     <>
                                       <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
                                         <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">ملخص الدفعات</h4>
-                                        <div className="grid grid-cols-2 gap-2 sm:gap-3 text-[10px] sm:text-xs">
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 text-[10px] sm:text-xs">
                                           <div>
                                             <p className="text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
                                             <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white">
@@ -918,9 +947,24 @@ const Courses = () => {
                                           <div>
                                             <p className="text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
                                             <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
-                                              {studentData.payments
+                                              {formatCurrency(studentData.payments
                                                 .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
-                                                .toLocaleString('ar-EG')} د.ع
+                                                )}
+                                            </p>
+                                          </div>
+                                          <div className="col-span-2 sm:col-span-1">
+                                            <p className="text-gray-500 dark:text-gray-400">طريقة الدفع</p>
+                                            <p className="text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-400">
+                                              {(() => {
+                                                const method = studentPaymentsModal.course?.payment_method || studentData.payments[0]?.payment_method || studentData.payments[0]?.course?.payment_method;
+                                                if (!method) return '-';
+                                                const methods = {
+                                                  'zain_cash': 'زين كاش',
+                                                  'qi_card': 'بطاقة كي',
+                                                  'delivery': 'توصيل',
+                                                };
+                                                return methods[method] || method;
+                                              })()}
                                             </p>
                                           </div>
                                         </div>
@@ -935,6 +979,7 @@ const Courses = () => {
                                               <tr>
                                                 <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">المبلغ</th>
                                                 <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ الدفع</th>
+                                                <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">طريقة الدفع</th>
                                                 <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
                                                 <th className="px-1.5 sm:px-3 py-1 sm:py-2 text-right text-[9px] sm:text-[10px] font-semibold text-gray-700 dark:text-gray-300">ملاحظات</th>
                                               </tr>
@@ -969,10 +1014,22 @@ const Courses = () => {
                                                 return (
                                                   <tr key={payment.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                                     <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-800 dark:text-white text-[9px] sm:text-[10px] font-medium whitespace-nowrap">
-                                                      {parseFloat(payment.amount || 0).toLocaleString('ar-EG')} د.ع
+                                                      {formatCurrency(payment.amount || 0)}
                                                     </td>
                                                     <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-600 dark:text-gray-400 text-[9px] sm:text-[10px] whitespace-nowrap">
                                                       {formattedDate}
+                                                    </td>
+                                                    <td className="px-1.5 sm:px-3 py-1 sm:py-2 text-gray-600 dark:text-gray-400 text-[9px] sm:text-[10px] whitespace-nowrap">
+                                                      {(() => {
+                                                        const method = payment.payment_method || payment.course?.payment_method || studentPaymentsModal.course?.payment_method;
+                                                        if (!method) return '-';
+                                                        const methods = {
+                                                          'zain_cash': 'زين كاش',
+                                                          'qi_card': 'بطاقة كي',
+                                                          'delivery': 'توصيل',
+                                                        };
+                                                        return methods[method] || method;
+                                                      })()}
                                                     </td>
                                                     <td className="px-1.5 sm:px-3 py-1 sm:py-2">
                                                       <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[9px] font-medium ${
@@ -1017,7 +1074,7 @@ const Courses = () => {
                           {/* Payments Summary */}
                           <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2.5 sm:p-4">
                             <h3 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">ملخص الدفعات</h3>
-                            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-[10px] sm:text-xs">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-[10px] sm:text-xs">
                               <div>
                                 <p className="text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
                                 <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white">
@@ -1027,19 +1084,34 @@ const Courses = () => {
                               <div>
                                 <p className="text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
                                 <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
-                                  {studentPaymentsModal.payments
+                                  {formatCurrency(studentPaymentsModal.payments
                                     .filter(p => p.status === 'paid' || p.status === 'completed')
                                     .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
-                                    .toLocaleString('ar-EG')} د.ع
+                                        )}
                                 </p>
                               </div>
                               <div>
                                 <p className="text-gray-500 dark:text-gray-400">المبلغ المتبقي</p>
                                 <p className="text-sm sm:text-lg font-bold text-orange-600 dark:text-orange-400">
-                                  {studentPaymentsModal.payments
+                                  {formatCurrency(studentPaymentsModal.payments
                                     .filter(p => p.status === 'pending' || p.status === 'unpaid' || p.status === 'partial')
                                     .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
-                                    .toLocaleString('ar-EG')} د.ع
+                                        )}
+                                </p>
+                              </div>
+                              <div className="col-span-2 sm:col-span-1">
+                                <p className="text-gray-500 dark:text-gray-400">طريقة الدفع</p>
+                                <p className="text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-400">
+                                  {(() => {
+                                    const method = studentPaymentsModal.course?.payment_method || studentPaymentsModal.payments[0]?.payment_method || studentPaymentsModal.payments[0]?.course?.payment_method;
+                                    if (!method) return '-';
+                                    const methods = {
+                                      'zain_cash': 'زين كاش',
+                                      'qi_card': 'بطاقة كي',
+                                      'delivery': 'توصيل',
+                                    };
+                                    return methods[method] || method;
+                                  })()}
                                 </p>
                               </div>
                             </div>

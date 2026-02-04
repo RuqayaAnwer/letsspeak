@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
+import { formatCurrency } from '../../utils/currencyFormat';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import {
@@ -149,9 +150,6 @@ const TrainerPayroll = () => {
     }
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US').format(amount || 0) + ' د.ع';
-  };
 
   const getVolumeBonus = (lectures) => {
     if (lectures >= 80) return { amount: 80000, label: 'مكافأة 80 محاضرة' };

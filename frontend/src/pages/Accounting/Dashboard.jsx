@@ -5,6 +5,7 @@ import StatCard from '../../components/StatCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { DollarSign, CreditCard, Users, CheckCircle, BookOpen, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDateSimple } from '../../utils/dateFormat';
+import { formatCurrency } from '../../utils/currencyFormat';
 
 const AccountingDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -61,9 +62,6 @@ const AccountingDashboard = () => {
     }
   };
 
-  const formatCurrency = (amount) => {
-    return `${Number(amount || 0).toLocaleString('en-US')} د.ع`;
-  };
 
   const getStatusLabel = (status) => {
     const labels = { completed: 'مكتمل', pending: 'معلق' };

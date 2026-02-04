@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, HelpCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../api/axios';
+import { formatCurrency } from '../../utils/currencyFormat';
 
 const CourseAlerts = () => {
   const [courses, setCourses] = useState([]);
@@ -516,19 +517,19 @@ const CourseAlerts = () => {
                       <div className="text-center">
                         <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
                         <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
-                          {studentPaymentsModal.payments
-                            .filter(p => p.status === 'paid' || p.status === 'completed')
-                            .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
-                            .toLocaleString('ar-EG')} د.ع
+                          {formatCurrency(studentPaymentsModal.payments
+                              .filter(p => p.status === 'paid' || p.status === 'completed')
+                              .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                              )}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المبلغ المتبقي</p>
                         <p className="text-sm sm:text-lg font-bold text-orange-600 dark:text-orange-400">
-                          {studentPaymentsModal.payments
+                          {formatCurrency(studentPaymentsModal.payments
                             .filter(p => p.status === 'pending' || p.status === 'unpaid' || p.status === 'partial')
                             .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
-                            .toLocaleString('ar-EG')} د.ع
+                            )}
                         </p>
                       </div>
                     </div>
@@ -583,7 +584,7 @@ const CourseAlerts = () => {
                                 <div className="col-span-2 flex items-center gap-1">
                                   <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400">المبلغ:</span>
                                   <span className="text-[10px] font-bold text-gray-800 dark:text-white">
-                                    {parseFloat(payment.amount || 0).toLocaleString('ar-EG')} د.ع
+                                    {formatCurrency(payment.amount || 0)}
                                   </span>
                                 </div>
                                 <div className="col-span-2 flex items-center gap-1">
@@ -645,7 +646,7 @@ const CourseAlerts = () => {
                                 <tr key={payment.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                   <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-gray-800 dark:text-white text-[10px]">{index + 1}</td>
                                   <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-gray-800 dark:text-white text-[10px] font-medium">
-                                    {parseFloat(payment.amount || 0).toLocaleString('ar-EG')} د.ع
+                                    {formatCurrency(payment.amount || 0)}
                                   </td>
                                   <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-gray-600 dark:text-gray-400 text-[10px]">
                                     {formattedDate}
