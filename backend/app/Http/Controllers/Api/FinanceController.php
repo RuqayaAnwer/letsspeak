@@ -97,8 +97,8 @@ class FinanceController extends Controller
          * All renewal bonus calculations now use this tiered system.
          */
 
-        // Get all trainers
-        $trainers = Trainer::with('user')->get();
+        // Get ALL trainers - must loop through all trainers
+        $trainers = Trainer::all();
         
         \Log::info('Trainer Payroll Calculation', [
             'month' => $month,
@@ -107,25 +107,24 @@ class FinanceController extends Controller
         ]);
         
         // Calculate start and end dates for the month
-        $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
-        $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();
+        $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->format('Y-m-d');
+        $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d');
 
         $payrolls = [];
         $renewalsData = []; // To track renewals for competition bonus
 
+        // Loop through ALL trainers
         foreach ($trainers as $trainer) {
             \Log::info('Processing trainer', [
                 'trainer_id' => $trainer->id,
                 'trainer_name' => $trainer->name,
             ]);
-            // Get completed lectures for this trainer in the month
-            // A lecture is considered completed and payable if:
-            // 1. trainer_payment_status = 'paid', AND
-            // 2. (is_completed = true OR attendance = 'present'/'partially'/'absent' OR student_attendance contains 'present'/'absent')
             
-            // Use date range for SQLite compatibility
-            $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->format('Y-m-d');
-            $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d');
+            // Get completed lectures for this trainer in the month
+            // A lecture is considered completed and payable ONLY if:
+            // 1. trainer_payment_status = 'paid', AND
+            // 2. (is_completed = true OR attendance = 'present'/'partially'/'absent')
+            // NOTE: student_attendance column does NOT exist - COMPLETELY REMOVED
             
             $completedLectures = Lecture::whereHas('course', function ($query) use ($trainer) {
                 $query->where('trainer_id', $trainer->id);
@@ -134,32 +133,9 @@ class FinanceController extends Controller
             ->where('trainer_payment_status', 'paid') // Only count paid lectures
             ->where(function ($query) {
                 $query->where('is_completed', true)
-                      ->orWhereIn('attendance', ['present', 'partially', 'absent'])
-                      ->orWhere(function ($q) {
-                          // Check student_attendance for dual courses
-                          // If student_attendance is not empty and contains attendance data
-                          $q->whereNotNull('student_attendance')
-                            ->where('student_attendance', '!=', '[]')
-                            ->where('student_attendance', '!=', '{}');
-                      });
+                      ->orWhereIn('attendance', ['present', 'partially', 'absent']);
             })
-            ->get()
-            ->filter(function ($lecture) {
-                // Additional check for dual courses with student_attendance
-                if ($lecture->student_attendance && is_array($lecture->student_attendance)) {
-                    foreach ($lecture->student_attendance as $studentData) {
-                        if (is_array($studentData)) {
-                            $attendance = $studentData['attendance'] ?? null;
-                            if ($attendance === 'present' || $attendance === 'absent') {
-                                return true; // At least one student has attendance set
-                            }
-                        }
-                    }
-                }
-                // For single courses, check is_completed or attendance
-                return $lecture->is_completed || in_array($lecture->attendance, ['present', 'partially', 'absent']);
-            })
-            ->count();
+            ->count(); // Use count() directly for better performance
 
             \Log::info('Trainer completed lectures', [
                 'trainer_id' => $trainer->id,
@@ -228,23 +204,38 @@ class FinanceController extends Controller
             // Competition bonus will be calculated after we know all renewals
             $trainerCompetitionBonus = 0;
 
-            // Get bonus_deduction from existing payroll record if exists
-            $existingPayroll = TrainerPayroll::where('trainer_id', $trainer->id)
-                ->where('month', $month)
-                ->where('year', $year)
-                ->first();
+            // Use firstOrCreate to ensure payroll record exists for all trainers (even with 0 balance)
+            // This guarantees all trainers appear in the list
+            $existingPayroll = TrainerPayroll::firstOrCreate(
+                [
+                    'trainer_id' => $trainer->id,
+                    'month' => $month,
+                    'year' => $year,
+                ],
+                [
+                    'lecture_rate' => $lectureRate,
+                    'renewal_bonus_rate' => 0,
+                    'completed_lectures' => 0,
+                    'base_pay' => 0,
+                    'renewals_count' => 0,
+                    'renewal_total' => 0,
+                    'volume_bonus' => 0,
+                    'competition_bonus' => 0,
+                    'status' => 'draft',
+                ]
+            );
             
-            $bonusDeduction = $existingPayroll ? ($existingPayroll->bonus_deduction ?? 0) : 0;
-            $bonusDeductionNotes = $existingPayroll ? ($existingPayroll->bonus_deduction_notes ?? null) : null;
+            $bonusDeduction = $existingPayroll->bonus_deduction ?? 0;
+            $bonusDeductionNotes = $existingPayroll->bonus_deduction_notes ?? null;
             // استخدام طريقة التحويل من المدرب (ثابتة لكل الأشهر)
-            $paymentMethod = $trainer->payment_method ?? ($existingPayroll ? ($existingPayroll->payment_method ?? null) : null);
-            $paymentAccountNumber = $trainer->payment_account_number ?? ($existingPayroll ? ($existingPayroll->payment_account_number ?? null) : null);
-            $paymentPin = $existingPayroll ? ($existingPayroll->payment_pin ?? null) : null;
-            $status = $existingPayroll ? ($existingPayroll->status ?? 'draft') : 'draft';
-            $paidAt = $existingPayroll ? ($existingPayroll->paid_at ? $existingPayroll->paid_at->format('Y-m-d H:i:s') : null) : null;
+            $paymentMethod = $trainer->payment_method ?? ($existingPayroll->payment_method ?? null);
+            $paymentAccountNumber = $trainer->payment_account_number ?? ($existingPayroll->payment_account_number ?? null);
+            $paymentPin = $existingPayroll->payment_pin ?? null;
+            $status = $existingPayroll->status ?? 'draft';
+            $paidAt = $existingPayroll->paid_at ? $existingPayroll->paid_at->format('Y-m-d H:i:s') : null;
             
             // Get selected bonus type
-            $selectedBonusType = $existingPayroll ? ($existingPayroll->selected_bonus_type ?? null) : null;
+            $selectedBonusType = $existingPayroll->selected_bonus_type ?? null;
             
             // المكافآت تلقائية: تطبق تلقائياً إذا استحق المدرب
             // مكافأة التجديد: تلقائية إذا كان هناك تجديدات

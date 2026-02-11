@@ -1,6 +1,36 @@
+import { Component } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+
+// تشخيص: Error Boundary يسجل أي خطأ في الـ render إلى Console
+class DiagnosticErrorBoundary extends Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.group('%c[تشخيص] خطأ أثناء عرض المكوّن — الشاشة السوداء قد تكون بسبب هذا', 'color: #dc2626; font-weight: bold; font-size: 14px;');
+    console.error('الخطأ:', error);
+    console.error('الرسالة:', error.message);
+    console.error('المكوّن الذي توقف:', errorInfo.componentStack);
+    console.error('كامل errorInfo:', errorInfo);
+    console.groupEnd();
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded-lg">
+          <p className="font-bold">حدث خطأ في الصفحة. افتح Console (F12) لرؤية التفاصيل.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Pages
 import Login from './pages/Login';
@@ -182,7 +212,9 @@ const AppRoutes = () => {
         path="/finance/payments"
         element={
           <ProtectedRoute allowedRoles={['finance']}>
-            <Payments />
+            <DiagnosticErrorBoundary>
+              <Payments />
+            </DiagnosticErrorBoundary>
           </ProtectedRoute>
         }
       />

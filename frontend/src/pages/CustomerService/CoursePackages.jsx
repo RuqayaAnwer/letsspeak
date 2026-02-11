@@ -4,6 +4,7 @@ import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { Plus, Edit2, Trash2, Package } from 'lucide-react';
+import { formatCurrency } from '../../utils/currencyFormat';
 
 const CoursePackages = () => {
   const [packages, setPackages] = useState([]);

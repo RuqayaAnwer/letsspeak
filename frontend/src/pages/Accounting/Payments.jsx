@@ -65,6 +65,13 @@ const Payments = () => {
   const [showAllSinglePayments, setShowAllSinglePayments] = useState(false);
   const [showAllDualPayments, setShowAllDualPayments] = useState(false);
 
+  // تشخيص: تسجيل عند فتح صفحة المدفوعات
+  useEffect(() => {
+    console.group('[Payments] تشخيص — صفحة المدفوعات تم تحميلها');
+    console.log('سيتم جلب: payments, students, courses, course-packages, dual courses');
+    console.groupEnd();
+  }, []);
+
   useEffect(() => {
     fetchPayments();
     fetchStudentsAndCourses();
@@ -144,8 +151,13 @@ const Payments = () => {
       setPayments(sortedPayments);
       console.log('Payments fetched:', sortedPayments.length);
     } catch (err) {
-      console.error('Error fetching payments:', err);
-      console.error('Error details:', err.response?.data || err.message);
+      console.group('%c[Payments] فشل جلب المدفوعات', 'color: #dc2626; font-weight: bold;');
+      console.error('الرابط: GET /api/payments');
+      console.error('الحالة:', err.response?.status, err.response?.statusText);
+      console.error('الرسالة:', err.message);
+      console.error('رد السيرفر:', err.response?.data);
+      console.error('كامل:', err);
+      console.groupEnd();
       setPayments([]); // Set empty array on error
       setError(err.response?.data?.message || err.message || 'حدث خطأ أثناء جلب البيانات');
     } finally {
@@ -164,7 +176,12 @@ const Payments = () => {
       setCourses(coursesRes.data.data || coursesRes.data || []);
       setPackages(packagesRes.data.data || packagesRes.data || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.group('%c[Payments] فشل جلب الطلاب/الكورسات/الباقات', 'color: #dc2626; font-weight: bold;');
+      console.error('الروابط: GET /students, /courses, /course-packages');
+      console.error('الحالة:', error.response?.status, error.response?.statusText);
+      console.error('الرسالة:', error.message);
+      console.error('كامل:', error);
+      console.groupEnd();
     }
   };
 
@@ -208,7 +225,12 @@ const Payments = () => {
 
       setDualCoursesData(dualCoursesWithStudents);
     } catch (error) {
-      console.error('Error fetching dual courses:', error);
+      console.group('%c[Payments] فشل جلب الكورسات المزدوجة', 'color: #dc2626; font-weight: bold;');
+      console.error('الرابط: GET /api/courses (صفحات متعددة)');
+      console.error('الحالة:', error.response?.status, error.response?.statusText);
+      console.error('الرسالة:', error.message);
+      console.error('كامل:', error);
+      console.groupEnd();
     }
   };
 
@@ -1619,7 +1641,7 @@ const Payments = () => {
                                     <div className="flex items-center gap-1">
                                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">طريقة الدفع:</span>
                                       <span className="text-sm text-gray-800 dark:text-white">
-                                        {getPaymentMethodLabel(payment.payment_method || payment.course?.payment_method)}
+                                        {getPaymentMethodLabel(row.payment?.payment_method || row.course?.payment_method)}
                                       </span>
                                     </div>
                                   </div>

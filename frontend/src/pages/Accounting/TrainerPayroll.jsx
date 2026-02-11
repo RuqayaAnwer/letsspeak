@@ -94,45 +94,66 @@ const TrainerPayroll = () => {
 
   const fetchPayrollData = async () => {
     setLoading(true);
+    // Isolate payroll fetch in its own try/catch to prevent other API failures from affecting it
     try {
+      console.log('Fetching payroll data for:', { month: selectedMonth, year: selectedYear });
+      
       const response = await api.get('/trainer-payroll', {
         params: { month: selectedMonth, year: selectedYear },
       });
       
-      console.log('Payroll API Response:', response.data);
+      console.log('Full Payroll API Response:', response);
+      console.log('Response data:', response.data);
+      console.log('Response data.data:', response.data?.data);
+      console.log('Response data.data.payrolls:', response.data?.data?.payrolls);
       
-      // Handle response structure
-      if (response.data.success && response.data.data) {
-        setPayrollData(response.data.data);
-      } else       if (response.data.data) {
-        const payrollsData = response.data.data.payrolls || response.data.data;
-        console.log('Payrolls data received:', payrollsData);
-        console.log('Sample payroll with volume bonus:', Array.isArray(payrollsData) ? payrollsData.find(p => p.selected_volume_bonus) : null);
-        setPayrollData(response.data.data);
-      } else if (response.data.payrolls) {
-        const payrollsData = response.data.payrolls;
-        console.log('Payrolls data received:', payrollsData);
-        console.log('Sample payroll with volume bonus:', Array.isArray(payrollsData) ? payrollsData.find(p => p.selected_volume_bonus) : null);
-        setPayrollData(response.data);
-      } else {
-        // Default empty data
-        setPayrollData({
-          month: selectedMonth,
-          year: selectedYear,
-          payrolls: [],
-          competition_winners: [],
-          summary: {
-            total_trainers: 0,
-            total_lectures: 0,
-            total_renewals: 0,
-            total_payout: 0,
-          },
+      // CRITICAL: Backend returns: { success: true, data: { payrolls: [...], summary: {...}, competition_winners: [...] } }
+      // We MUST read from response.data.data.payrolls
+      const payrollsArray = response.data?.data?.payrolls || response.data?.payrolls || [];
+      const summaryData = response.data?.data?.summary || response.data?.summary || {};
+      const competitionWinnersArray = response.data?.data?.competition_winners || response.data?.competition_winners || [];
+      
+      console.log('Extracted payrolls:', payrollsArray);
+      console.log('Extracted summary:', summaryData);
+      console.log('Extracted competition winners:', competitionWinnersArray);
+      console.log('Number of payrolls:', payrollsArray.length);
+      
+      // Ensure data structure is correct - always set payrollData even if empty
+      const payrollDataToSet = {
+        month: response.data?.data?.month || response.data?.month || selectedMonth,
+        year: response.data?.data?.year || response.data?.year || selectedYear,
+        payrolls: Array.isArray(payrollsArray) ? payrollsArray : [],
+        competition_winners: Array.isArray(competitionWinnersArray) ? competitionWinnersArray : [],
+        summary: {
+          total_trainers: summaryData.total_trainers || 0,
+          total_lectures: summaryData.total_lectures || 0,
+          total_renewals: summaryData.total_renewals || 0,
+          total_payout: summaryData.total_payout || 0,
+        },
+      };
+      
+      console.log('Setting payroll data:', payrollDataToSet);
+      setPayrollData(payrollDataToSet);
+      
+      // Log first payroll item structure for debugging
+      if (payrollsArray.length > 0) {
+        console.log('First payroll item structure:', payrollsArray[0]);
+        console.log('First payroll fields:', {
+          trainer_id: payrollsArray[0].trainer_id,
+          trainer_name: payrollsArray[0].trainer_name,
+          name: payrollsArray[0].name,
+          total_pay: payrollsArray[0].total_pay,
+          completed_lectures: payrollsArray[0].completed_lectures,
+          status: payrollsArray[0].status,
         });
       }
     } catch (error) {
-      console.error('Error fetching payroll data:', error);
+      // Isolated error handling - don't let other API failures affect payroll display
+      console.error('Error fetching payroll data (isolated):', error);
       console.error('Error response:', error.response?.data);
-      // إذا لم يكن الـ API موجوداً، نستخدم بيانات افتراضية
+      console.error('Error status:', error.response?.status);
+      
+      // Set empty data structure to prevent crashes
       setPayrollData({
         month: selectedMonth,
         year: selectedYear,
@@ -150,6 +171,11 @@ const TrainerPayroll = () => {
     }
   };
 
+
+  // Helper function to safely get trainer name (handles both 'trainer_name' and 'name')
+  const getTrainerName = (payroll) => {
+    return payroll?.trainer_name || payroll?.name || 'غير محدد';
+  };
 
   const getVolumeBonus = (lectures) => {
     if (lectures >= 80) return { amount: 80000, label: 'مكافأة 80 محاضرة' };
@@ -488,7 +514,7 @@ const TrainerPayroll = () => {
           <div class="payroll-container">
             <div class="header">
               <h1>كشف راتب المدرب</h1>
-              <h2>${payroll.trainer_name || 'غير محدد'}</h2>
+              <h2>${getTrainerName(payroll)}</h2>
               <p>شهر ${monthName} ${selectedYear}</p>
             </div>
             
@@ -593,7 +619,7 @@ const TrainerPayroll = () => {
         }
         
         // تحميل PDF
-        const fileName = `راتب_${cleanFileName(payroll.trainer_name || 'غير_محدد')}_${monthName}_${selectedYear}.pdf`;
+        const fileName = `راتب_${cleanFileName(getTrainerName(payroll))}_${monthName}_${selectedYear}.pdf`;
         pdf.save(fileName);
         
         // إزالة العنصر المخفي
@@ -889,7 +915,7 @@ const TrainerPayroll = () => {
                     
                     <div className="col-span-2 flex items-center gap-1">
                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">المدرب:</span>
-                      <span className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1">{payroll.trainer_name}</span>
+                      <span className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1">{getTrainerName(payroll)}</span>
                     </div>
                     
                     <div className="flex items-center gap-1">
@@ -916,7 +942,7 @@ const TrainerPayroll = () => {
                               setPaymentModal({
                                 open: true,
                                 trainerId: payroll.trainer_id,
-                                trainerName: payroll.trainer_name,
+                                trainerName: getTrainerName(payroll),
                                 paymentMethod: payroll.payment_method || '',
                                 accountNumber: payroll.payment_account_number || '',
                                 paymentPin: payroll.payment_pin || '',
@@ -1033,7 +1059,7 @@ const TrainerPayroll = () => {
                           e.stopPropagation();
                           openPaymentStatusModal(
                             payroll.trainer_id,
-                            payroll.trainer_name,
+                            getTrainerName(payroll),
                             payroll.status
                           );
                         }}
@@ -1144,7 +1170,7 @@ const TrainerPayroll = () => {
                             <Receipt className="w-3.5 h-3.5" />
                           </button>
                           <span className="font-semibold text-[var(--color-text-primary)] text-xs">
-                            {payroll.trainer_name}
+                            {getTrainerName(payroll)}
                           </span>
                           {isWinner && (
                             <span
@@ -1179,7 +1205,7 @@ const TrainerPayroll = () => {
                                 setPaymentModal({
                                   open: true,
                                   trainerId: payroll.trainer_id,
-                                  trainerName: payroll.trainer_name,
+                                  trainerName: getTrainerName(payroll),
                                   paymentMethod: payroll.payment_method || '',
                                   accountNumber: payroll.payment_account_number || '',
                                 });
@@ -1268,7 +1294,7 @@ const TrainerPayroll = () => {
                               setPaymentModal({
                                 open: true,
                                 trainerId: payroll.trainer_id,
-                                trainerName: payroll.trainer_name,
+                                trainerName: getTrainerName(payroll),
                                 paymentMethod: '',
                                 accountNumber: '',
                               });
@@ -1327,7 +1353,7 @@ const TrainerPayroll = () => {
                               setBonusModal({
                                 open: true,
                                 trainerId: payroll.trainer_id,
-                                trainerName: payroll.trainer_name,
+                                trainerName: getTrainerName(payroll),
                                 bonusDeduction: payroll.bonus_deduction || '',
                                 notes: payroll.bonus_deduction_notes || '',
                               });
@@ -1354,7 +1380,7 @@ const TrainerPayroll = () => {
                                   setBonusModal({
                                     open: true,
                                     trainerId: payroll.trainer_id,
-                                    trainerName: payroll.trainer_name,
+                                    trainerName: getTrainerName(payroll),
                                     bonusDeduction: payroll.bonus_deduction || '',
                                     notes: payroll.bonus_deduction_notes || '',
                                   });
@@ -1383,7 +1409,7 @@ const TrainerPayroll = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleMarkAsPaid(payroll.trainer_id, payroll.trainer_name, payroll.status || 'draft');
+                            handleMarkAsPaid(payroll.trainer_id, getTrainerName(payroll), payroll.status || 'draft');
                           }}
                           className={`px-3 py-1.5 rounded-md font-medium text-[10px] transition-all hover:scale-105 flex items-center gap-1.5 ${
                             (payroll.status || 'draft') === 'paid'
