@@ -21,17 +21,23 @@ class AuthController extends Controller
     }
 
     /**
-     * Login with username and password
+     * Login with username/email and password (يقبل username أو email)
      */
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'username' => 'required|string',
             'password' => 'required|string',
         ]);
+        $login = $request->input('username') ?? $request->input('email');
+        if (empty($login)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'يرجى إدخال البريد الإلكتروني أو اسم المستخدم',
+            ], 422);
+        }
 
         $result = $this->authService->authenticate(
-            $request->input('username'),
+            $login,
             $request->input('password')
         );
 

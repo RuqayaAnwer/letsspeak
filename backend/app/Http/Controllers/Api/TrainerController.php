@@ -476,16 +476,37 @@ class TrainerController extends Controller
             ->whereBetween('date', [$startDate, $endDate])
             ->count();
 
-            // Get active courses count for current month (courses that have lectures this month)
-            $coursesThisMonth = Course::where('trainer_id', $trainer->id)
-                ->whereHas('lectures', function ($query) use ($startDate, $endDate) {
-                    $query->whereBetween('date', [$startDate, $endDate]);
-                })
-                ->distinct()
-                ->count();
-
-            // Calculate remaining lectures
-            $remainingLectures = max(0, $totalLectures - $completedLectures);
+            // Get active courses count (all active and paused courses for the trainer)
+            $activeCourses = Course::where('trainer_id', $trainer->id)
+                ->whereIn('status', ['active', 'paused'])
+                ->with('lectures')
+                ->get();
+            
+            $coursesThisMonth = $activeCourses->count();
+            
+            $remainingLectures = 0;
+            foreach ($activeCourses as $course) {
+                // Count completed lectures for this course
+                $completedForCourse = $course->lectures->filter(function ($lecture) {
+                    // Check student_attendance for dual courses
+                    if ($lecture->student_attendance && is_array($lecture->student_attendance) && count($lecture->student_attendance) > 0) {
+                        foreach ($lecture->student_attendance as $studentData) {
+                            if (is_array($studentData)) {
+                                $attendance = $studentData['attendance'] ?? null;
+                                if ($attendance === 'present' || $attendance === 'absent') {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    // For single courses, check is_completed or attendance
+                    return $lecture->is_completed || in_array($lecture->attendance, ['present', 'partially', 'absent']);
+                })->count();
+                
+                // Remaining = total lectures - completed
+                $remaining = max(0, $course->lectures_count - $completedForCourse);
+                $remainingLectures += $remaining;
+            }
 
             // Get renewals count for current month
             $month = $today->month;

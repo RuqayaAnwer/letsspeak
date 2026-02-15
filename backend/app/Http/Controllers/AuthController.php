@@ -35,7 +35,8 @@ class AuthController extends Controller
     }
 
     /**
-     * Login with email and password
+     * Login with email and password.
+     * المدربون: يدخلون بالإيميل المسجّل لهم في نظام المدربين (خدمة العملاء) ويُوجّهون لصفحتهم.
      */
     public function login(Request $request)
     {
@@ -52,12 +53,19 @@ class AuthController extends Controller
             ], 401);
         }
 
+        if (($user->status ?? '') !== 'active') {
+            return response()->json([
+                'message' => 'الحساب غير مفعّل. يرجى التواصل مع الإدارة.',
+            ], 403);
+        }
+
         if ($user->role === 'trainer') {
             $user->load('trainer');
         }
 
         return response()->json([
             'user' => $user,
+            'role' => $user->role,
             'token' => 'token-' . $user->id . '-' . time(),
         ]);
     }

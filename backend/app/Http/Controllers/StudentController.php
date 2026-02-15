@@ -36,10 +36,11 @@ class StudentController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
+            'level' => 'nullable|string|max:10',
             'notes' => 'nullable|string',
         ]);
 
-        $student = Student::create($request->only(['name', 'phone', 'notes']));
+        $student = Student::create($request->only(['name', 'phone', 'level', 'notes']));
 
         return response()->json($student, 201);
     }
@@ -62,10 +63,11 @@ class StudentController extends Controller
         $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'phone' => 'sometimes|required|string|max:20',
+            'level' => 'nullable|string|max:10',
             'notes' => 'nullable|string',
         ]);
 
-        $student->update($request->only(['name', 'phone', 'notes']));
+        $student->update($request->only(['name', 'phone', 'level', 'notes']));
 
         return response()->json($student);
     }

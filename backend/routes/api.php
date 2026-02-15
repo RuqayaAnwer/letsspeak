@@ -23,7 +23,10 @@ use App\Models\Trainer;
 
 // Auth Routes
 Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/dev-login', [AuthController::class, 'devLogin']);
+// Dev login - only available in local/development environment
+if (app()->environment('local', 'development')) {
+    Route::post('/auth/dev-login', [AuthController::class, 'devLogin']);
+}
 Route::post('/auth/logout', [AuthController::class, 'logout']);
 
 // Dashboard Stats

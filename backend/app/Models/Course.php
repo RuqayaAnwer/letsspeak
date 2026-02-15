@@ -47,6 +47,8 @@ class Course extends Model
         'amount_paid' => 'decimal:2',
     ];
 
+    protected $appends = ['is_custom'];
+
     /**
      * Get the trainer for this course.
      */
@@ -207,5 +209,13 @@ class Course extends Model
 
         $days = $this->lecture_days ?? [];
         return array_map(fn($day) => $dayNames[$day] ?? $day, $days);
+    }
+
+    /**
+     * Check if course is custom (no course package).
+     */
+    public function getIsCustomAttribute(): bool
+    {
+        return $this->course_package_id === null;
     }
 }

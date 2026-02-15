@@ -15,7 +15,7 @@ class PaymentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Payment::with(['course.trainer.user', 'course.coursePackage', 'student']);
+        $query = Payment::with(['course.trainer.user', 'course.coursePackage', 'course.students', 'student']);
 
         // Filter by status
         if ($request->has('status')) {
@@ -48,7 +48,8 @@ class PaymentController extends Controller
             });
         }
 
-        $payments = $query->latest('payment_date')->paginate(15);
+        $perPage = $request->input('per_page', 15);
+        $payments = $query->latest('payment_date')->paginate($perPage);
         
         // Ensure payment_method is included from course if not in payment
         $payments->getCollection()->transform(function ($payment) {
@@ -93,6 +94,9 @@ class PaymentController extends Controller
             'date.date' => 'التاريخ غير صالح',
         ]);
 
+        // Get course to obtain payment_method
+        $course = Course::find($request->course_id);
+        
         // Prepare payment data
         $paymentData = [
             'course_id' => $request->course_id,
@@ -109,6 +113,13 @@ class PaymentController extends Controller
             $paymentData['payment_date'] = $request->date;
         } else {
             $paymentData['payment_date'] = date('Y-m-d');
+        }
+        
+        // Add payment_method from request or course
+        if ($request->has('payment_method') && !empty($request->payment_method)) {
+            $paymentData['payment_method'] = $request->payment_method;
+        } elseif ($course && $course->payment_method) {
+            $paymentData['payment_method'] = $course->payment_method;
         }
 
         \Log::info('Payment Store Data:', ['payment_data' => $paymentData]);
@@ -193,6 +204,14 @@ class PaymentController extends Controller
         
         if ($request->has('notes')) {
             $updateData['notes'] = $request->notes ?? '';
+        }
+        
+        // Handle payment_method
+        if ($request->has('payment_method') && !empty($request->payment_method)) {
+            $updateData['payment_method'] = $request->payment_method;
+        } elseif (!$payment->payment_method && $payment->course) {
+            // If payment doesn't have payment_method, get it from course
+            $updateData['payment_method'] = $payment->course->payment_method;
         }
         
         // Handle date field (payment_date takes priority, then date)
