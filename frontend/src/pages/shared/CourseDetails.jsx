@@ -774,15 +774,14 @@ const CourseDetails = () => {
     return labels[homework] || homework || '-';
   };
 
-  // Format time to 12-hour format with Arabic period (ص/م)
+  // Format time to 12-hour format
   const formatTime12Hour = (time24) => {
     if (!time24) return '-';
     const [hours, minutes] = time24.split(':');
-    const h = parseInt(hours);
-    const m = parseInt(minutes);
-    const period = h >= 12 ? 'م' : 'ص';
-    const h12 = h % 12 || 12;
-    return `${h12}:${m.toString().padStart(2, '0')} ${period}`;
+    const date = new Date();
+    date.setHours(parseInt(hours));
+    date.setMinutes(parseInt(minutes));
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   };
 
   // Get student-specific attendance data from lecture
@@ -1335,8 +1334,8 @@ const CourseDetails = () => {
             </span>
           </div>
           
-          {/* Student and Trainer Info */}
-          <div className="flex flex-wrap gap-4 text-sm">
+          {/* Student and Trainer Info - compact font for long names */}
+          <div className="flex flex-wrap gap-3 text-xs">
           {/* Show students - handle both single and dual courses */}
           {course.is_dual && course.students && course.students.length > 1 ? (
               <>
@@ -1344,7 +1343,7 @@ const CourseDetails = () => {
                   <button
                     key={student.id}
                     onClick={() => setSelectedStudentId(student.id)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all cursor-pointer max-w-full min-w-0 ${
                       selectedStudentId === student.id
                         ? index === 0 
                           ? 'bg-blue-500 text-white ring-2 ring-blue-300'
@@ -1353,8 +1352,9 @@ const CourseDetails = () => {
                           ? 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40'
                           : 'bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40'
                     }`}
+                    title={student.name || 'غير محدد'}
                   >
-                    <User className={`w-4 h-4 ${
+                    <User className={`w-3.5 h-3.5 flex-shrink-0 ${
                       selectedStudentId === student.id 
                         ? 'text-white' 
                         : index === 0 
@@ -1367,30 +1367,30 @@ const CourseDetails = () => {
                     }>
                       {index === 0 ? 'الطالب الأول:' : 'الطالب الثاني:'}
                     </span>
-                    <span className="font-semibold">
+                    <span className="font-semibold truncate">
                       {student.name || 'غير محدد'}
                     </span>
                   </button>
                 ))}
               </>
             ) : (
-              <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg">
-                <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-[var(--color-text-muted)]">الطالب:</span>
-                <span className="font-semibold text-[var(--color-text-primary)]">
+              <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg max-w-full min-w-0" title={course.student?.name || course.students?.[0]?.name || 'غير محدد'}>
+                <User className="w-3.5 h-3.5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                <span className="text-[var(--color-text-muted)] flex-shrink-0">الطالب:</span>
+                <span className="font-semibold text-[var(--color-text-primary)] truncate">
                   {course.student?.name || course.students?.[0]?.name || 'غير محدد'}
                 </span>
               </div>
             )}
             {course.is_dual && (
               <div className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-lg">
-                <span className="badge badge-purple text-xs">كورس ثنائي</span>
+                <span className="badge badge-purple text-[10px]">كورس ثنائي</span>
               </div>
             )}
-            <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-lg">
-              <GraduationCap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-[var(--color-text-muted)]">المدرب:</span>
-              <span className="font-semibold text-[var(--color-text-primary)]">
+            <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg max-w-full min-w-0" title={course.trainer?.user?.name || course.trainer?.name || 'غير محدد'}>
+              <GraduationCap className="w-3.5 h-3.5 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-[var(--color-text-muted)] flex-shrink-0">المدرب:</span>
+              <span className="font-semibold text-[var(--color-text-primary)] truncate">
                 {course.trainer?.user?.name || course.trainer?.name || 'غير محدد'}
               </span>
             </div>
@@ -1399,16 +1399,16 @@ const CourseDetails = () => {
 
         {/* Show selected student indicator for dual courses */}
         {course.is_dual && selectedStudentId && (
-          <div className="mb-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <User className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                <span className="text-sm text-[var(--color-text-muted)]">عرض بيانات:</span>
-                <span className="font-bold text-indigo-700 dark:text-indigo-300">
+          <div className="mb-3 p-2 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <User className="w-4 h-4 flex-shrink-0 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0">عرض بيانات:</span>
+                <span className="font-bold text-xs text-indigo-700 dark:text-indigo-300 truncate" title={course.students?.find(s => s.id === selectedStudentId)?.name}>
                   {course.students?.find(s => s.id === selectedStudentId)?.name}
                 </span>
               </div>
-              <span className="text-xs text-[var(--color-text-muted)]">
+              <span className="text-[10px] text-[var(--color-text-muted)] flex-shrink-0">
                 اضغط على اسم الطالب الآخر للتبديل
               </span>
             </div>
@@ -1701,19 +1701,29 @@ const CourseDetails = () => {
           })}
         </div>
 
-        {/* Desktop Table View */}
+        {/* Desktop Table View - أعمدة ضيقة، خط صغير، دفع المدرب يظهر كاملاً */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="table">
+          <table className="w-full text-[10px] border-collapse border border-[var(--color-border)] table-fixed" style={{ minWidth: '520px' }}>
+            <colgroup>
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '16%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '7%' }} />
+              <col style={{ width: '17%' }} />
+            </colgroup>
             <thead>
-              <tr>
-                <th className="text-center text-xs">رقم</th>
-                <th className="text-center text-xs">التاريخ</th>
-                <th className="text-center text-xs">الوقت</th>
-                <th className="text-center text-xs">الحضور</th>
-                <th className="text-center text-xs">النشاط</th>
-                <th className="text-center text-xs">الواجب</th>
-                <th className="text-center text-xs">دفع المدرب</th>
-                <th className="text-center text-xs">ملاحظات</th>
+              <tr className="border-b-2 border-[var(--color-border)]">
+                <th className="text-center py-1 px-1 border-l border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50 font-semibold text-[var(--color-text-primary)] text-[9px]">رقم</th>
+                <th className="text-center py-1 px-1 border-l border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50 font-semibold text-[var(--color-text-primary)] text-[9px]">التاريخ</th>
+                <th className="text-center py-1 px-1 border-l border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50 font-semibold text-[var(--color-text-primary)] text-[9px]">الوقت</th>
+                <th className="text-center py-1 px-1 border-l border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50 font-semibold text-[var(--color-text-primary)] text-[9px]">الحضور</th>
+                <th className="text-center py-1 px-1 border-l border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50 font-semibold text-[var(--color-text-primary)] text-[9px]">النشاط</th>
+                <th className="text-center py-1 px-1 border-l border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50 font-semibold text-[var(--color-text-primary)] text-[9px]">الواجب</th>
+                <th className="text-center py-1 px-1 border-l border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50 font-semibold text-[var(--color-text-primary)] text-[9px]">دفع المدرب</th>
+                <th className="text-center py-1 px-1 border-l border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50 font-semibold text-[var(--color-text-primary)] text-[9px]">ملاحظات</th>
               </tr>
             </thead>
             <tbody>
@@ -1828,24 +1838,27 @@ const CourseDetails = () => {
                 return (
                   <tr
                     key={lecture.id}
-                    className={`
-                      ${isCompleted ? 'bg-green-100 dark:bg-green-900/30' : ''}
-                      ${isToday && !isCompleted ? 'bg-primary-50 dark:bg-primary-900/10' : ''}
-                      ${isMakeup && !isCompleted ? 'bg-green-50 dark:bg-green-900/10' : ''}
-                      ${isSelected ? 'ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-900/20' : ''}
-                    `}
+                    className={`border-b border-[var(--color-border)] ${
+                      isCompleted ? 'bg-green-100 dark:bg-green-900/30' : ''
+                    } ${
+                      isToday && !isCompleted ? 'bg-primary-50 dark:bg-primary-900/10' : ''
+                    } ${
+                      isMakeup && !isCompleted ? 'bg-green-50 dark:bg-green-900/10' : ''
+                    } ${
+                      isSelected ? 'ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-900/20' : ''
+                    }`}
                   >
-                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center font-bold text-[var(--color-text-primary)]">
-                      <div className="flex items-center justify-center gap-1">
+                    <td className="border-l border-[var(--color-border)] px-1 py-0.5 font-bold text-[var(--color-text-primary)] text-[10px] text-center align-middle">
+                      <div className="flex items-center justify-center gap-0.5">
                         {lecture.lecture_number}
                         {isMakeup && (
-                          <span className="text-xs text-green-600 dark:text-green-400" title="محاضرة تعويضية">
-                            (تعويضية)
+                          <span className="text-[8px] text-green-600 dark:text-green-400" title="محاضرة تعويضية">
+                            (تعو.)
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center">
+                    <td className="border-l border-[var(--color-border)] px-1 py-0.5 text-center align-middle">
                       {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
                         <input
                           type="date"
@@ -1861,34 +1874,34 @@ const CourseDetails = () => {
                             e.stopPropagation();
                             handleLectureSelect(lecture);
                           }}
-                          className="text-center w-full px-2 py-1 rounded transition-all hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                          className="text-center w-full px-1 py-0.5 rounded transition-all hover:bg-amber-100 dark:hover:bg-amber-900/30 text-[10px]"
                           title="انقر لتعديل التاريخ والوقت"
                         >
-                          <p className="text-[10px] font-medium text-[var(--color-text-primary)]">
+                          <p className="font-medium text-[var(--color-text-primary)]">
                             {formatDateShort(lecture.date)}
                           </p>
                           {isToday && (
-                            <span className="text-[9px] text-primary-600 dark:text-primary-400 font-medium block">
+                            <span className="text-[8px] text-primary-600 dark:text-primary-400 font-medium block">
                               اليوم
                             </span>
                           )}
                         </button>
                       ) : (
-                        <div className="text-center">
-                          <p className="text-[10px] font-medium text-[var(--color-text-primary)]">
+                        <div className="text-[10px] text-center">
+                          <p className="font-medium text-[var(--color-text-primary)]">
                             {formatDateShort(lecture.date)}
                           </p>
                           {isToday && (
-                            <span className="text-[9px] text-primary-600 dark:text-primary-400 font-medium block">
+                            <span className="text-[8px] text-primary-600 dark:text-primary-400 font-medium block">
                               اليوم
                             </span>
                           )}
                         </div>
                       )}
                     </td>
-                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center" dir="ltr">
+                    <td className="border-l border-[var(--color-border)] px-1 py-0.5 text-center text-[10px] align-middle" dir="ltr">
                       {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
                           <input
                             type="time"
                             value={editingLectureDateTime.time}
@@ -1925,7 +1938,7 @@ const CourseDetails = () => {
                             e.stopPropagation();
                             handleLectureSelect(lecture);
                           }}
-                          className="text-[10px] font-medium px-2 py-1 rounded transition-all text-[var(--color-text-primary)] hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                          className="text-[10px] font-medium px-1 py-0.5 rounded transition-all text-[var(--color-text-primary)] hover:bg-amber-100 dark:hover:bg-amber-900/30"
                           title="انقر لتعديل التاريخ والوقت"
                         >
                           {formatTime12Hour(lecture.time || course?.lecture_time)}
@@ -1936,10 +1949,10 @@ const CourseDetails = () => {
                         </span>
                       )}
                     </td>
-                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center">
+                    <td className="border-l border-[var(--color-border)] px-1 py-0.5 text-center align-middle">
                       {['postponed_by_trainer', 'postponed_by_student', 'postponed_holiday'].includes(currentAttendance) ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <span className={`badge text-[9px] ${getAttendanceBadge(currentAttendance)}`}>
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
+                          <span className={`badge ${getAttendanceBadge(currentAttendance)}`}>
                             {getAttendanceLabel(currentAttendance)}
                           </span>
                           {((course?.is_dual && selectedStudentId 
@@ -1973,7 +1986,7 @@ const CourseDetails = () => {
                           )}
                         </div>
                       ) : isLocked || isAccounting ? (
-                        <span className={`badge text-[9px] ${getAttendanceBadge(currentAttendance)}`}>
+                        <span className={`badge ${getAttendanceBadge(currentAttendance)}`}>
                           {getAttendanceLabel(currentAttendance)}
                         </span>
                       ) : (
@@ -1982,7 +1995,7 @@ const CourseDetails = () => {
                           onChange={(e) =>
                             handleLectureChange(lecture.id, 'attendance', e.target.value)
                           }
-                          className="select text-[10px] py-1 w-full"
+                          className="select text-[9px] py-0.5 px-1 w-20 mx-auto"
                           disabled={isLocked}
                         >
                           <option value="pending">لم يحدد</option>
@@ -1992,14 +2005,14 @@ const CourseDetails = () => {
                         </select>
                       )}
                     </td>
-                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center">
+                    <td className="border-l border-[var(--color-border)] px-1 py-0.5 text-center align-middle">
                       {isLocked || isAccounting ? (
-                        <span className="text-[10px] text-gray-500">{getActivityLabel(currentActivity)}</span>
+                        <span className="text-[9px] text-gray-500">{getActivityLabel(currentActivity)}</span>
                       ) : (
                         <select
                           value={currentActivity ?? ''}
                           onChange={(e) => handleLectureChange(lecture.id, 'activity', e.target.value)}
-                          className="select text-[10px] py-1 px-1 w-full"
+                          className="select text-[9px] py-0.5 px-1 w-16 mx-auto"
                           disabled={isLocked}
                         >
                           <option value="">-</option>
@@ -2009,14 +2022,14 @@ const CourseDetails = () => {
                         </select>
                       )}
                     </td>
-                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center">
+                    <td className="border-l border-[var(--color-border)] px-1 py-0.5 text-center align-middle">
                       {isLocked || isAccounting ? (
-                        <span className="text-[10px] text-gray-500">{getHomeworkLabel(currentHomework)}</span>
+                        <span className="text-[9px] text-gray-500">{getHomeworkLabel(currentHomework)}</span>
                       ) : (
                         <select
                           value={currentHomework ?? ''}
                           onChange={(e) => handleLectureChange(lecture.id, 'homework', e.target.value)}
-                          className="select text-[10px] py-1 px-1 w-full"
+                          className="select text-[9px] py-0.5 px-1 w-16 mx-auto"
                           disabled={isLocked}
                         >
                           <option value="">-</option>
@@ -2026,29 +2039,30 @@ const CourseDetails = () => {
                         </select>
                       )}
                     </td>
-                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center">
+                    <td className="border-l border-[var(--color-border)] px-1 py-0.5 text-center align-middle">
                       {(isCustomerService || isAccounting) ? (
                         <select
                           value={lecture.trainer_payment_status || 'unpaid'}
                           onChange={(e) => handleTrainerPaymentChange(lecture.id, e.target.value)}
-                          className={`select text-[10px] py-1 px-1 w-full ${
+                          className={`select py-0.5 px-0.5 w-full max-w-[100%] min-w-0 ${
                             lecture.trainer_payment_status === 'paid' 
                               ? 'text-green-600 bg-green-50 dark:bg-green-900/20' 
                               : 'text-red-500 bg-red-50 dark:bg-red-900/20'
                           }`}
+                          style={{ fontSize: '8px' }}
                         >
                           <option value="unpaid">غير مدفوع</option>
                           <option value="paid">مدفوع</option>
                         </select>
                       ) : (
-                        <span className={`text-[10px] ${lecture.trainer_payment_status === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
+                        <span className={`block text-[8px] whitespace-nowrap overflow-hidden text-ellipsis max-w-full ${lecture.trainer_payment_status === 'paid' ? 'text-green-600' : 'text-red-500'}`} title={lecture.trainer_payment_status === 'paid' ? 'مدفوع' : 'غير مدفوع'}>
                           {lecture.trainer_payment_status === 'paid' ? 'مدفوع' : 'غير مدفوع'}
                         </span>
                       )}
                     </td>
-                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center">
+                    <td className="border-l border-[var(--color-border)] px-1 py-0.5 text-center align-middle">
                       {isLocked ? (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-[9px] text-gray-500">
                           {(rawEdited.notes ?? lecture.notes) ? (
                             <button
                               onClick={() => setReasonPopup({ 
@@ -2058,12 +2072,12 @@ const CourseDetails = () => {
                               className="text-blue-500 hover:text-blue-600"
                               title="عرض الملاحظة"
                             >
-                              <MessageSquare className="w-3.5 h-3.5" />
-                            </button>
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          </button>
                           ) : '-'}
                         </span>
                       ) : isAccounting ? (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-[9px] text-gray-500">
                           {(rawEdited.notes ?? lecture.notes) ? (
                             <button
                               onClick={() => setReasonPopup({ 
@@ -2087,14 +2101,14 @@ const CourseDetails = () => {
                               notes: currentNotes
                             });
                           }}
-                          className={`p-1.5 rounded-lg transition-colors ${
+                          className={`p-1 rounded-lg transition-colors ${
                             (rawEdited.notes ?? lecture.notes)
                               ? 'text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50'
                               : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'
                           }`}
                           title={rawEdited.notes ?? lecture.notes ?? 'إضافة ملاحظة'}
                         >
-                          <MessageSquare className="w-4 h-4" />
+                          <MessageSquare className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </td>
