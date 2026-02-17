@@ -38,6 +38,13 @@ const CourseDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isCustomerService, isAccounting, isTrainer, user } = useAuth();
+  
+  // Helper function to get package name (handles custom packages)
+  const getPackageName = (course) => {
+    if (course?.is_custom) return 'مخصص';
+    return course?.course_package?.name || course?.coursePackage?.name || 'كورس بدون باقة';
+  };
+  
   const [course, setCourse] = useState(null);
   const [lectures, setLectures] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -211,7 +218,7 @@ const CourseDetails = () => {
   const handleDeleteCourse = async () => {
     if (!course) return;
 
-    const courseName = course?.course_package?.name || course?.coursePackage?.name || `الكورس رقم ${course.id}`;
+    const courseName = getPackageName(course);
     const studentNames = course?.students?.map(s => s.name).join(' و ') || course?.student_name || 'غير محدد';
     
     if (!confirm(`هل أنت متأكد من حذف ${courseName} للطالب/الطلاب: ${studentNames}؟\n\nتحذير: سيتم حذف الكورس وجميع المحاضرات المرتبطة به بشكل نهائي!`)) {
@@ -767,14 +774,15 @@ const CourseDetails = () => {
     return labels[homework] || homework || '-';
   };
 
-  // Format time to 12-hour format
+  // Format time to 12-hour format with Arabic period (ص/م)
   const formatTime12Hour = (time24) => {
     if (!time24) return '-';
     const [hours, minutes] = time24.split(':');
-    const date = new Date();
-    date.setHours(parseInt(hours));
-    date.setMinutes(parseInt(minutes));
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const h = parseInt(hours);
+    const m = parseInt(minutes);
+    const period = h >= 12 ? 'م' : 'ص';
+    const h12 = h % 12 || 12;
+    return `${h12}:${m.toString().padStart(2, '0')} ${period}`;
   };
 
   // Get student-specific attendance data from lecture
@@ -1169,7 +1177,7 @@ const CourseDetails = () => {
           </button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="page-title">{course.course_package?.name || course.coursePackage?.name || 'كورس بدون باقة'}</h1>
+              <h1 className="page-title">{getPackageName(course)}</h1>
               {isCustomerService ? (
                 <select
                   ref={statusSelectRef}
@@ -1698,14 +1706,14 @@ const CourseDetails = () => {
           <table className="table">
             <thead>
               <tr>
-                <th>رقم</th>
-                <th>التاريخ</th>
-                <th>الوقت</th>
-                <th>الحضور</th>
-                <th>النشاط</th>
-                <th>الواجب</th>
-                <th>دفع المدرب</th>
-                <th>ملاحظات</th>
+                <th className="text-center text-xs">رقم</th>
+                <th className="text-center text-xs">التاريخ</th>
+                <th className="text-center text-xs">الوقت</th>
+                <th className="text-center text-xs">الحضور</th>
+                <th className="text-center text-xs">النشاط</th>
+                <th className="text-center text-xs">الواجب</th>
+                <th className="text-center text-xs">دفع المدرب</th>
+                <th className="text-center text-xs">ملاحظات</th>
               </tr>
             </thead>
             <tbody>
@@ -1827,8 +1835,8 @@ const CourseDetails = () => {
                       ${isSelected ? 'ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-900/20' : ''}
                     `}
                   >
-                    <td className="font-bold text-[var(--color-text-primary)]">
-                      <div className="flex items-center gap-1">
+                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center font-bold text-[var(--color-text-primary)]">
+                      <div className="flex items-center justify-center gap-1">
                         {lecture.lecture_number}
                         {isMakeup && (
                           <span className="text-xs text-green-600 dark:text-green-400" title="محاضرة تعويضية">
@@ -1837,7 +1845,7 @@ const CourseDetails = () => {
                         )}
                       </div>
                     </td>
-                    <td>
+                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center">
                       {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
                         <input
                           type="date"
@@ -1853,32 +1861,32 @@ const CourseDetails = () => {
                             e.stopPropagation();
                             handleLectureSelect(lecture);
                           }}
-                          className="text-right w-full px-2 py-1 rounded transition-all hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                          className="text-center w-full px-2 py-1 rounded transition-all hover:bg-amber-100 dark:hover:bg-amber-900/30"
                           title="انقر لتعديل التاريخ والوقت"
                         >
-                          <p className="font-medium text-[var(--color-text-primary)]">
+                          <p className="text-[10px] font-medium text-[var(--color-text-primary)]">
                             {formatDateShort(lecture.date)}
                           </p>
                           {isToday && (
-                            <span className="text-xs text-primary-600 dark:text-primary-400 font-medium block">
+                            <span className="text-[9px] text-primary-600 dark:text-primary-400 font-medium block">
                               اليوم
                             </span>
                           )}
                         </button>
                       ) : (
-                        <div>
-                          <p className="font-medium text-[var(--color-text-primary)]">
+                        <div className="text-center">
+                          <p className="text-[10px] font-medium text-[var(--color-text-primary)]">
                             {formatDateShort(lecture.date)}
                           </p>
                           {isToday && (
-                            <span className="text-xs text-primary-600 dark:text-primary-400 font-medium block">
+                            <span className="text-[9px] text-primary-600 dark:text-primary-400 font-medium block">
                               اليوم
                             </span>
                           )}
                         </div>
                       )}
                     </td>
-                    <td className="text-center" dir="ltr">
+                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center" dir="ltr">
                       {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
                         <div className="flex items-center gap-2">
                           <input
@@ -1917,21 +1925,21 @@ const CourseDetails = () => {
                             e.stopPropagation();
                             handleLectureSelect(lecture);
                           }}
-                          className="text-sm font-medium px-2 py-1 rounded transition-all text-[var(--color-text-primary)] hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                          className="text-[10px] font-medium px-2 py-1 rounded transition-all text-[var(--color-text-primary)] hover:bg-amber-100 dark:hover:bg-amber-900/30"
                           title="انقر لتعديل التاريخ والوقت"
                         >
                           {formatTime12Hour(lecture.time || course?.lecture_time)}
                         </button>
                       ) : (
-                        <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                        <span className="text-[10px] font-medium text-[var(--color-text-primary)]">
                           {formatTime12Hour(lecture.time || course?.lecture_time)}
                         </span>
                       )}
                     </td>
-                    <td>
+                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center">
                       {['postponed_by_trainer', 'postponed_by_student', 'postponed_holiday'].includes(currentAttendance) ? (
-                        <div className="flex items-center gap-2">
-                          <span className={`badge ${getAttendanceBadge(currentAttendance)}`}>
+                        <div className="flex items-center justify-center gap-2">
+                          <span className={`badge text-[9px] ${getAttendanceBadge(currentAttendance)}`}>
                             {getAttendanceLabel(currentAttendance)}
                           </span>
                           {((course?.is_dual && selectedStudentId 
@@ -1965,7 +1973,7 @@ const CourseDetails = () => {
                           )}
                         </div>
                       ) : isLocked || isAccounting ? (
-                        <span className={`badge ${getAttendanceBadge(currentAttendance)}`}>
+                        <span className={`badge text-[9px] ${getAttendanceBadge(currentAttendance)}`}>
                           {getAttendanceLabel(currentAttendance)}
                         </span>
                       ) : (
@@ -1974,7 +1982,7 @@ const CourseDetails = () => {
                           onChange={(e) =>
                             handleLectureChange(lecture.id, 'attendance', e.target.value)
                           }
-                          className="select text-sm py-1.5 w-28"
+                          className="select text-[10px] py-1 w-full"
                           disabled={isLocked}
                         >
                           <option value="pending">لم يحدد</option>
@@ -1984,14 +1992,14 @@ const CourseDetails = () => {
                         </select>
                       )}
                     </td>
-                    <td>
+                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center">
                       {isLocked || isAccounting ? (
-                        <span className="text-xs text-gray-500">{getActivityLabel(currentActivity)}</span>
+                        <span className="text-[10px] text-gray-500">{getActivityLabel(currentActivity)}</span>
                       ) : (
                         <select
                           value={currentActivity ?? ''}
                           onChange={(e) => handleLectureChange(lecture.id, 'activity', e.target.value)}
-                          className="select text-xs py-1 px-1.5 w-20"
+                          className="select text-[10px] py-1 px-1 w-full"
                           disabled={isLocked}
                         >
                           <option value="">-</option>
@@ -2001,14 +2009,14 @@ const CourseDetails = () => {
                         </select>
                       )}
                     </td>
-                    <td>
+                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center">
                       {isLocked || isAccounting ? (
-                        <span className="text-xs text-gray-500">{getHomeworkLabel(currentHomework)}</span>
+                        <span className="text-[10px] text-gray-500">{getHomeworkLabel(currentHomework)}</span>
                       ) : (
                         <select
                           value={currentHomework ?? ''}
                           onChange={(e) => handleLectureChange(lecture.id, 'homework', e.target.value)}
-                          className="select text-xs py-1 px-1.5 w-20"
+                          className="select text-[10px] py-1 px-1 w-full"
                           disabled={isLocked}
                         >
                           <option value="">-</option>
@@ -2018,12 +2026,12 @@ const CourseDetails = () => {
                         </select>
                       )}
                     </td>
-                    <td>
+                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center">
                       {(isCustomerService || isAccounting) ? (
                         <select
                           value={lecture.trainer_payment_status || 'unpaid'}
                           onChange={(e) => handleTrainerPaymentChange(lecture.id, e.target.value)}
-                          className={`select text-xs py-1 px-1.5 w-20 ${
+                          className={`select text-[10px] py-1 px-1 w-full ${
                             lecture.trainer_payment_status === 'paid' 
                               ? 'text-green-600 bg-green-50 dark:bg-green-900/20' 
                               : 'text-red-500 bg-red-50 dark:bg-red-900/20'
@@ -2033,14 +2041,14 @@ const CourseDetails = () => {
                           <option value="paid">مدفوع</option>
                         </select>
                       ) : (
-                        <span className={`text-xs ${lecture.trainer_payment_status === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
+                        <span className={`text-[10px] ${lecture.trainer_payment_status === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
                           {lecture.trainer_payment_status === 'paid' ? 'مدفوع' : 'غير مدفوع'}
                         </span>
                       )}
                     </td>
-                    <td className="text-center">
+                    <td className="border-l border-[var(--color-border)] px-2 py-1 text-center">
                       {isLocked ? (
-                        <span className="text-sm text-gray-500">
+                        <span className="text-xs text-gray-500">
                           {(rawEdited.notes ?? lecture.notes) ? (
                             <button
                               onClick={() => setReasonPopup({ 
@@ -2050,12 +2058,12 @@ const CourseDetails = () => {
                               className="text-blue-500 hover:text-blue-600"
                               title="عرض الملاحظة"
                             >
-                              <MessageSquare className="w-4 h-4" />
+                              <MessageSquare className="w-3.5 h-3.5" />
                             </button>
                           ) : '-'}
                         </span>
                       ) : isAccounting ? (
-                        <span className="text-sm text-gray-500">
+                        <span className="text-xs text-gray-500">
                           {(rawEdited.notes ?? lecture.notes) ? (
                             <button
                               onClick={() => setReasonPopup({ 
@@ -2065,7 +2073,7 @@ const CourseDetails = () => {
                               className="text-blue-500 hover:text-blue-600"
                               title="عرض الملاحظة"
                             >
-                              <MessageSquare className="w-4 h-4" />
+                              <MessageSquare className="w-3.5 h-3.5" />
                             </button>
                           ) : '-'}
                         </span>

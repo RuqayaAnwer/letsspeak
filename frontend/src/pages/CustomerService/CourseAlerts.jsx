@@ -5,6 +5,12 @@ import api from '../../api/axios';
 import { formatCurrency } from '../../utils/currencyFormat';
 
 const CourseAlerts = () => {
+  // Helper function to get package name (handles custom packages)
+  const getPackageName = (course) => {
+    if (course?.is_custom) return 'مخصص';
+    return (course?.course_package || course?.coursePackage)?.name || '-';
+  };
+  
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [studentPaymentsModal, setStudentPaymentsModal] = useState({
@@ -271,10 +277,10 @@ const CourseAlerts = () => {
                             {/* Package */}
                             <div className="col-span-2 flex flex-col items-center gap-0.5">
                               <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400">الباقة</span>
-                              {(course.course_package || course.coursePackage) ? (
+                              {(course.course_package || course.coursePackage || course.is_custom) ? (
                                 <>
                                   <span className="text-[10px] font-semibold text-gray-800 dark:text-white text-center">
-                                    {(course.course_package || course.coursePackage)?.name || '-'}
+                                    {getPackageName(course)}
                                   </span>
                                   <span className="text-[9px] text-gray-500 dark:text-gray-400 text-center">
                                     ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
@@ -410,9 +416,9 @@ const CourseAlerts = () => {
                     >
                       <td className="px-2 py-2 text-center text-gray-800 dark:text-white text-[10px] font-medium">{course.id}</td>
                       <td className="px-2 py-2 text-center text-gray-800 dark:text-white">
-                        {(course.course_package || course.coursePackage) ? (
+                        {(course.course_package || course.coursePackage || course.is_custom) ? (
                           <div className="flex flex-col items-center gap-0.5">
-                            <span className="text-[10px] font-medium">{(course.course_package || course.coursePackage)?.name || '-'}</span>
+                            <span className="text-[10px] font-medium">{getPackageName(course)}</span>
                             <span className="text-[9px] text-gray-500 dark:text-gray-400">
                               ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
                             </span>

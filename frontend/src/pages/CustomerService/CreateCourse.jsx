@@ -362,8 +362,13 @@ const CreateCourse = () => {
       };
       const lectureDays = formData.lecture_days.map(day => dayMap[day] || day);
 
-      // Validate required fields
-      if (!formData.trainer_id || !formData.course_package_id || !formData.start_date || !formData.lecture_time || lectureDays.length === 0) {
+      // Validate required fields - for custom packages, course_package_id can be empty
+      if (!formData.trainer_id || 
+          (!formData.is_custom && !formData.course_package_id) || 
+          (formData.is_custom && (!formData.custom_total_amount || !formData.lectures_count)) ||
+          !formData.start_date || 
+          !formData.lecture_time || 
+          lectureDays.length === 0) {
         alert('يرجى ملء جميع الحقول المطلوبة');
         setSubmitting(false);
         return;
@@ -371,7 +376,11 @@ const CreateCourse = () => {
 
       const data = {
         trainer_id: parseInt(formData.trainer_id),
-        course_package_id: parseInt(formData.course_package_id),
+        // Only include course_package_id if not custom
+        ...(formData.is_custom 
+          ? {} 
+          : { course_package_id: parseInt(formData.course_package_id) }
+        ),
         lectures_count: formData.lectures_count ? parseInt(formData.lectures_count) : undefined,
         start_date: formData.start_date,
         lecture_time: formData.lecture_time,
@@ -379,6 +388,12 @@ const CreateCourse = () => {
         is_dual: isDual,
         student_ids: studentIds,
         payment_method: formData.payment_method,
+        // Add custom package fields
+        is_custom: formData.is_custom,
+        ...(formData.is_custom && formData.custom_total_amount
+          ? { custom_total_amount: parseFloat(parseAmountInput(formData.custom_total_amount)) }
+          : {}
+        ),
         // For single courses, use paid_amount
         // For dual courses, we'll create payments separately for each student
         paid_amount: isDual ? 0 : (formData.paid_amount ? parseFloat(formData.paid_amount) : 0),

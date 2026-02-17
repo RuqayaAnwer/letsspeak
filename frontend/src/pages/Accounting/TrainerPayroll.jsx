@@ -1057,19 +1057,29 @@ const TrainerPayroll = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          openPaymentStatusModal(
+                          handleMarkAsPaid(
                             payroll.trainer_id,
                             getTrainerName(payroll),
-                            payroll.status
+                            payroll.status || 'draft'
                           );
                         }}
-                        className={`px-2 py-0.5 rounded-lg text-[9px] font-medium transition-all ${
+                        className={`px-2 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 min-h-[36px] ${
                           payroll.status === 'paid'
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                             : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
                         }`}
                       >
-                        {payroll.status === 'paid' ? '✓ تم الدفع' : 'مسودة'}
+                        {payroll.status === 'paid' ? (
+                          <>
+                            <Check className="w-3 h-3" />
+                            <span>تم الدفع</span>
+                          </>
+                        ) : (
+                          <>
+                            <X className="w-3 h-3" />
+                            <span>لم يدفع</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -1527,23 +1537,23 @@ const TrainerPayroll = () => {
 
       {/* Bonus/Deduction Modal */}
       {bonusModal.open && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
+              <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text-primary)]">
                 بونص/خصم - {bonusModal.trainerName}
               </h3>
               <button
                 onClick={() => setBonusModal({ open: false, trainerId: null, trainerName: '', bonusDeduction: '', notes: '' })}
-                className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]"
+                className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6 sm:w-5 sm:h-5" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="label">المبلغ (د.ع) *</label>
+                <label className="label text-sm sm:text-base">المبلغ (د.ع) *</label>
                 <p className="text-xs text-[var(--color-text-muted)] mb-2">
                   أدخل رقم موجب للبونص أو رقم سالب للخصم
                 </p>
@@ -1551,7 +1561,7 @@ const TrainerPayroll = () => {
                   type="number"
                   value={bonusModal.bonusDeduction}
                   onChange={(e) => setBonusModal({ ...bonusModal, bonusDeduction: e.target.value })}
-                  className="input"
+                  className="input text-base sm:text-sm min-h-[48px]"
                   placeholder="0"
                   step="0.01"
                   required
@@ -1559,11 +1569,11 @@ const TrainerPayroll = () => {
               </div>
 
               <div>
-                <label className="label">الملاحظة</label>
+                <label className="label text-sm sm:text-base">الملاحظة</label>
                 <textarea
                   value={bonusModal.notes}
                   onChange={(e) => setBonusModal({ ...bonusModal, notes: e.target.value })}
-                  className="input min-h-[100px]"
+                  className="input min-h-[100px] text-base sm:text-sm"
                   placeholder="اكتب سبب البونص أو الخصم..."
                   maxLength={1000}
                 />
@@ -1573,16 +1583,16 @@ const TrainerPayroll = () => {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[var(--color-border)]">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-[var(--color-border)]">
               <button
                 onClick={() => setBonusModal({ open: false, trainerId: null, trainerName: '', bonusDeduction: '', notes: '' })}
-                className="btn-secondary"
+                className="btn-secondary min-h-[48px] text-base sm:text-sm order-2 sm:order-1"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleSaveBonusDeduction}
-                className="btn-primary"
+                className="btn-primary min-h-[48px] text-base sm:text-sm order-1 sm:order-2"
               >
                 حفظ
               </button>
@@ -1593,27 +1603,27 @@ const TrainerPayroll = () => {
 
       {/* Payment Method Modal */}
       {paymentModal.open && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
+              <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text-primary)]">
                 طريقة التحويل - {paymentModal.trainerName}
               </h3>
               <button
                 onClick={() => setPaymentModal({ open: false, trainerId: null, trainerName: '', paymentMethod: '', accountNumber: '' })}
-                className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]"
+                className="p-2 sm:p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6 sm:w-5 sm:h-5" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="label">طريقة التحويل *</label>
+                <label className="label text-sm sm:text-base">طريقة التحويل *</label>
                 <select
                   value={paymentModal.paymentMethod}
                   onChange={(e) => setPaymentModal({ ...paymentModal, paymentMethod: e.target.value })}
-                  className="select"
+                  className="select text-base sm:text-sm min-h-[48px]"
                   required
                 >
                   <option value="">اختر طريقة التحويل</option>
@@ -1623,12 +1633,12 @@ const TrainerPayroll = () => {
               </div>
 
               <div>
-                <label className="label">رقم البطاقة/الحساب *</label>
+                <label className="label text-sm sm:text-base">رقم البطاقة/الحساب *</label>
                 <input
                   type="text"
                   value={paymentModal.accountNumber}
                   onChange={(e) => setPaymentModal({ ...paymentModal, accountNumber: e.target.value })}
-                  className="input"
+                  className="input text-base sm:text-sm min-h-[48px]"
                   placeholder="أدخل رقم البطاقة أو الحساب"
                   maxLength={50}
                   required
@@ -1636,31 +1646,31 @@ const TrainerPayroll = () => {
               </div>
 
               <div>
-                <label className="label">الرقم السري (PIN)</label>
+                <label className="label text-sm sm:text-base">الرقم السري (PIN)</label>
                 <input
                   type="text"
                   value={paymentModal.paymentPin}
                   onChange={(e) => setPaymentModal({ ...paymentModal, paymentPin: e.target.value })}
-                  className="input"
+                  className="input text-base sm:text-sm min-h-[48px]"
                   placeholder="أدخل الرقم السري للبطاقة (اختياري)"
                   maxLength={20}
                 />
-                <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                <p className="text-xs sm:text-xs text-[var(--color-text-muted)] mt-1">
                   الرقم السري للبطاقة (Q كارد فقط)
                 </p>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[var(--color-border)]">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-[var(--color-border)]">
               <button
                 onClick={() => setPaymentModal({ open: false, trainerId: null, trainerName: '', paymentMethod: '', accountNumber: '' })}
-                className="btn-secondary"
+                className="btn-secondary min-h-[48px] text-base sm:text-sm order-2 sm:order-1"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleSavePaymentMethod}
-                className="btn-primary"
+                className="btn-primary min-h-[48px] text-base sm:text-sm order-1 sm:order-2"
                 disabled={!paymentModal.paymentMethod || !paymentModal.accountNumber}
               >
                 حفظ
@@ -1672,10 +1682,10 @@ const TrainerPayroll = () => {
 
       {/* Payment Status Confirmation Modal */}
       {paymentStatusModal.open && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
+              <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text-primary)]">
                 تأكيد تغيير حالة الدفع
               </h3>
               <button
@@ -1686,9 +1696,9 @@ const TrainerPayroll = () => {
                   currentStatus: 'draft',
                   newStatus: 'paid',
                 })}
-                className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]"
+                className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6 sm:w-5 sm:h-5" />
               </button>
             </div>
 
@@ -1720,7 +1730,7 @@ const TrainerPayroll = () => {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[var(--color-border)]">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-[var(--color-border)]">
               <button
                 onClick={() => setPaymentStatusModal({
                   open: false,
@@ -1729,13 +1739,13 @@ const TrainerPayroll = () => {
                   currentStatus: 'draft',
                   newStatus: 'paid',
                 })}
-                className="btn-secondary"
+                className="btn-secondary min-h-[48px] text-base sm:text-sm order-2 sm:order-1"
               >
                 إلغاء
               </button>
               <button
                 onClick={confirmPaymentStatusChange}
-                className={`btn-primary ${
+                className={`btn-primary min-h-[48px] text-base sm:text-sm order-1 sm:order-2 ${
                   paymentStatusModal.newStatus === 'paid'
                     ? 'bg-green-600 hover:bg-green-700'
                     : 'bg-gray-600 hover:bg-gray-700'

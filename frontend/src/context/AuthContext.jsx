@@ -35,20 +35,25 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
-    const { token, user: userData } = response.data;
-    
-    // Ensure role is included
-    const userWithRole = {
-      ...userData,
-      role: userData.role || 'trainer' // Default to trainer if role is missing
-    };
-    
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userWithRole));
-    setUser(userWithRole);
-    
-    return userWithRole;
+    try {
+      // الباكند يتوقع حقل email
+      const response = await api.post('/auth/login', { email, password });
+      const { token, user: userData, role: responseRole } = response.data;
+
+      const userWithRole = {
+        ...userData,
+        role: responseRole || userData?.role || 'trainer',
+      };
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userWithRole));
+      setUser(userWithRole);
+
+      return userWithRole;
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || 'فشل تسجيل الدخول';
+      throw new Error(message);
+    }
   };
 
   const devLogin = async (role) => {
@@ -69,7 +74,16 @@ export const AuthProvider = ({ children }) => {
       return userWithRole;
     } catch (error) {
       console.error('Dev login error:', error);
-      // Fallback for demo mode
+      // على الموقع الحقيقي لا نستخدم توكن وهمي — السيرفر سيرفضه (401)
+      const isProduction = typeof window !== 'undefined' && (
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1'
+      );
+      if (isProduction) {
+        const msg = error.response?.data?.message || error.message || 'فشل التسجيل التجريبي';
+        throw new Error('على الموقع الحقيقي استخدم تسجيل الدخول العادي (البريد وكلمة المرور). إذا لم يوجد مستخدم للدور المطلوب أضفه من لوحة التحكم.');
+      }
+      // محلياً فقط: Fallback للعرض التجريبي
       const demoUsers = {
         customer_service: { id: 1, name: 'موظف خدمة العملاء', email: 'cs@letspeak.com', role: 'customer_service' },
         trainer: { id: 2, name: 'المدرب محمد', email: 'trainer@letspeak.com', role: 'trainer' },

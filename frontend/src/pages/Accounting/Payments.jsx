@@ -65,10 +65,18 @@ const Payments = () => {
   const [showAllSinglePayments, setShowAllSinglePayments] = useState(false);
   const [showAllDualPayments, setShowAllDualPayments] = useState(false);
 
-  // تشخيص: تسجيل عند فتح صفحة المدفوعات
+  // تشخيص: يظهر في الكونسول لمعرفة سبب عدم ظهور بيانات المدفوعات
   useEffect(() => {
-    console.group('[Payments] تشخيص — صفحة المدفوعات تم تحميلها');
-    console.log('سيتم جلب: payments, students, courses, course-packages, dual courses');
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    const baseURL = 'https://api.letspeak.online/api';
+    console.group('%c[Payments] تشخيص — صفحة المدفوعات', 'color: #2563eb; font-weight: bold; font-size: 12px;');
+    console.log('1. الرابط الأساسي للـ API:', baseURL);
+    console.log('2. هل يوجد توكن؟', token ? `نعم (${token.substring(0, 20)}...)` : 'لا — سيُعاد توجيهك لصفحة الدخول عند أول طلب 401');
+    console.log('3. هل يوجد user محفوظ؟', user ? 'نعم' : 'لا');
+    console.log('4. الطلبات التي ستُنفذ: GET /payments, /students, /courses, /course-packages');
+    console.log('5. إذا ظهر 401 = انتهت الجلسة أو التوكن غير مقبول من السيرفر');
+    console.log('6. إذا ظهر 504 = السيرفر لم يرد في الوقت المحدد');
     console.groupEnd();
   }, []);
 
@@ -108,6 +116,10 @@ const Payments = () => {
       const params = {};
       if (search) params.search = search;
 
+      console.log('[Payments] جاري طلب GET /payments ...');
+      const token = localStorage.getItem('token');
+      if (!token) console.warn('[Payments] لا يوجد توكن — الطلب قد يرجع 401');
+
       // Fetch all pages of payments to ensure we have all data
       let allPayments = [];
       let currentPage = 1;
@@ -119,17 +131,31 @@ const Payments = () => {
         });
         
         const responseData = response.data;
-        const paymentsData = responseData?.data || responseData || [];
+        // تشخيص: شكل الاستجابة (للمساعدة إذا اختفت البيانات)
+        if (currentPage === 1) {
+          console.log('[Payments] شكل الاستجابة:', {
+            hasData: !!responseData?.data,
+            dataLength: responseData?.data?.length ?? (Array.isArray(responseData) ? responseData.length : 0),
+            keys: responseData ? Object.keys(responseData) : [],
+          });
+        }
+        // دعم أكثر من شكل: Laravel paginate { data: [] } أو مصفوفة مباشرة
+        const paymentsData = Array.isArray(responseData?.data)
+          ? responseData.data
+          : Array.isArray(responseData)
+            ? responseData
+            : [];
         
-        if (Array.isArray(paymentsData) && paymentsData.length > 0) {
+        if (paymentsData.length > 0) {
           allPayments = [...allPayments, ...paymentsData];
-          // Check if there are more pages
           hasMorePages = responseData?.current_page < responseData?.last_page;
           currentPage++;
         } else {
           hasMorePages = false;
         }
       }
+
+      console.log('[Payments] نجاح: تم جلب', allPayments.length, 'مدفوعة');
 
       // Sort payments by student name + course name alphabetically
       // This ensures each course is treated as a separate entry, even if same student
@@ -151,12 +177,23 @@ const Payments = () => {
       setPayments(sortedPayments);
       console.log('Payments fetched:', sortedPayments.length);
     } catch (err) {
-      console.group('%c[Payments] فشل جلب المدفوعات', 'color: #dc2626; font-weight: bold;');
-      console.error('الرابط: GET /api/payments');
-      console.error('الحالة:', err.response?.status, err.response?.statusText);
+      const status = err.response?.status;
+      const statusText = err.response?.statusText || '';
+      console.group('%c[Payments] فشل جلب المدفوعات — السبب أدناه', 'color: #dc2626; font-weight: bold; font-size: 12px;');
+      console.error('الرابط:', 'GET https://api.letspeak.online/api/payments');
+      console.error('الحالة:', status, statusText);
+      if (status === 401) {
+        console.error('%cالسبب: 401 Unauthorized — التوكن منتهي أو غير مقبول. التطبيق سيوجّهك لصفحة الدخول.', 'color: #ea580c; font-weight: bold;');
+      } else if (status === 504 || err.code === 'ECONNABORTED') {
+        console.error('%cالسبب: 504 أو انتهاء الوقت — السيرفر لم يرد في الوقت المحدد (تحقق من Nginx/PHP-FPM).', 'color: #ea580c; font-weight: bold;');
+      } else if (status === 403) {
+        console.error('%cالسبب: 403 Forbidden — ليس لديك صلاحية لهذا الطلب.', 'color: #ea580c; font-weight: bold;');
+      } else if (!err.response) {
+        console.error('%cالسبب: خطأ شبكة أو CORS — لم يصل رد من السيرفر (تحقق من الرابط و CORS).', 'color: #ea580c; font-weight: bold;');
+      }
       console.error('الرسالة:', err.message);
       console.error('رد السيرفر:', err.response?.data);
-      console.error('كامل:', err);
+      console.error('كائن الخطأ:', err);
       console.groupEnd();
       setPayments([]); // Set empty array on error
       setError(err.response?.data?.message || err.message || 'حدث خطأ أثناء جلب البيانات');
@@ -167,6 +204,7 @@ const Payments = () => {
 
   const fetchStudentsAndCourses = async () => {
     try {
+      console.log('[Payments] جاري طلب GET /students, /courses, /course-packages ...');
       const [studentsRes, coursesRes, packagesRes] = await Promise.all([
         api.get('/students'),
         api.get('/courses'),
@@ -175,10 +213,14 @@ const Payments = () => {
       setStudents(studentsRes.data.data || studentsRes.data || []);
       setCourses(coursesRes.data.data || coursesRes.data || []);
       setPackages(packagesRes.data.data || packagesRes.data || []);
+      console.log('[Payments] نجاح: طلاب، كورسات، باقات تم جلبها');
     } catch (error) {
+      const status = error.response?.status;
       console.group('%c[Payments] فشل جلب الطلاب/الكورسات/الباقات', 'color: #dc2626; font-weight: bold;');
       console.error('الروابط: GET /students, /courses, /course-packages');
-      console.error('الحالة:', error.response?.status, error.response?.statusText);
+      console.error('الحالة:', status, error.response?.statusText);
+      if (status === 401) console.error('%cالسبب: 401 — سيتم توجيهك لصفحة الدخول', 'color: #ea580c; font-weight: bold;');
+      else if (status === 504) console.error('%cالسبب: 504 — السيرفر لم يرد في الوقت', 'color: #ea580c; font-weight: bold;');
       console.error('الرسالة:', error.message);
       console.error('كامل:', error);
       console.groupEnd();
@@ -431,10 +473,28 @@ const Payments = () => {
     if (!method) return '-';
     const methods = {
       'zain_cash': 'زين كاش',
-      'qi_card': 'بطاقة كي',
+      'qi_card': 'كي كارد',
       'delivery': 'توصيل',
     };
     return methods[method] || method;
+  };
+
+  const getPaymentMethodColor = (method) => {
+    const colors = {
+      'zain_cash': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+      'qi_card': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+      'delivery': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    };
+    return colors[method] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+  };
+
+  const getPaymentMethodBadge = (method) => {
+    if (!method) return <span className="text-gray-400">-</span>;
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${getPaymentMethodColor(method)}`}>
+        {getPaymentMethodLabel(method)}
+      </span>
+    );
   };
 
   const getStatusLabel = (status) => {
@@ -1426,9 +1486,7 @@ const Payments = () => {
                               {formatCurrency(payment.amount)}
                             </td>
                             <td className="text-center text-[10px] py-2 px-2">
-                              <span className="text-[var(--color-text-primary)]">
-                                {getPaymentMethodLabel(payment.payment_method || payment.course?.payment_method)}
-                              </span>
+                              {getPaymentMethodBadge(payment.payment_method || payment.course?.payment_method)}
                             </td>
                             <td className="text-center text-xs py-2 px-2">
                               {paymentStatus.amount > 0 ? (
@@ -1640,9 +1698,7 @@ const Payments = () => {
                                     
                                     <div className="flex items-center gap-1">
                                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">طريقة الدفع:</span>
-                                      <span className="text-sm text-gray-800 dark:text-white">
-                                        {getPaymentMethodLabel(row.payment?.payment_method || row.course?.payment_method)}
-                                      </span>
+                                      {getPaymentMethodBadge(row.payment?.payment_method || row.course?.payment_method)}
                                     </div>
                                   </div>
                                 </div>
@@ -1800,9 +1856,7 @@ const Payments = () => {
                               {totalPaid > 0 ? formatCurrency(totalPaid) : '—'}
                             </td>
                             <td className="text-center text-[10px] py-2 px-2">
-                              <span className="text-[var(--color-text-primary)]">
-                                {getPaymentMethodLabel(row.payment?.payment_method || row.course?.payment_method)}
-                              </span>
+                              {getPaymentMethodBadge(row.payment?.payment_method || row.course?.payment_method)}
                             </td>
                             <td className="text-center text-xs py-2 px-2">
                               {paymentStatus.amount > 0 ? (
@@ -2358,19 +2412,19 @@ const Payments = () => {
                                         const totalPaid = studentData.payments
                                           .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
                                         const remaining = studentPrice - totalPaid;
-                                        return remaining > 0 ? remaining.toLocaleString('ar-EG') + ' د.ع' : '0 د.ع';
+                                        return remaining > 0 ? remaining.toLocaleString('en-US') + ' د.ع' : '0 د.ع';
                                       })()}
                                     </p>
                                   </div>
                                   <div className="col-span-2 sm:col-span-1">
-                                    <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">طريقة الدفع</p>
-                                    <p className="text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-400">
-                                      {getPaymentMethodLabel(
+                                    <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1">طريقة الدفع</p>
+                                    <div>
+                                      {getPaymentMethodBadge(
                                         paymentInfoModal.course?.payment_method || 
                                         studentData.payments[0]?.payment_method || 
                                         studentData.payments[0]?.course?.payment_method
                                       )}
-                                    </p>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -2409,10 +2463,8 @@ const Payments = () => {
                                             </div>
                                           )}
                                           <div>
-                                            <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">طريقة الدفع:</p>
-                                            <p className="text-[10px] sm:text-sm font-semibold text-gray-800 dark:text-white">
-                                              {getPaymentMethodLabel(payment.payment_method || payment.course?.payment_method)}
-                                            </p>
+                                            <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1">طريقة الدفع:</p>
+                                            {getPaymentMethodBadge(payment.payment_method || payment.course?.payment_method)}
                                           </div>
                                         </div>
                                       </div>
@@ -2464,19 +2516,19 @@ const Payments = () => {
                                   const totalPaid = paymentInfoModal.payments
                                     .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
                                   const remaining = studentPrice - totalPaid;
-                                  return remaining > 0 ? remaining.toLocaleString('ar-EG') + ' د.ع' : '0 د.ع';
+                                  return remaining > 0 ? remaining.toLocaleString('en-US') + ' د.ع' : '0 د.ع';
                                 })()}
                               </p>
                             </div>
                             <div className="col-span-2 sm:col-span-1">
-                              <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">طريقة الدفع</p>
-                              <p className="text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-400">
-                                {getPaymentMethodLabel(
+                              <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1">طريقة الدفع</p>
+                              <div>
+                                {getPaymentMethodBadge(
                                   paymentInfoModal.course?.payment_method || 
                                   paymentInfoModal.payments[0]?.payment_method || 
                                   paymentInfoModal.payments[0]?.course?.payment_method
                                 )}
-                              </p>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -2509,10 +2561,8 @@ const Payments = () => {
                                       </p>
                                     </div>
                                     <div>
-                                      <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">طريقة الدفع:</p>
-                                      <p className="text-[10px] sm:text-sm font-semibold text-gray-800 dark:text-white">
-                                        {getPaymentMethodLabel(payment.payment_method || payment.course?.payment_method)}
-                                      </p>
+                                      <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1">طريقة الدفع:</p>
+                                      {getPaymentMethodBadge(payment.payment_method || payment.course?.payment_method)}
                                     </div>
                                     {payment.notes && (
                                       <div className="col-span-2">

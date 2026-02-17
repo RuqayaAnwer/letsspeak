@@ -16,7 +16,7 @@ const Students = () => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    level: 'L1',
+    level: '',
     notes: '',
     course_package_id: '',
     paid_amount: '',
@@ -35,6 +35,7 @@ const Students = () => {
   ];
   const [submitting, setSubmitting] = useState(false);
   const [studentsPage, setStudentsPage] = useState(1); // Pagination for mobile cards
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(null); // Track which card's actions are open
 
   useEffect(() => {
     fetchStudents();
@@ -169,7 +170,7 @@ const Students = () => {
       setFormData({
         name: student.name,
         phone: student.phone,
-        level: student.level || 'L1',
+        level: student.level || '',
         notes: student.notes || '',
         course_package_id: '',
         paid_amount: '',
@@ -180,7 +181,7 @@ const Students = () => {
       setFormData({ 
         name: '', 
         phone: '', 
-        level: 'L1', 
+        level: '', 
         notes: '',
         course_package_id: '',
         paid_amount: '',
@@ -196,7 +197,7 @@ const Students = () => {
     setFormData({ 
       name: '', 
       phone: '', 
-      level: 'L1', 
+      level: '', 
       notes: '',
       course_package_id: '',
       paid_amount: '',
@@ -279,8 +280,12 @@ const Students = () => {
                     {currentStudents.map((student, index) => {
                       const displayIndex = startIndex + index + 1;
                       return (
-                        <div key={student.id} className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-                          <div className="space-y-1.5">
+                        <div key={student.id} className="relative">
+                          <div 
+                            onClick={() => setMobileActionsOpen(student.id)}
+                            className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 sm:cursor-default cursor-pointer hover:border-primary-400 dark:hover:border-primary-600 transition-colors sm:hover:border-gray-200 sm:dark:hover:border-gray-700"
+                          >
+                            <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">اسم الطالب</span>
                               <div className="flex items-center gap-1.5">
@@ -301,10 +306,14 @@ const Students = () => {
                             
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">المستوى</span>
-                              <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold ${getLevelBadgeColor(student.level)}`}>
-                                <GraduationCap className="w-3 h-3" />
-                                {student.level || 'L1'}
-                              </span>
+                              {student.level ? (
+                                <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold ${getLevelBadgeColor(student.level)}`}>
+                                  <GraduationCap className="w-3 h-3" />
+                                  {student.level}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400 dark:text-gray-500">غير محدد</span>
+                              )}
                             </div>
                             
                             <div className="flex items-center justify-between">
@@ -328,18 +337,25 @@ const Students = () => {
                               </span>
                             </div>
                             
-                            <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
+                            {/* Actions - Hidden on mobile, shown on larger screens */}
+                            <div className="hidden sm:flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
                               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الإجراءات</span>
                               <div className="flex items-center gap-1">
                                 <button
-                                  onClick={() => openModal(student)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openModal(student);
+                                  }}
                                   className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 hover:text-primary-600"
                                   title="تعديل"
                                 >
                                   <Edit2 className="w-3.5 h-3.5" />
                                 </button>
                                 <button
-                                    onClick={() => handleDelete(student.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDelete(student.id);
+                                    }}
                                     className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600"
                                     title="حذف"
                                   >
@@ -349,8 +365,59 @@ const Students = () => {
                               </div>
                             </div>
                           </div>
-                        );
-                      })}
+                          
+                          {/* Mobile Actions Menu */}
+                          {mobileActionsOpen === student.id && (
+                            <>
+                              {/* Backdrop */}
+                              <div 
+                                className="sm:hidden fixed inset-0 bg-black/50 z-40"
+                                onClick={() => setMobileActionsOpen(null)}
+                              />
+                              
+                              {/* Actions Menu */}
+                              <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl z-50 p-4 space-y-2">
+                                <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-4" />
+                                
+                                <div className="text-center mb-4">
+                                  <h3 className="text-lg font-bold text-gray-800 dark:text-white">{student.name}</h3>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400" dir="ltr">{student.phone}</p>
+                                </div>
+                                
+                                <button
+                                  onClick={() => {
+                                    setMobileActionsOpen(null);
+                                    openModal(student);
+                                  }}
+                                  className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-semibold transition-colors"
+                                >
+                                  <Edit2 className="w-5 h-5" />
+                                  تعديل الطالب
+                                </button>
+                                
+                                <button
+                                  onClick={() => {
+                                    setMobileActionsOpen(null);
+                                    handleDelete(student.id);
+                                  }}
+                                  className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors"
+                                >
+                                  <Trash2 className="w-5 h-5" />
+                                  حذف الطالب
+                                </button>
+                                
+                                <button
+                                  onClick={() => setMobileActionsOpen(null)}
+                                  className="w-full p-3 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                >
+                                  إلغاء
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                   
                   {/* Pagination Controls */}
@@ -429,10 +496,14 @@ const Students = () => {
                           </div>
                         </td>
                         <td>
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${getLevelBadgeColor(student.level)}`}>
-                            <GraduationCap className="w-3 h-3" />
-                            {student.level || 'L1'}
-                          </span>
+                          {student.level ? (
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${getLevelBadgeColor(student.level)}`}>
+                              <GraduationCap className="w-3 h-3" />
+                              {student.level}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400 dark:text-gray-500">غير محدد</span>
+                          )}
                         </td>
                         <td>
                           <div className="flex items-center gap-1">
@@ -514,6 +585,7 @@ const Students = () => {
               onChange={(e) => setFormData({ ...formData, level: e.target.value })}
               className="select"
             >
+              <option value="">اختر المستوى</option>
               {levels.map((level) => (
                 <option key={level.value} value={level.value}>
                   {level.label}

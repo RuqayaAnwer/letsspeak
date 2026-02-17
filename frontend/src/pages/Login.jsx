@@ -4,8 +4,8 @@ import { ThemeContext } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
-    const [mode, setMode] = useState('dev'); // 'dev' or 'manual'
-    const [username, setUsername] = useState('');
+    const [mode, setMode] = useState('manual'); // 'manual' = تسجيل دخول بالإيميل (للمدربين والموظفين)
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -18,8 +18,8 @@ const Login = () => {
         setLoading(true);
         setError('');
         try {
-            const result = await login(username, password);
-            navigateByRole(result.role);
+            const result = await login(email.trim(), password);
+            navigateByRole(result?.role);
         } catch (err) {
             setError(err.message || 'فشل تسجيل الدخول. يرجى التحقق من البيانات.');
         } finally {
@@ -49,6 +49,7 @@ const Login = () => {
                 navigate('/trainer');
                 break;
             case 'finance':
+            case 'accounting':
                 navigate('/finance');
                 break;
             default:
@@ -114,9 +115,19 @@ const Login = () => {
                     </p>
                 </div>
 
-                {/* Mode Toggle */}
+                {/* Mode Toggle: تسجيل دخول بالإيميل (افتراضي) | دخول سريع للتطوير */}
                 <div className="flex justify-center mb-6">
                     <div className="bg-white dark:bg-gray-800 rounded-lg p-1 shadow-md">
+                        <button
+                            onClick={() => setMode('manual')}
+                            className={`px-4 py-2 rounded-md transition-all ${
+                                mode === 'manual'
+                                    ? 'bg-blue-500 text-white'
+                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            }`}
+                        >
+                            تسجيل الدخول
+                        </button>
                         <button
                             onClick={() => setMode('dev')}
                             className={`px-4 py-2 rounded-md transition-all ${
@@ -126,16 +137,6 @@ const Login = () => {
                             }`}
                         >
                             دخول سريع
-                        </button>
-                        <button
-                            onClick={() => setMode('manual')}
-                            className={`px-4 py-2 rounded-md transition-all ${
-                                mode === 'manual'
-                                    ? 'bg-blue-500 text-white'
-                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                            }`}
-                        >
-                            تسجيل دخول
                         </button>
                     </div>
                 </div>
@@ -170,23 +171,27 @@ const Login = () => {
                         ))}
                     </div>
                 ) : (
-                    /* Manual Login Form */
+                    /* Manual Login Form - تسجيل الدخول بالإيميل (المدربون والموظفون) */
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md mx-auto">
-                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white text-center mb-6">
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white text-center mb-2">
                             تسجيل الدخول
                         </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+                            أدخل البريد الإلكتروني وكلمة المرور المسجّلين في النظام
+                        </p>
                         <form onSubmit={handleManualLogin}>
                             <div className="mb-4">
                                 <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
-                                    اسم المستخدم
+                                    البريد الإلكتروني
                                 </label>
                                 <input
-                                    type="text"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
                                     className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                    placeholder="أدخل اسم المستخدم"
+                                    placeholder="مثال: trainer@letspeak.online"
                                     required
+                                    autoComplete="email"
                                 />
                             </div>
                             <div className="mb-6">
@@ -200,8 +205,12 @@ const Login = () => {
                                     className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                     placeholder="أدخل كلمة المرور"
                                     required
+                                    autoComplete="current-password"
                                 />
                             </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 text-center">
+                                المدربون: استخدموا البريد الإلكتروني المسجّل لكم في خدمة العملاء (معلومات المدربين) — سيتم توجيهكم لصفحتكم تلقائياً.
+                            </p>
                             <button
                                 type="submit"
                                 disabled={loading}
@@ -213,23 +222,22 @@ const Login = () => {
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        جاري التحميل...
+                                        جاري الدخول...
                                     </span>
                                 ) : (
-                                    'تسجيل الدخول'
+                                    'دخول'
                                 )}
                             </button>
                         </form>
 
-                        {/* Test Credentials */}
-                        <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                            <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-2">
-                                بيانات الاختبار (كلمة المرور: password)
+                        {/* Test Credentials - للاختبار فقط */}
+                        <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <p className="text-xs text-gray-500 dark:text-gray-500 text-center mb-2">
+                                للاختبار: استخدم نفس الإيميل المسجّل في قسم المدربين + كلمة المرور المعطاة للمدرب
                             </p>
                             <div className="text-xs text-gray-500 dark:text-gray-500 text-center space-y-1">
-                                <p>خدمة العملاء: <span className="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">cs@letspeak.com</span></p>
-                                <p>المالية: <span className="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">finance@letspeak.com</span></p>
-                                <p>المدرب: <span className="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">mohammed</span></p>
+                                <p>خدمة العملاء / المالية: إيميل الموظف المسجّل في النظام</p>
+                                <p>المدرب: <span className="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">نفس الإيميل في معلومات المدرب</span></p>
                             </div>
                         </div>
                     </div>

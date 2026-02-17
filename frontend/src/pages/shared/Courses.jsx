@@ -9,8 +9,15 @@ import { formatCurrency } from '../../utils/currencyFormat';
 const Courses = () => {
   const navigate = useNavigate();
   const { isCustomerService, isFinance, isTrainer } = useAuth();
+  
+  // Helper function to get package name (handles custom packages)
+  const getPackageName = (course) => {
+    if (course?.is_custom) return 'مخصص';
+    return (course?.course_package || course?.coursePackage)?.name || '-';
+  };
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchStudent, setSearchStudent] = useState('');
   const [studentPaymentsModal, setStudentPaymentsModal] = useState({
     open: false,
     studentId: null,
@@ -36,10 +43,10 @@ const Courses = () => {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  // Reset pagination when courses change
+  // Reset pagination when courses change or search filters change
   useEffect(() => {
     setCoursesPages({});
-  }, [courses]);
+  }, [courses, searchStudent]);
 
   const fetchCourses = async () => {
     try {
@@ -350,26 +357,66 @@ const Courses = () => {
     return course.is_dual || (course.students && Array.isArray(course.students) && course.students.length > 1);
   };
 
+  // Filter courses by search criteria
+  const filterCoursesBySearch = (coursesList) => {
+    return coursesList.filter(course => {
+      // Filter by student name
+      if (searchStudent) {
+        const studentMatch = course.students?.some(student => 
+          student.name?.toLowerCase().includes(searchStudent.toLowerCase())
+        );
+        if (!studentMatch) return false;
+      }
+
+      return true;
+    });
+  };
+
   const coursesArray = Array.isArray(courses) ? courses : [];
   
-  // Filter courses by status and type (single vs dual)
-  const activeSingleCourses = coursesArray.filter(c => c.status === 'active' && !isDualCourse(c));
-  const activeDualCourses = coursesArray.filter(c => c.status === 'active' && isDualCourse(c));
-  const pausedSingleCourses = coursesArray.filter(c => c.status === 'paused' && !isDualCourse(c));
-  const pausedDualCourses = coursesArray.filter(c => c.status === 'paused' && isDualCourse(c));
-  const finishedSingleCourses = coursesArray.filter(c => c.status === 'finished' && !isDualCourse(c));
-  const finishedDualCourses = coursesArray.filter(c => c.status === 'finished' && isDualCourse(c));
-  // عرض الكورسات بحالات أخرى (paid, cancelled, إلخ)
-  const otherSingleCourses = coursesArray.filter(c => 
-    c.status && 
-    !['active', 'paused', 'finished'].includes(c.status) &&
-    !isDualCourse(c)
-  );
-  const otherDualCourses = coursesArray.filter(c => 
-    c.status && 
-    !['active', 'paused', 'finished'].includes(c.status) &&
-    isDualCourse(c)
-  );
+  // Filter courses by search criteria first
+  const filteredCourses = filterCoursesBySearch(coursesArray);
+  
+  // Group courses by trainer and sort alphabetically by trainer name
+  const coursesByTrainer = filteredCourses.reduce((acc, course) => {
+    const trainerName = course.trainer?.name || course.trainer?.user?.name || 'غير محدد';
+    const trainerId = course.trainer?.id || 'unknown';
+    const key = `${trainerId}-${trainerName}`;
+    
+    if (!acc[key]) {
+      acc[key] = {
+        trainerName,
+        trainerId,
+        courses: []
+      };
+    }
+    acc[key].courses.push(course);
+    return acc;
+  }, {});
+  
+  // Convert to array and sort by trainer name alphabetically (Arabic)
+  const trainerGroups = Object.values(coursesByTrainer).sort((a, b) => {
+    return a.trainerName.localeCompare(b.trainerName, 'ar');
+  });
+  
+  // Sort courses within each trainer group by: status priority (active > paused > finished > other), then by start date (newest first)
+  trainerGroups.forEach(group => {
+    group.courses.sort((a, b) => {
+      // Status priority
+      const statusPriority = { active: 1, paused: 2, finished: 3 };
+      const priorityA = statusPriority[a.status] || 99;
+      const priorityB = statusPriority[b.status] || 99;
+      
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      // If same status, sort by start date (newest first)
+      const dateA = new Date(a.start_date || 0);
+      const dateB = new Date(b.start_date || 0);
+      return dateB - dateA;
+    });
+  });
 
   const renderCourseTable = (coursesList, title, titleColor, sectionKey) => {
     if (coursesList.length === 0) return null;
@@ -389,7 +436,7 @@ const Courses = () => {
     return (
       <div className="mb-4 sm:mb-5">
         <h2 className={`text-xs sm:text-base font-bold mb-1.5 sm:mb-2 pr-1 sm:pr-16 ${titleColor}`}>
-          {title} ({coursesList.length})
+          {title}
         </h2>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
@@ -414,11 +461,11 @@ const Courses = () => {
                       <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الباقة</span>
                       <div className="text-right flex items-center gap-1.5">
                         <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{course.id}</span>
-                        {(course.course_package || course.coursePackage) ? (
+                        {(course.is_custom || course.course_package || course.coursePackage) ? (
                           <>
                             <div className="flex items-center gap-1">
                               <div className="text-sm font-medium text-gray-800 dark:text-white">
-                                {(course.course_package || course.coursePackage)?.name || '-'}
+                                {getPackageName(course)}
                               </div>
                               {isDualCourse(course) && (
                                 <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
@@ -574,10 +621,10 @@ const Courses = () => {
                     }`}
                   >
                     <td className="px-2 py-2 text-center text-gray-800 dark:text-white">
-                      {(course.course_package || course.coursePackage) ? (
+                      {(course.is_custom || course.course_package || course.coursePackage) ? (
                         <div className="flex flex-col items-center gap-0.5">
                           <div className="flex items-center gap-1">
-                            <span className="text-[10px] font-medium">{(course.course_package || course.coursePackage)?.name || '-'}</span>
+                            <span className="text-[10px] font-medium">{getPackageName(course)}</span>
                             {isDualCourse(course) && (
                               <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold">
                                 ثنائي
@@ -685,31 +732,70 @@ const Courses = () => {
         )}
       </div>
 
-      {activeSingleCourses.length === 0 && activeDualCourses.length === 0 && 
-       pausedSingleCourses.length === 0 && pausedDualCourses.length === 0 && 
-       finishedSingleCourses.length === 0 && finishedDualCourses.length === 0 && 
-       otherSingleCourses.length === 0 && otherDualCourses.length === 0 && !loading && (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-xs bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-          لا توجد كورسات
+      {/* Search Filters */}
+      <div className="card p-3 sm:p-4 mb-3 sm:mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+              البحث باسم الطالب
+            </label>
+            <input
+              type="text"
+              value={searchStudent}
+              onChange={(e) => setSearchStudent(e.target.value)}
+              placeholder="ابحث عن كورس بإدخال اسم الطالب..."
+              className="input text-xs sm:text-sm"
+            />
+          </div>
+        </div>
+        
+        {searchStudent && (
+          <div className="mt-2 sm:mt-3 flex items-center gap-2 text-xs sm:text-sm">
+            <span className="text-gray-600 dark:text-gray-400">عوامل التصفية النشطة:</span>
+            {searchStudent && (
+              <button
+                onClick={() => setSearchStudent('')}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded text-xs"
+              >
+                طالب: {searchStudent}
+                <X className="w-3 h-3" />
+              </button>
+            )}
+            <button
+              onClick={() => setSearchStudent('')}
+              className="text-red-600 dark:text-red-400 hover:underline text-xs"
+            >
+              مسح
+            </button>
+          </div>
+        )}
+      </div>
+
+      {trainerGroups.length === 0 && !loading && (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-xs sm:text-sm bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+          {searchStudent ? (
+            <div>
+              <p className="text-base sm:text-lg mb-2">لا توجد نتائج مطابقة لبحثك</p>
+              <p className="text-xs sm:text-sm">جرب تغيير معايير البحث</p>
+            </div>
+          ) : (
+            'لا توجد كورسات'
+          )}
         </div>
       )}
 
-      {/* Active Courses - Single */}
-      {renderCourseTable(activeSingleCourses, 'الكورسات النشطة - الفردية', 'text-green-600 dark:text-green-400', 'active-single')}
-      {/* Active Courses - Dual */}
-      {renderCourseTable(activeDualCourses, 'الكورسات النشطة - الثنائية', 'text-purple-600 dark:text-purple-400', 'active-dual')}
-      {/* Paused Courses - Single */}
-      {renderCourseTable(pausedSingleCourses, 'الكورسات المتوقفة - الفردية', 'text-yellow-600 dark:text-yellow-400', 'paused-single')}
-      {/* Paused Courses - Dual */}
-      {renderCourseTable(pausedDualCourses, 'الكورسات المتوقفة - الثنائية', 'text-purple-600 dark:text-purple-400', 'paused-dual')}
-      {/* Finished Courses - Single */}
-      {renderCourseTable(finishedSingleCourses, 'الكورسات المنتهية - الفردية', 'text-blue-600 dark:text-blue-400', 'finished-single')}
-      {/* Finished Courses - Dual */}
-      {renderCourseTable(finishedDualCourses, 'الكورسات المنتهية - الثنائية', 'text-purple-600 dark:text-purple-400', 'finished-dual')}
-      {/* Other Courses - Single */}
-      {renderCourseTable(otherSingleCourses, 'كورسات أخرى - الفردية', 'text-gray-600 dark:text-gray-400', 'other-single')}
-      {/* Other Courses - Dual */}
-      {renderCourseTable(otherDualCourses, 'كورسات أخرى - الثنائية', 'text-purple-600 dark:text-purple-400', 'other-dual')}
+      {/* Render courses grouped by trainer */}
+      {trainerGroups.map((trainerGroup, index) => {
+        const sectionKey = `trainer-${trainerGroup.trainerId}`;
+        const totalCount = trainerGroup.courses.length;
+        
+        return renderCourseTable(
+          trainerGroup.courses, 
+          `${trainerGroup.trainerName} (${totalCount})`, 
+          'text-blue-600 dark:text-blue-400', 
+          sectionKey
+        );
+      })}
 
       {/* Student Payments Modal */}
       {studentPaymentsModal.open && (
@@ -1093,10 +1179,14 @@ const Courses = () => {
                               <div>
                                 <p className="text-gray-500 dark:text-gray-400">المبلغ المتبقي</p>
                                 <p className="text-sm sm:text-lg font-bold text-orange-600 dark:text-orange-400">
-                                  {formatCurrency(studentPaymentsModal.payments
-                                    .filter(p => p.status === 'pending' || p.status === 'unpaid' || p.status === 'partial')
-                                    .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
-                                        )}
+                                  {(() => {
+                                    const totalPrice = parseFloat(studentPaymentsModal.course?.total_price || 0);
+                                    const totalPaid = studentPaymentsModal.payments
+                                      .filter(p => p.status === 'paid' || p.status === 'completed')
+                                      .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                                    const remaining = Math.max(0, totalPrice - totalPaid);
+                                    return formatCurrency(remaining);
+                                  })()}
                                 </p>
                               </div>
                               <div className="col-span-2 sm:col-span-1">

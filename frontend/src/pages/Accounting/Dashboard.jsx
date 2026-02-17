@@ -24,7 +24,7 @@ const AccountingDashboard = () => {
       const [statsRes, paymentStatsRes, paymentsRes] = await Promise.all([
         api.get('/statistics'),
         api.get('/payments-statistics'),
-        api.get('/payments?per_page=10'),
+        api.get('/payments?per_page=5'),
       ]);
       
       console.log('Statistics response:', statsRes.data);
@@ -64,13 +64,64 @@ const AccountingDashboard = () => {
 
 
   const getStatusLabel = (status) => {
-    const labels = { completed: 'مكتمل', pending: 'معلق' };
+    const labels = { completed: 'مكتمل', pending: 'معلق', partial: 'غير مكتمل' };
     return labels[status] || status;
   };
 
   const getStatusBadge = (status) => {
-    const badges = { completed: 'badge-success', pending: 'badge-warning' };
+    const badges = { completed: 'badge-success', pending: 'badge-warning', partial: 'badge-warning' };
     return badges[status] || 'badge-gray';
+  };
+
+  // Get payment completion status based on remaining amount
+  const getPaymentStatus = (payment) => {
+    const remaining = calculateRemainingAmount(payment);
+    if (remaining > 0) {
+      return 'partial'; // غير مكتمل
+    }
+    return 'completed'; // مكتمل
+  };
+
+  // Calculate remaining amount for a payment using course data
+  const calculateRemainingAmount = (payment) => {
+    if (!payment.course) return 0;
+    
+    const course = payment.course;
+    const isDual = course.is_dual || false;
+    
+    // Get total amount and amount paid from course
+    const totalAmount = parseFloat(course.total_amount || 0);
+    const amountPaid = parseFloat(course.amount_paid || 0);
+    
+    // If we have total_amount and amount_paid from the course, use them
+    if (totalAmount > 0) {
+      // For dual courses, divide by number of students
+      if (isDual && course.students && course.students.length > 1) {
+        const studentCount = course.students.length;
+        const studentTotal = totalAmount / studentCount;
+        const studentPaid = amountPaid / studentCount;
+        const remaining = studentTotal - studentPaid;
+        return remaining > 0 ? remaining : 0;
+      } else {
+        // Single course
+        const remaining = totalAmount - amountPaid;
+        return remaining > 0 ? remaining : 0;
+      }
+    }
+    
+    // Fallback: use course package price if total_amount not available
+    const packagePrice = parseFloat(course.course_package?.price || course.coursePackage?.price || 0);
+    if (packagePrice > 0) {
+      let studentPrice = packagePrice;
+      if (isDual && course.students && course.students.length > 1) {
+        studentPrice = packagePrice / course.students.length;
+      }
+      // We can't accurately calculate without all payments, so we show package price - current payment
+      const remaining = studentPrice - parseFloat(payment.amount || 0);
+      return remaining > 0 ? remaining : 0;
+    }
+    
+    return 0;
   };
 
   if (loading) {
@@ -181,8 +232,8 @@ const AccountingDashboard = () => {
                           </div>
                           
                           <div className="flex items-center justify-end">
-                            <span className={`badge ${getStatusBadge(payment.status)} text-[9px] px-1.5 py-0.5`}>
-                              {getStatusLabel(payment.status)}
+                            <span className={`badge ${getStatusBadge(getPaymentStatus(payment))} text-[9px] px-1.5 py-0.5`}>
+                              {getStatusLabel(getPaymentStatus(payment))}
                             </span>
                           </div>
                           
@@ -203,9 +254,21 @@ const AccountingDashboard = () => {
                             <span className="text-[10px] text-gray-800 dark:text-white truncate">{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</span>
                           </div>
                           
-                          <div className="col-span-2 flex items-center gap-1">
+                          <div className="flex items-center gap-1">
                             <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المبلغ:</span>
                             <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(payment.amount)}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">المتبقي:</span>
+                            {(() => {
+                              const remaining = calculateRemainingAmount(payment);
+                              return remaining > 0 ? (
+                                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{formatCurrency(remaining)}</span>
+                              ) : (
+                                <span className="text-[10px] font-bold text-green-600 dark:text-green-400">مكتمل ✓</span>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -227,11 +290,12 @@ const AccountingDashboard = () => {
                 <th className="text-xs sm:text-sm">الطالب</th>
                 <th className="text-xs sm:text-sm">الكورس</th>
                 <th className="text-xs sm:text-sm">المبلغ</th>
+                <th className="text-xs sm:text-sm">المتبقي</th>
                 <th className="text-xs sm:text-sm">الحالة</th>
               </tr>
             </thead>
             <tbody>
-              {recentPayments.map((payment) => (
+              {recentPayments.slice(0, 5).map((payment) => (
                 <tr key={payment.id}>
                   <td className="font-semibold text-xs sm:text-sm">{payment.id}</td>
                   <td className="text-xs sm:text-sm">
@@ -244,16 +308,26 @@ const AccountingDashboard = () => {
                   <td className="font-bold text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm">
                     {formatCurrency(payment.amount)}
                   </td>
+                  <td className="text-xs sm:text-sm">
+                    {(() => {
+                      const remaining = calculateRemainingAmount(payment);
+                      return remaining > 0 ? (
+                        <span className="font-bold text-amber-600 dark:text-amber-400">{formatCurrency(remaining)}</span>
+                      ) : (
+                        <span className="font-bold text-green-600 dark:text-green-400">مكتمل ✓</span>
+                      );
+                    })()}
+                  </td>
                   <td>
-                    <span className={`badge ${getStatusBadge(payment.status)} text-xs`}>
-                      {getStatusLabel(payment.status)}
+                    <span className={`badge ${getStatusBadge(getPaymentStatus(payment))} text-xs`}>
+                      {getStatusLabel(getPaymentStatus(payment))}
                     </span>
                   </td>
                 </tr>
               ))}
               {recentPayments.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center py-8 text-[var(--color-text-muted)] text-xs sm:text-sm">
+                  <td colSpan="7" className="text-center py-8 text-[var(--color-text-muted)] text-xs sm:text-sm">
                     لا توجد مدفوعات
                   </td>
                 </tr>
