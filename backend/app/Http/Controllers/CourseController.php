@@ -238,6 +238,14 @@ class CourseController extends Controller
                 $courseData['amount_paid'] = floatval($request->input('paid_amount', 0));
             }
         }
+
+        // For package courses, set total_amount from package price
+        if (!$isCustom && !empty($request->course_package_id)) {
+            $package = CoursePackage::find($request->course_package_id);
+            if ($package && $package->price !== null) {
+                $courseData['total_amount'] = (float) $package->price;
+            }
+        }
         
         $course = Course::create($courseData);
 

@@ -166,6 +166,15 @@ class Course extends Model
     }
 
     /**
+     * Recalculate and update amount_paid from payments.
+     */
+    public function recalculateAmountPaid(): void
+    {
+        $this->amount_paid = $this->payments()->sum('amount');
+        $this->save();
+    }
+
+    /**
      * Get remaining amount.
      */
     public function getRemainingAmountAttribute(): float

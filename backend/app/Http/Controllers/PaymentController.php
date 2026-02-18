@@ -126,6 +126,11 @@ class PaymentController extends Controller
 
         $payment = Payment::create($paymentData);
 
+        $course = Course::find($request->course_id);
+        if ($course) {
+            $course->recalculateAmountPaid();
+        }
+
         $payment->load(['course', 'student']);
 
         return response()->json($payment, 201);
@@ -234,6 +239,10 @@ class PaymentController extends Controller
 
         $payment->update($updateData);
 
+        if ($payment->course) {
+            $payment->course->recalculateAmountPaid();
+        }
+
         // Log the modification in ActivityLog
         try {
             $changes = [];
@@ -282,7 +291,11 @@ class PaymentController extends Controller
      */
     public function destroy(Payment $payment)
     {
+        $course = $payment->course;
         $payment->delete();
+        if ($course) {
+            $course->recalculateAmountPaid();
+        }
 
         return response()->json(null, 204);
     }
