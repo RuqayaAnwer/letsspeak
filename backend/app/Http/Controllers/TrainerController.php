@@ -121,10 +121,11 @@ public function store(Request $request)
 
             // 3. إنشاء المستخدم في جدول users (المخزن الأول: لا يحوي username)
             $user = User::create([
-                'name' => $request->name,
-                'email' => $email,
+                'name'     => $request->name,
+                'email'    => $email,
                 'password' => $hashedPassword,
-                'status' => 'active',
+                'role'     => 'trainer',
+                'status'   => 'active',
             ]);
 
             // 4. إنشاء المدرب في جدول trainers (المخزن الثاني: يحوي username ويطلب البيانات مكررة)
@@ -143,7 +144,13 @@ public function store(Request $request)
                 'password' => $hashedPassword, // تكرار كلمة السر
             ]);
 
-            return response()->json($trainer, 201);
+            $plainPassword = $request->password ?: '123456';
+
+            return response()->json([
+                'trainer'        => $trainer,
+                'login_email'    => $email,
+                'login_password' => $plainPassword,
+            ], 201);
         });
     }
     /**
@@ -162,17 +169,37 @@ public function store(Request $request)
     public function update(Request $request, Trainer $trainer)
     {
         $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'phone' => 'nullable|string|max:20',
+            'name'      => 'sometimes|required|string|max:255',
+            'email'     => 'nullable|email|max:255',
+            'phone'     => 'nullable|string|max:20',
             'min_level' => 'nullable|string|max:10',
             'max_level' => 'nullable|string|max:10',
-            'notes' => 'nullable|string',
+            'notes'     => 'nullable|string',
+            'password'  => 'nullable|string|min:6',
         ]);
 
-        // Update trainer profile
-        $trainer->update($request->only(['name', 'phone', 'min_level', 'max_level', 'notes']));
+        return DB::transaction(function () use ($request, $trainer) {
+            // Update trainer profile
+            $trainerData = $request->only(['name', 'phone', 'min_level', 'max_level', 'notes']);
+            if ($request->filled('email')) {
+                $trainerData['email']    = $request->email;
+                $trainerData['username'] = $request->email;
+            }
+            $trainer->update($trainerData);
 
-        return response()->json($trainer);
+            // Sync changes to linked User account
+            if ($trainer->user) {
+                $userData = [];
+                if ($request->filled('name'))     $userData['name']     = $request->name;
+                if ($request->filled('email'))    $userData['email']    = $request->email;
+                if ($request->filled('password')) $userData['password'] = \Illuminate\Support\Facades\Hash::make($request->password);
+                if (!empty($userData)) {
+                    $trainer->user->update($userData);
+                }
+            }
+
+            return response()->json($trainer->fresh(['user']));
+        });
     }
 
     /**

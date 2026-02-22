@@ -20,7 +20,9 @@ const Trainers = () => {
     min_level: '',
     max_level: '',
     notes: '',
+    password: '',
   });
+  const [newTrainerCredentials, setNewTrainerCredentials] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [trainersPage, setTrainersPage] = useState(1); // Pagination for mobile cards
 
@@ -66,19 +68,30 @@ const Trainers = () => {
 
     try {
       if (editingTrainer) {
-        await api.put(`/trainers/${editingTrainer.id}`, {
+        const payload = {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
           min_level: formData.min_level,
           max_level: formData.max_level,
           notes: formData.notes,
-        });
+        };
+        if (formData.password) payload.password = formData.password;
+        await api.put(`/trainers/${editingTrainer.id}`, payload);
+        fetchTrainers();
+        closeModal();
       } else {
-        await api.post('/trainers', formData);
+        const res = await api.post('/trainers', formData);
+        fetchTrainers();
+        closeModal();
+        // Show login credentials to the user creating the trainer
+        const data = res.data;
+        setNewTrainerCredentials({
+          name:     data.trainer?.name  || formData.name,
+          email:    data.login_email    || data.trainer?.email || formData.email,
+          password: data.login_password || formData.password,
+        });
       }
-      fetchTrainers();
-      closeModal();
     } catch (error) {
       console.error('Error saving trainer:', error);
       alert(error.response?.data?.message || 'حدث خطأ أثناء الحفظ');
@@ -111,7 +124,7 @@ const Trainers = () => {
       });
     } else {
       setEditingTrainer(null);
-      setFormData({ name: '', email: '', phone: '', min_level: '', max_level: '', notes: '' });
+      setFormData({ name: '', email: '', phone: '', min_level: '', max_level: '', notes: '', password: '' });
     }
     setIsModalOpen(true);
   };
@@ -523,6 +536,22 @@ const Trainers = () => {
           </div>
 
           <div>
+            <label className="label">
+              {editingTrainer ? 'كلمة المرور الجديدة (اتركها فارغة للإبقاء على الحالية)' : 'كلمة المرور'}
+            </label>
+            <input
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="input"
+              placeholder={editingTrainer ? '••••••••' : 'أدخل كلمة مرور للمدرب'}
+              dir="ltr"
+              required={!editingTrainer}
+              minLength={6}
+            />
+          </div>
+
+          <div>
             <label className="label">ملاحظات</label>
             <textarea
               value={formData.notes}
@@ -542,6 +571,29 @@ const Trainers = () => {
           </div>
         </form>
       </Modal>
+
+      {/* New Trainer Credentials Modal */}
+      {newTrainerCredentials && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setNewTrainerCredentials(null)} />
+          <div className="relative bg-[var(--color-bg-primary)] rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-fade-in text-center space-y-4">
+            <div className="text-4xl">✅</div>
+            <h3 className="text-xl font-bold text-[var(--color-text-primary)]">تم إضافة المدرب بنجاح</h3>
+            <p className="text-sm text-[var(--color-text-secondary)]">احتفظ ببيانات الدخول التالية وسلّمها للمدرب:</p>
+            <div className="bg-[var(--color-bg-secondary)] rounded-xl p-4 text-right space-y-2 text-sm font-mono" dir="ltr">
+              <div><span className="text-[var(--color-text-secondary)]">Name: </span><span className="font-bold text-[var(--color-text-primary)]">{newTrainerCredentials.name}</span></div>
+              <div><span className="text-[var(--color-text-secondary)]">Email: </span><span className="font-bold text-[var(--color-text-primary)]">{newTrainerCredentials.email}</span></div>
+              <div><span className="text-[var(--color-text-secondary)]">Password: </span><span className="font-bold text-green-600 dark:text-green-400">{newTrainerCredentials.password}</span></div>
+            </div>
+            <button
+              onClick={() => setNewTrainerCredentials(null)}
+              className="btn-primary w-full mt-2"
+            >
+              حسنًا، تم الحفظ
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Notes Popup */}
       {notesPopup.open && (
