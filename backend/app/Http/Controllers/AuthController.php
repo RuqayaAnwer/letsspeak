@@ -59,13 +59,21 @@ class AuthController extends Controller
             ], 403);
         }
 
-        if ($user->role === 'trainer') {
-            $user->load('trainer');
+        // إذا كان لديه ملف مدرب فدوره دائماً trainer (ونصلح الجدول إن كان خاطئاً)
+        $user->load('trainer');
+        if ($user->trainer) {
+            if ($user->role !== 'trainer') {
+                $user->role = 'trainer';
+                $user->save();
+            }
+            $role = 'trainer';
+        } else {
+            $role = $user->role ?: null;
         }
 
         return response()->json([
             'user' => $user,
-            'role' => $user->role,
+            'role' => $role,
             'token' => 'token-' . $user->id . '-' . time(),
         ]);
     }

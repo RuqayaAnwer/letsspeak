@@ -40,9 +40,11 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/login', { email, password });
       const { token, user: userData, role: responseRole } = response.data;
 
+      // تأكيد الدور: من الاستجابة أولاً، وإذا كان المستخدم له trainer بدون role فاعتبره مدرباً
+      const role = responseRole ?? userData?.role ?? (userData?.trainer ? 'trainer' : null) ?? 'trainer';
       const userWithRole = {
         ...userData,
-        role: responseRole || userData?.role || 'trainer',
+        role,
       };
 
       localStorage.setItem('token', token);
