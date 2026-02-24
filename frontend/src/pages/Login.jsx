@@ -208,9 +208,17 @@ const Login = () => {
                                     autoComplete="current-password"
                                 />
                             </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 text-center">
-                                المدربون: استخدموا البريد الإلكتروني المسجّل لكم في خدمة العملاء (معلومات المدربين) — سيتم توجيهكم لصفحتكم تلقائياً.
-                            </p>
+                            <div className="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-right">
+                                <p className="text-xs text-blue-700 dark:text-blue-300 font-semibold mb-1">
+                                    🎓 للمدربين
+                                </p>
+                                <p className="text-xs text-blue-600 dark:text-blue-400">
+                                    استخدموا البريد الإلكتروني المسجّل في لوحة خدمة العملاء (معلومات المدربين) وكلمة المرور التي أُعطيت لكم عند الإضافة.
+                                </p>
+                                <p className="text-xs text-blue-500 dark:text-blue-500 mt-1">
+                                    في حال واجهتم مشكلة في الدخول، تواصلوا مع الإدارة لإعادة تعيين كلمة المرور.
+                                </p>
+                            </div>
                             <button
                                 type="submit"
                                 disabled={loading}

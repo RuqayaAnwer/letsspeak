@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Trainer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -46,6 +47,17 @@ class AuthController extends Controller
         ]);
 
         $user = User::where('email', $request->email)->first();
+
+        // إذا لم يُوجد مستخدم بهذا الإيميل في users، ابحث في جدول المدربين
+        // (يحدث عند اختلاف trainers.email عن users.email بسبب عدم المزامنة)
+        if (!$user) {
+            $trainer = Trainer::where('email', $request->email)
+                ->orWhere('username', $request->email)
+                ->first();
+            if ($trainer?->user_id) {
+                $user = User::find($trainer->user_id);
+            }
+        }
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
