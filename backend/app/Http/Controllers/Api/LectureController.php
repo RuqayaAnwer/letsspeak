@@ -76,14 +76,17 @@ class LectureController extends Controller
     {
         $lecture->load('course.trainer');
 
-        // Validate request
+        // Validate request (new_time: accept H:i or H:i:s and normalize)
         $validated = $request->validate([
             'new_date' => 'required|date|date_format:Y-m-d',
-            'new_time' => 'nullable|date_format:H:i',
+            'new_time' => 'nullable|string|max:8',
             'postponed_by' => 'required|in:trainer,student,customer_service,admin,holiday',
             'reason' => 'nullable|string|max:500',
             'force' => 'nullable|boolean',
         ]);
+        if (!empty($validated['new_time']) && strlen($validated['new_time']) >= 5) {
+            $validated['new_time'] = substr($validated['new_time'], 0, 5);
+        }
 
         // Get current user using AuthService (same as other controllers)
         $user = null;
@@ -172,8 +175,11 @@ class LectureController extends Controller
     {
         $validated = $request->validate([
             'new_date' => 'required|date|date_format:Y-m-d',
-            'new_time' => 'nullable|date_format:H:i',
+            'new_time' => 'nullable|string|max:8',
         ]);
+        if (!empty($validated['new_time']) && strlen($validated['new_time']) >= 5) {
+            $validated['new_time'] = substr($validated['new_time'], 0, 5);
+        }
 
         $lecture->load('course');
 
