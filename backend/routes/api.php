@@ -12,6 +12,7 @@ use App\Http\Controllers\CoursePackageController;
 use App\Http\Controllers\Api\CustomerServiceController;
 use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\TrainerController as ApiTrainerController;
+use App\Http\Controllers\Api\LectureController as ApiLectureController;
 use App\Http\Controllers\ActivityLogController;
 use App\Models\Trainer;
 
@@ -68,12 +69,12 @@ Route::put('/courses/{course}/lectures/bulk', [CourseController::class, 'bulkUpd
 
 // Lectures
 Route::get('/lectures', [LectureController::class, 'index']);
-Route::get('/lectures/{lecture}', [LectureController::class, 'show']);
+Route::get('/lectures/{lecture}', [ApiLectureController::class, 'show']);
 Route::put('/lectures/{lecture}', [LectureController::class, 'update']);
-Route::post('/lectures/{lecture}/postpone', [LectureController::class, 'postpone']);
-Route::post('/lectures/{lecture}/cancel-postponement', [LectureController::class, 'cancelPostponement']);
-Route::post('/lectures/{lecture}/check-conflicts', [LectureController::class, 'checkConflicts']);
-Route::get('/lectures/{lecture}/postponement-stats', [LectureController::class, 'postponementStats']);
+Route::post('/lectures/{lecture}/postpone', [ApiLectureController::class, 'postpone']);
+Route::post('/lectures/{lecture}/cancel-postponement', [ApiLectureController::class, 'cancelPostponement']);
+Route::post('/lectures/{lecture}/check-conflicts', [ApiLectureController::class, 'checkConflicts']);
+Route::get('/lectures/{lecture}/postponement-stats', [ApiLectureController::class, 'postponementStats']);
 
 // Payments
 Route::get('/payments', [PaymentController::class, 'index']);

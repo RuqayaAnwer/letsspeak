@@ -115,7 +115,7 @@ class Lecture extends Model
      */
     public function originalLecture(): BelongsTo
     {
-        return $this->belongsTo(Lecture::class, 'original_lecture_id');
+        return $this->belongsTo(Lecture::class, 'makeup_for');
     }
 
     /**
@@ -126,7 +126,7 @@ class Lecture extends Model
      */
     public function makeupLecture(): HasOne
     {
-        return $this->hasOne(Lecture::class, 'original_lecture_id');
+        return $this->hasOne(Lecture::class, 'makeup_for');
     }
 
     /**
@@ -151,8 +151,9 @@ class Lecture extends Model
     public function isPostponed(): bool
     {
         return in_array($this->attendance, [
-            self::ATTENDANCE_POSTPONED_BY_TRAINER, 
-            self::ATTENDANCE_POSTPONED_BY_STUDENT
+            self::ATTENDANCE_POSTPONED_BY_TRAINER,
+            self::ATTENDANCE_POSTPONED_BY_STUDENT,
+            self::ATTENDANCE_POSTPONED_HOLIDAY,
         ]);
     }
 
@@ -161,7 +162,7 @@ class Lecture extends Model
      */
     public function isMakeup(): bool
     {
-        return $this->is_makeup === true || $this->original_lecture_id !== null;
+        return $this->is_makeup === true || $this->makeup_for !== null;
     }
 
     /**
@@ -214,7 +215,8 @@ class Lecture extends Model
     {
         return $query->whereIn('attendance', [
             self::ATTENDANCE_POSTPONED_BY_TRAINER,
-            self::ATTENDANCE_POSTPONED_BY_STUDENT
+            self::ATTENDANCE_POSTPONED_BY_STUDENT,
+            self::ATTENDANCE_POSTPONED_HOLIDAY,
         ]);
     }
 

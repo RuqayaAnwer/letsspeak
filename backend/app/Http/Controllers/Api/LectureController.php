@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Lecture;
 use App\Models\User;
+use App\Models\Trainer;
 use App\Services\LecturePostponementService;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
@@ -71,8 +72,10 @@ class LectureController extends Controller
      *   }
      * }
      */
-    public function postpone(Request $request, int $id): JsonResponse
+    public function postpone(Request $request, Lecture $lecture): JsonResponse
     {
+        $lecture->load('course.trainer');
+
         // Validate request
         $validated = $request->validate([
             'new_date' => 'required|date|date_format:Y-m-d',
@@ -81,16 +84,6 @@ class LectureController extends Controller
             'reason' => 'nullable|string|max:500',
             'force' => 'nullable|boolean',
         ]);
-
-        // Find the lecture
-        $lecture = Lecture::with('course.trainer')->find($id);
-        
-        if (!$lecture) {
-            return response()->json([
-                'success' => false,
-                'message' => 'المحاضرة غير موجودة.',
-            ], 404);
-        }
 
         // Get current user using AuthService (same as other controllers)
         $user = null;
@@ -102,11 +95,15 @@ class LectureController extends Controller
             $authResult = $authService->validateToken($token);
             if ($authResult) {
                 $userRole = $authResult['role'];
-                // Create a simple user object for authorization
+                $userId = $authResult['user']['id'] ?? null;
                 $user = (object) [
                     'role' => $userRole,
-                    'id' => $authResult['user']['id'] ?? null,
+                    'id' => $userId,
                 ];
+                if ($userRole === 'trainer' && $userId) {
+                    $user->trainer = Trainer::where('user_id', $userId)->first()
+                        ?? Trainer::find($userId);
+                }
             }
         }
 
@@ -150,16 +147,9 @@ class LectureController extends Controller
      * @param int $id Lecture ID
      * @return JsonResponse
      */
-    public function postponementStats(int $id): JsonResponse
+    public function postponementStats(Lecture $lecture): JsonResponse
     {
-        $lecture = Lecture::with('course')->find($id);
-        
-        if (!$lecture) {
-            return response()->json([
-                'success' => false,
-                'message' => 'المحاضرة غير موجودة.',
-            ], 404);
-        }
+        $lecture->load('course');
 
         $stats = $this->postponementService->getPostponementStats($lecture->course);
 
@@ -178,21 +168,14 @@ class LectureController extends Controller
      * @param int $id Lecture ID
      * @return JsonResponse
      */
-    public function checkConflicts(Request $request, int $id): JsonResponse
+    public function checkConflicts(Request $request, Lecture $lecture): JsonResponse
     {
         $validated = $request->validate([
             'new_date' => 'required|date|date_format:Y-m-d',
             'new_time' => 'nullable|date_format:H:i',
         ]);
 
-        $lecture = Lecture::with('course')->find($id);
-        
-        if (!$lecture) {
-            return response()->json([
-                'success' => false,
-                'message' => 'المحاضرة غير موجودة.',
-            ], 404);
-        }
+        $lecture->load('course');
 
         $result = $this->postponementService->checkTimeConflicts(
             $lecture->course,
@@ -263,21 +246,14 @@ class LectureController extends Controller
      * @param int $id
      * @return JsonResponse
      */
-    public function show(int $id): JsonResponse
+    public function show(Lecture $lecture): JsonResponse
     {
-        $lecture = Lecture::with([
+        $lecture->load([
             'course.trainer',
             'course.students',
             'originalLecture',
             'makeupLecture',
-        ])->find($id);
-
-        if (!$lecture) {
-            return response()->json([
-                'success' => false,
-                'message' => 'المحاضرة غير موجودة.',
-            ], 404);
-        }
+        ]);
 
         return response()->json([
             'success' => true,
@@ -293,16 +269,9 @@ class LectureController extends Controller
      * @param int $id Lecture ID (the originally postponed lecture)
      * @return JsonResponse
      */
-    public function cancelPostponement(int $id): JsonResponse
+    public function cancelPostponement(Lecture $lecture): JsonResponse
     {
-        $lecture = Lecture::with('course')->find($id);
-
-        if (!$lecture) {
-            return response()->json([
-                'success' => false,
-                'message' => 'المحاضرة غير موجودة.',
-            ], 404);
-        }
+        $lecture->load('course');
 
         $result = $this->postponementService->cancelPostponement($lecture);
 

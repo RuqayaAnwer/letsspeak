@@ -107,6 +107,14 @@ class Course extends Model
     }
 
     /**
+     * Number of postponed lectures (for postponement limit check).
+     */
+    public function getPostponementCountAttribute(): int
+    {
+        return $this->lectures()->postponed()->count();
+    }
+
+    /**
      * Get all payments for this course.
      */
     public function payments(): HasMany
