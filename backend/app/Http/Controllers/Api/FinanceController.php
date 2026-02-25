@@ -120,22 +120,16 @@ class FinanceController extends Controller
                 'trainer_name' => $trainer->name,
             ]);
             
-            // Get completed lectures for this trainer in the month
-            // A lecture is considered completed and payable ONLY if:
-            // 1. trainer_payment_status = 'paid', AND
-            // 2. (is_completed = true OR attendance = 'present'/'partially'/'absent')
-            // NOTE: student_attendance column does NOT exist - COMPLETELY REMOVED
-            
+            // محاضرة مكتملة = تحتسب في المستحقات. "مدفوعة" = للتدقيق فقط (تم دفعها للمدرب).
             $completedLectures = Lecture::whereHas('course', function ($query) use ($trainer) {
                 $query->where('trainer_id', $trainer->id);
             })
             ->whereBetween('date', [$startDate, $endDate])
-            ->where('trainer_payment_status', 'paid') // Only count paid lectures
             ->where(function ($query) {
                 $query->where('is_completed', true)
                       ->orWhereIn('attendance', ['present', 'partially', 'absent']);
             })
-            ->count(); // Use count() directly for better performance
+            ->count();
 
             \Log::info('Trainer completed lectures', [
                 'trainer_id' => $trainer->id,
@@ -860,7 +854,7 @@ class FinanceController extends Controller
             }
         }
 
-        // Calculate completed lectures (only paid ones)
+        // احتساب المحاضرات المكتملة للمستحقات (مكتملة = تحتسب، مدفوعة = تدقيق فقط)
         $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();
         
@@ -868,7 +862,6 @@ class FinanceController extends Controller
                 $query->where('trainer_id', $trainerId);
             })
             ->whereBetween('date', [$startDate, $endDate])
-            ->where('trainer_payment_status', 'paid') // Only count paid lectures
             ->get()
             ->filter(function ($lecture) {
                 if ($lecture->student_attendance && is_array($lecture->student_attendance)) {
@@ -1028,7 +1021,7 @@ class FinanceController extends Controller
             }
         }
 
-        // Calculate completed lectures for volume bonus (only paid ones)
+        // احتساب المحاضرات المكتملة للمستحقات (مكتملة = تحتسب)
         $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();
         
@@ -1036,7 +1029,6 @@ class FinanceController extends Controller
                 $query->where('trainer_id', $trainerId);
             })
             ->whereBetween('date', [$startDate, $endDate])
-            ->where('trainer_payment_status', 'paid') // Only count paid lectures
             ->get()
             ->filter(function ($lecture) {
                 if ($lecture->student_attendance && is_array($lecture->student_attendance)) {
