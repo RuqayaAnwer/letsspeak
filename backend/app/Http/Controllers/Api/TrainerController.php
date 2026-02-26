@@ -363,17 +363,19 @@ class TrainerController extends Controller
             $q->where('trainer_id', $trainer->id)->where('status', 'active');
         })
         ->where('date', $today)
-        ->with(['course.student', 'course.coursePackage'])
+        ->with(['course.student', 'course.students', 'course.coursePackage'])
         ->orderBy('time')
         ->get()
         ->map(function ($lecture) {
+            $course = $lecture->course;
+            $displayStudent = $course->student ?? $course->students->sortByDesc(fn ($s) => $s->pivot->is_primary ?? 0)->first();
             return [
                 'id' => $lecture->id,
                 'course' => [
-                    'id' => $lecture->course->id,
-                    'student' => $lecture->course->student,
-                    'course_package' => $lecture->course->coursePackage,
-                    'lecture_time' => $lecture->course->lecture_time,
+                    'id' => $course->id,
+                    'student' => $displayStudent,
+                    'course_package' => $course->coursePackage,
+                    'lecture_time' => $course->lecture_time,
                 ],
                 'date' => $lecture->date,
                 'time' => $lecture->time,
@@ -405,9 +407,26 @@ class TrainerController extends Controller
             $q->where('trainer_id', $trainer->id)->where('status', 'active');
         })
         ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-        ->with(['course.student', 'course.coursePackage'])
+        ->with(['course.student', 'course.students', 'course.coursePackage'])
         ->orderBy('date')->orderBy('time')
-        ->get();
+        ->get()
+        ->map(function ($lecture) {
+            $course = $lecture->course;
+            $displayStudent = $course->student ?? $course->students->sortByDesc(fn ($s) => $s->pivot->is_primary ?? 0)->first();
+            return [
+                'id' => $lecture->id,
+                'course' => [
+                    'id' => $course->id,
+                    'student' => $displayStudent,
+                    'course_package' => $course->coursePackage,
+                    'lecture_time' => $course->lecture_time,
+                ],
+                'date' => $lecture->date,
+                'time' => $lecture->time,
+                'attendance' => $lecture->attendance,
+                'status' => $lecture->is_completed ? 'completed' : ($lecture->attendance === 'cancelled' ? 'cancelled' : 'pending'),
+            ];
+        });
 
         return response()->json(['success' => true, 'data' => $lectures]);
     }
