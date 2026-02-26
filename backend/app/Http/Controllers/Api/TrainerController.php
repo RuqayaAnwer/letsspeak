@@ -442,75 +442,84 @@ class TrainerController extends Controller
             }
 
             $today = Carbon::today();
-            $startDate = $today->copy()->startOfMonth()->format('Y-m-d');
-            $endDate = $today->copy()->endOfMonth()->format('Y-m-d');
+            // Allow optional month/year or period=previous (الشهر من 1 إلى آخر يوم 28/29/30/31)
+            $period = $request->input('period', 'current');
+            if ($period === 'previous') {
+                $targetDate = $today->copy()->subMonth();
+                $month = $targetDate->month;
+                $year = $targetDate->year;
+            } else {
+                $month = (int) $request->input('month', $today->month);
+                $year = (int) $request->input('year', $today->year);
+            }
+            // من يوم 1 إلى آخر يوم في الشهر (30 أو 31 أو 28/29)
+            $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth()->format('Y-m-d');
+            $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth()->format('Y-m-d');
 
-            // Get completed lectures for current month (only paid ones)
-            $completedLectures = Lecture::whereHas('course', function ($query) use ($trainer) {
-                $query->where('trainer_id', $trainer->id);
-            })
-            ->whereBetween('date', [$startDate, $endDate])
-            ->where('trainer_payment_status', 'paid') // Only count paid lectures
-            ->get()
-            ->filter(function ($lecture) {
-                // Check student_attendance for dual courses
+            $lecturesInMonthQuery = function ($query) use ($trainer, $startDate, $endDate) {
+                $query->whereHas('course', function ($q) use ($trainer) {
+                    $q->where('trainer_id', $trainer->id);
+                })->whereBetween('date', [$startDate, $endDate]);
+            };
+
+            $isCompletedLecture = function ($lecture) {
                 if ($lecture->student_attendance && is_array($lecture->student_attendance) && count($lecture->student_attendance) > 0) {
                     foreach ($lecture->student_attendance as $studentData) {
                         if (is_array($studentData)) {
                             $attendance = $studentData['attendance'] ?? null;
-                            if ($attendance === 'present' || $attendance === 'absent') {
+                            if (in_array($attendance, ['present', 'absent', 'partially'])) {
                                 return true;
                             }
                         }
                     }
                 }
-                // For single courses, check is_completed or attendance
                 return $lecture->is_completed || in_array($lecture->attendance, ['present', 'partially', 'absent']);
+            };
+
+            // المحاضرات المكتملة في الشهر (حاضر/غائب أو is_completed) — للعداد والاستحقاق
+            $completedLectures = Lecture::whereHas('course', function ($query) use ($trainer) {
+                $query->where('trainer_id', $trainer->id);
             })
+            ->whereBetween('date', [$startDate, $endDate])
+            ->get()
+            ->filter($isCompletedLecture)
             ->count();
 
-            // Get total lectures (scheduled) for current month
+            // إجمالي المحاضرات المجدولة في الشهر (من 1 إلى آخر يوم)
             $totalLectures = Lecture::whereHas('course', function ($query) use ($trainer) {
                 $query->where('trainer_id', $trainer->id);
             })
             ->whereBetween('date', [$startDate, $endDate])
             ->count();
 
-            // Get active courses count (all active and paused courses for the trainer)
-            $activeCourses = Course::where('trainer_id', $trainer->id)
-                ->whereIn('status', ['active', 'paused'])
-                ->with('lectures')
-                ->get();
-            
-            $coursesThisMonth = $activeCourses->count();
-            
-            $remainingLectures = 0;
-            foreach ($activeCourses as $course) {
-                // Count completed lectures for this course
-                $completedForCourse = $course->lectures->filter(function ($lecture) {
-                    // Check student_attendance for dual courses
-                    if ($lecture->student_attendance && is_array($lecture->student_attendance) && count($lecture->student_attendance) > 0) {
-                        foreach ($lecture->student_attendance as $studentData) {
-                            if (is_array($studentData)) {
-                                $attendance = $studentData['attendance'] ?? null;
-                                if ($attendance === 'present' || $attendance === 'absent') {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                    // For single courses, check is_completed or attendance
-                    return $lecture->is_completed || in_array($lecture->attendance, ['present', 'partially', 'absent']);
-                })->count();
-                
-                // Remaining = total lectures - completed
-                $remaining = max(0, $course->lectures_count - $completedForCourse);
-                $remainingLectures += $remaining;
+            $isCurrentMonth = ($month == $today->month && $year == $today->year);
+
+            // عدد الكورسات: كورسات لها محاضرة واحدة على الأقل في هذا الشهر (للشهر الحالي والسابق)
+            $courseIdsInMonth = Lecture::whereHas('course', function ($query) use ($trainer) {
+                $query->where('trainer_id', $trainer->id);
+            })
+            ->whereBetween('date', [$startDate, $endDate])
+            ->pluck('course_id')
+            ->unique()
+            ->values();
+            $coursesThisMonth = $courseIdsInMonth->count();
+
+            // المحاضرات المتبقية
+            if ($isCurrentMonth) {
+                $activeCourses = Course::where('trainer_id', $trainer->id)
+                    ->whereIn('status', ['active', 'paused'])
+                    ->with('lectures')
+                    ->get();
+                $remainingLectures = 0;
+                foreach ($activeCourses as $course) {
+                    $completedForCourse = $course->lectures->filter($isCompletedLecture)->count();
+                    $remainingLectures += max(0, (int) $course->lectures_count - $completedForCourse);
+                }
+            } else {
+                $remainingLectures = max(0, $totalLectures - $completedLectures);
             }
 
-            // Get renewals count for current month
-            $month = $today->month;
-            $year = $today->year;
+            // Get renewals count for selected month
             $renewalsCount = Course::where('trainer_id', $trainer->id)
                 ->where('renewed_with_trainer', true)
                 ->whereMonth('start_date', $month)
@@ -615,9 +624,18 @@ class TrainerController extends Controller
             // Total earnings
             $totalEarnings = $basePay + $renewalBonus + $competitionBonus + $volumeBonus;
 
+            $arMonths = ['', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+            $monthName = ($arMonths[$month] ?? $month) . ' ' . $year;
+
             return response()->json([
                 'success' => true,
                 'data' => [
+                    'period' => [
+                        'month' => $month,
+                        'year' => $year,
+                        'label' => $monthName,
+                        'is_current' => ($month == $today->month && $year == $today->year),
+                    ],
                     'completed_lectures' => $completedLectures,
                     'total_lectures' => $totalLectures,
                     'remaining_lectures' => $remainingLectures,
