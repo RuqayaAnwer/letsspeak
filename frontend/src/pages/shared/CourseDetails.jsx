@@ -44,6 +44,19 @@ const CourseDetails = () => {
     if (course?.is_custom) return 'مخصص';
     return course?.course_package?.name || course?.coursePackage?.name || 'كورس بدون باقة';
   };
+
+  // ترتيب المحاضرات حسب التاريخ ثم الوقت (المحاضرة التعويضية تظهر في مكانها الزمني)
+  const sortLecturesByDate = (list) => {
+    if (!Array.isArray(list) || list.length === 0) return list;
+    return [...list].sort((a, b) => {
+      const dA = a.date ? new Date(a.date).getTime() : 0;
+      const dB = b.date ? new Date(b.date).getTime() : 0;
+      if (dA !== dB) return dA - dB;
+      const tA = (a.time || '').slice(0, 5);
+      const tB = (b.time || '').slice(0, 5);
+      return tA.localeCompare(tB);
+    });
+  };
   
   const [course, setCourse] = useState(null);
   const [lectures, setLectures] = useState([]);
@@ -180,7 +193,7 @@ const CourseDetails = () => {
     try {
       const response = await api.get(`/courses/${id}`);
       setCourse(response.data);
-      setLectures(response.data.lectures || []);
+      setLectures(sortLecturesByDate(response.data.lectures || []));
       
       // Debug: Log course students
       console.log('Course fetched:', {
@@ -558,6 +571,24 @@ const CourseDetails = () => {
   };
 
   /**
+   * Normalize date to YYYY-MM-DD for input and API
+   */
+  const normalizeDateForInput = (dateVal) => {
+    if (!dateVal) return '';
+    const str = typeof dateVal === 'string' ? dateVal : (dateVal instanceof Date ? dateVal.toISOString().split('T')[0] : String(dateVal));
+    return str.includes('T') ? str.slice(0, 10) : str.slice(0, 10);
+  };
+
+  /**
+   * Normalize time to HH:mm for input and API (backend expects H:i)
+   */
+  const normalizeTimeForInput = (timeVal) => {
+    if (!timeVal) return '';
+    const str = String(timeVal).trim();
+    return str.slice(0, 5);
+  };
+
+  /**
    * Handle lecture selection for date/time editing
    */
   const handleLectureSelect = (lecture) => {
@@ -568,29 +599,33 @@ const CourseDetails = () => {
     } else {
       setSelectedLecture(lecture);
       setEditingLectureDateTime({
-        date: lecture.date || '',
-        time: lecture.time || course?.lecture_time || '',
+        date: normalizeDateForInput(lecture.date),
+        time: normalizeTimeForInput(lecture.time || course?.lecture_time),
       });
     }
   };
 
   /**
-   * Save individual lecture date/time
+   * Save individual lecture date/time (sends Y-m-d and H:i to match backend validation)
    */
   const saveLectureDateTime = async () => {
     if (!selectedLecture) return;
-    
+    const dateSent = normalizeDateForInput(editingLectureDateTime.date);
+    const timeSent = normalizeTimeForInput(editingLectureDateTime.time || selectedLecture?.time || course?.lecture_time);
+    if (!dateSent) {
+      alert('يرجى اختيار التاريخ');
+      return;
+    }
     setSaving(true);
     try {
-      await api.put(`/lectures/${selectedLecture.id}`, {
-        date: editingLectureDateTime.date,
-        time: editingLectureDateTime.time,
-      });
+      const payload = { date: dateSent };
+      if (timeSent) payload.time = timeSent;
+      await api.put(`/lectures/${selectedLecture.id}`, payload);
       
-      // Update local state
+      // Update local state with normalized values
       setLectures(prev => prev.map(l => 
         l.id === selectedLecture.id 
-          ? { ...l, date: editingLectureDateTime.date, time: editingLectureDateTime.time }
+          ? { ...l, date: dateSent, time: timeSent || l.time }
           : l
       ));
       
@@ -719,7 +754,7 @@ const CourseDetails = () => {
         const courseResponse = await api.get(`/courses/${id}`);
         if (courseResponse.data) {
           setCourse(courseResponse.data);
-          setLectures(courseResponse.data.lectures || []);
+          setLectures(sortLecturesByDate(courseResponse.data.lectures || []));
           
           // Check for evaluation milestone after saving (for trainers only)
           if (isTrainer) {
@@ -1508,30 +1543,93 @@ const CourseDetails = () => {
                     <div className="flex items-center gap-1">
                       <span className="text-xs font-bold text-gray-800 dark:text-white">{lecture.lecture_number}</span>
                       {isMakeup && (
-                        <span className="text-[9px] text-green-600 dark:text-green-400">(تعويضية)</span>
+                        <span className="text-xs text-green-600 dark:text-green-400 font-medium whitespace-nowrap" title="محاضرة تعويضية">تعويضية</span>
                       )}
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">التاريخ</span>
-                    <div className="text-right">
-                      <p className="text-xs font-medium text-gray-800 dark:text-white">
+                    {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
+                      <input
+                        type="date"
+                        value={editingLectureDateTime.date}
+                        onChange={(e) => setEditingLectureDateTime(prev => ({ ...prev, date: e.target.value }))}
+                        className="input py-1 px-2 text-xs w-full max-w-[140px] border border-[var(--color-border)] rounded"
+                        dir="ltr"
+                      />
+                    ) : (isCustomerService || isTrainer) && !isAccounting ? (
+                      <button
+                        type="button"
+                        onClick={() => handleLectureSelect(lecture)}
+                        className="text-right text-xs font-medium text-gray-800 dark:text-white hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded px-1 py-0.5 -m-1"
+                        title="انقر لتعديل التاريخ والوقت"
+                      >
                         {formatDateShort(lecture.date)}
-                      </p>
-                      {isToday && (
-                        <span className="text-[9px] text-primary-600 dark:text-primary-400 font-medium">
-                          اليوم
-                        </span>
-                      )}
-                    </div>
+                        {isToday && (
+                          <span className="text-[9px] text-primary-600 dark:text-primary-400 font-medium block">
+                            اليوم
+                          </span>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="text-right">
+                        <p className="text-xs font-medium text-gray-800 dark:text-white">
+                          {formatDateShort(lecture.date)}
+                        </p>
+                        {isToday && (
+                          <span className="text-[9px] text-primary-600 dark:text-primary-400 font-medium">
+                            اليوم
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الوقت</span>
-                    <span className="text-xs font-medium text-gray-800 dark:text-white" dir="ltr">
-                      {formatTime12Hour(lecture.time || course?.lecture_time)}
-                    </span>
+                    {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <input
+                          type="time"
+                          value={editingLectureDateTime.time}
+                          onChange={(e) => setEditingLectureDateTime(prev => ({ ...prev, time: e.target.value }))}
+                          className="input py-1 px-2 text-xs w-24 border border-[var(--color-border)] rounded"
+                          dir="ltr"
+                        />
+                        <button
+                          type="button"
+                          onClick={saveLectureDateTime}
+                          disabled={saving}
+                          className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                          title="حفظ"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelLectureEdit}
+                          className="p-1.5 bg-gray-400 text-white rounded hover:bg-gray-500"
+                          title="إلغاء"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (isCustomerService || isTrainer) && !isAccounting ? (
+                      <button
+                        type="button"
+                        onClick={() => handleLectureSelect(lecture)}
+                        className="text-xs font-medium text-gray-800 dark:text-white hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded px-1 py-0.5 -m-1"
+                        dir="ltr"
+                        title="انقر لتعديل التاريخ والوقت"
+                      >
+                        {formatTime12Hour(lecture.time || course?.lecture_time)}
+                      </button>
+                    ) : (
+                      <span className="text-xs font-medium text-gray-800 dark:text-white" dir="ltr">
+                        {formatTime12Hour(lecture.time || course?.lecture_time)}
+                      </span>
+                    )}
                   </div>
                   
                   <div className="flex items-center justify-between">
@@ -1852,8 +1950,8 @@ const CourseDetails = () => {
                       <div className="flex items-center justify-center gap-0.5">
                         {lecture.lecture_number}
                         {isMakeup && (
-                          <span className="text-[8px] text-green-600 dark:text-green-400" title="محاضرة تعويضية">
-                            (تعو.)
+                          <span className="text-xs text-green-600 dark:text-green-400 font-medium whitespace-nowrap" title="محاضرة تعويضية">
+                            تعويضية
                           </span>
                         )}
                       </div>
