@@ -209,7 +209,11 @@ const Trainers = () => {
                     {currentTrainers.map((trainer, index) => {
                       const displayIndex = startIndex + index + 1;
                       return (
-                        <div key={trainer.id} className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                        <div
+                          key={trainer.id}
+                          onClick={() => openModal(trainer)}
+                          className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all active:scale-[0.98]"
+                        >
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">اسم المدرب</span>
@@ -220,7 +224,7 @@ const Trainers = () => {
                                 </span>
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">رقم الهاتف</span>
                               <div className="flex items-center gap-1.5">
@@ -228,78 +232,73 @@ const Trainers = () => {
                                 <span dir="ltr" className="text-sm text-gray-800 dark:text-white">{trainer.phone || '-'}</span>
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">البريد الإلكتروني</span>
                               <span dir="ltr" className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[60%]">{trainer.user?.email || trainer.email || '-'}</span>
                             </div>
-                            
+
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">المستوى</span>
                               <span className="text-xs text-gray-800 dark:text-white font-medium">
-                                {trainer.min_level && trainer.max_level 
-                                  ? `${trainer.min_level} - ${trainer.max_level}` 
+                                {trainer.min_level && trainer.max_level
+                                  ? `${trainer.min_level} - ${trainer.max_level}`
                                   : trainer.min_level || trainer.max_level || '-'}
                               </span>
                             </div>
-                            
+
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الكورسات</span>
                               <span className="badge badge-info text-xs px-1.5 py-0.5">
                                 {trainer.courses_count || 0}
                               </span>
                             </div>
-                            
+
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">محاضرات الأسبوع</span>
                               <span className={`badge text-xs px-1.5 py-0.5 ${
-                                trainer.weekly_lectures_count >= 3 
-                                  ? 'badge-success' 
-                                  : trainer.weekly_lectures_count > 0 
-                                    ? 'badge-warning' 
+                                trainer.weekly_lectures_count >= 3
+                                  ? 'badge-success'
+                                  : trainer.weekly_lectures_count > 0
+                                    ? 'badge-warning'
                                     : 'badge-gray'
                               }`}>
                                 {trainer.weekly_lectures_count || 0}
                               </span>
                             </div>
-                            
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">ملاحظات</span>
-                              {trainer.notes ? (
+
+                            {trainer.notes && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">ملاحظات</span>
                                 <button
-                                  onClick={() => setNotesPopup({
-                                    open: true,
-                                    notes: trainer.notes,
-                                    trainerName: trainer.user?.name || trainer.name || 'المدرب'
-                                  })}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setNotesPopup({
+                                      open: true,
+                                      notes: trainer.notes,
+                                      trainerName: trainer.user?.name || trainer.name || 'المدرب'
+                                    });
+                                  }}
                                   className="p-1 rounded-lg text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors"
                                   title={trainer.notes}
                                 >
                                   <MessageSquare className="w-3.5 h-3.5" />
                                 </button>
-                              ) : (
-                                <span className="text-[10px] text-gray-300 dark:text-gray-600">-</span>
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
-                              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الإجراءات</span>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => openModal(trainer)}
-                                  className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 hover:text-primary-600"
-                                  title="تعديل"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(trainer.id)}
-                                  className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600"
-                                  title="حذف"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
                               </div>
+                            )}
+
+                            <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
+                              <span className="text-[10px] text-primary-600 dark:text-primary-400 font-medium">اضغط للتعديل</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(trainer.id);
+                                }}
+                                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors"
+                                title="حذف"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
                         </div>
