@@ -62,8 +62,8 @@ class LectureController extends Controller
                 'model_type' => 'Lecture',
                 'model_id' => $lecture->id,
                 'description' => "تعديل المحاضرة رقم {$lecture->lecture_number} للكورس #{$lecture->course_id}",
-                'old_values' => json_encode($oldData),
-                'new_values' => json_encode($newData),
+                'old_values' => $oldData,
+                'new_values' => $newData,
                 'changes' => json_encode($changes),
             ]);
         }
@@ -94,21 +94,29 @@ class LectureController extends Controller
     {
         $user = $request->user();
         
-        // Check authorization for trainers
+        // Check authorization for trainers (use null-safe in case trainer relation is missing)
         if ($user->isTrainer()) {
-            $trainerId = $user->trainer->id;
-            if ($lecture->course->trainer_id !== $trainerId) {
+            $trainer = $user->trainer;
+            if (!$trainer) {
+                return response()->json(['message' => 'ملف المدرب غير موجود.'], 403);
+            }
+            if ($lecture->course->trainer_id !== $trainer->id) {
                 return response()->json(['message' => 'Unauthorized'], 403);
             }
         }
 
-        // Check if lecture can be modified
-        $canModify = $this->canModifyLecture($lecture);
-        if (!$canModify['canModify']) {
-            return response()->json([
-                'message' => $canModify['reason'],
-                'type' => $canModify['type']
-            ], 422);
+        // For date/time-only requests, skip canModifyLecture restriction (allow future lectures)
+        $isDateTimeOnly = ($request->has('date') || $request->has('time'))
+            && !$request->hasAny(['attendance', 'activity', 'homework', 'notes']);
+
+        if (!$isDateTimeOnly) {
+            $canModify = $this->canModifyLecture($lecture);
+            if (!$canModify['canModify']) {
+                return response()->json([
+                    'message' => $canModify['reason'],
+                    'type' => $canModify['type']
+                ], 422);
+            }
         }
 
         $rules = [
@@ -118,10 +126,10 @@ class LectureController extends Controller
             'notes' => 'nullable|string',
         ];
 
-        // Trainers and customer_service can update date and time
+        // Trainers and customer_service can update date and time (any lecture, including future)
         if ($user->isTrainer() || $user->isCustomerService()) {
-            $rules['date'] = 'sometimes|date';
-            $rules['time'] = 'sometimes|date_format:H:i';
+            $rules['date'] = 'sometimes|date_format:Y-m-d';
+            $rules['time'] = 'sometimes|nullable|date_format:H:i';
         }
 
         $request->validate($rules);
@@ -145,15 +153,18 @@ class LectureController extends Controller
             if ($attendance === 'present' || $attendance === 'absent') {
                 $updateData['is_completed'] = true;
             } elseif ($attendance === 'pending') {
-                // If attendance is reset to pending, mark as not completed
                 $updateData['is_completed'] = false;
             }
         }
 
         $lecture->update($updateData);
 
-        // Log the modification
-        $this->logLectureModification($lecture, $oldData, $updateData, $user);
+        // Log the modification (wrapped in try-catch so logging failure never breaks the update)
+        try {
+            $this->logLectureModification($lecture, $oldData, $updateData, $user);
+        } catch (\Exception $e) {
+            \Log::error('Failed to log lecture modification: ' . $e->getMessage());
+        }
 
         return response()->json($lecture);
     }

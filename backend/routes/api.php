@@ -67,14 +67,16 @@ Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
 Route::put('/courses/{course}/lectures/bulk', [CourseController::class, 'bulkUpdateLectures']);
 });
 
-// Lectures
-Route::get('/lectures', [LectureController::class, 'index']);
-Route::get('/lectures/{lecture}', [ApiLectureController::class, 'show']);
-Route::put('/lectures/{lecture}', [LectureController::class, 'update']);
-Route::post('/lectures/{lecture}/postpone', [ApiLectureController::class, 'postpone']);
-Route::post('/lectures/{lecture}/cancel-postponement', [ApiLectureController::class, 'cancelPostponement']);
-Route::post('/lectures/{lecture}/check-conflicts', [ApiLectureController::class, 'checkConflicts']);
-Route::get('/lectures/{lecture}/postponement-stats', [ApiLectureController::class, 'postponementStats']);
+// Lectures - Protected routes (require authentication)
+Route::middleware('simple.auth')->group(function () {
+    Route::get('/lectures', [LectureController::class, 'index']);
+    Route::get('/lectures/{lecture}', [ApiLectureController::class, 'show']);
+    Route::put('/lectures/{lecture}', [LectureController::class, 'update']);
+    Route::post('/lectures/{lecture}/postpone', [ApiLectureController::class, 'postpone']);
+    Route::post('/lectures/{lecture}/cancel-postponement', [ApiLectureController::class, 'cancelPostponement']);
+    Route::post('/lectures/{lecture}/check-conflicts', [ApiLectureController::class, 'checkConflicts']);
+    Route::get('/lectures/{lecture}/postponement-stats', [ApiLectureController::class, 'postponementStats']);
+});
 
 // Payments
 Route::get('/payments', [PaymentController::class, 'index']);
