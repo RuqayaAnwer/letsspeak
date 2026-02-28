@@ -286,20 +286,6 @@ const Trainers = () => {
                                 </button>
                               </div>
                             )}
-
-                            <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
-                              <span className="text-[10px] text-primary-600 dark:text-primary-400 font-medium">اضغط للتعديل</span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDelete(trainer.id);
-                                }}
-                                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors"
-                                title="حذف"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
                           </div>
                         </div>
                       );
@@ -560,13 +546,25 @@ const Trainers = () => {
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
-            <button type="button" onClick={closeModal} className="btn-secondary">
-              إلغاء
-            </button>
-            <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? 'جاري الحفظ...' : editingTrainer ? 'تحديث' : 'إضافة'}
-            </button>
+          <div className="flex items-center justify-between pt-4 border-t border-[var(--color-border)]">
+            {editingTrainer ? (
+              <button
+                type="button"
+                onClick={() => { closeModal(); handleDelete(editingTrainer.id); }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm font-medium"
+              >
+                <Trash2 className="w-4 h-4" />
+                حذف
+              </button>
+            ) : <span />}
+            <div className="flex gap-3">
+              <button type="button" onClick={closeModal} className="btn-secondary">
+                إلغاء
+              </button>
+              <button type="submit" disabled={submitting} className="btn-primary">
+                {submitting ? 'جاري الحفظ...' : editingTrainer ? 'تحديث' : 'إضافة'}
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
