@@ -31,32 +31,43 @@ const AccountingDashboard = () => {
       console.log('Payment statistics response:', paymentStatsRes.data);
       console.log('Payments response:', paymentsRes.data);
       
+      const paymentsList = paymentsRes.data?.data || paymentsRes.data || [];
+      const paymentsEmpty = !Array.isArray(paymentsList) || paymentsList.length === 0;
+
       setStats(statsRes.data);
       setPaymentStats(paymentStatsRes.data);
-      setRecentPayments(paymentsRes.data?.data || paymentsRes.data || []);
+      if (paymentsEmpty && import.meta.env.DEV) {
+        const { sampleRecentPayments } = await import('../../data/sampleDashboardData');
+        setRecentPayments(sampleRecentPayments);
+      } else {
+        setRecentPayments(paymentsEmpty ? [] : paymentsList);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      
-      // Set default values on error
-      setStats({
-        active_courses_count: 0,
-        finished_courses_count: 0,
-        students_count: 0,
-        trainers_count: 0,
-      });
-      setPaymentStats({
-        total_amount: 0,
-        paid_amount: 0,
-        pending_amount: 0,
-        monthly_revenue: 0,
-        active_courses: 0,
-        finished_courses: 0,
-        total_students: 0,
-        completed_count: 0,
-      });
-      setRecentPayments([]);
+      if (import.meta.env.DEV) {
+        const { sampleGeneralStats, samplePaymentStats, sampleRecentPayments } = await import('../../data/sampleDashboardData');
+        setStats(sampleGeneralStats);
+        setPaymentStats(samplePaymentStats);
+        setRecentPayments(sampleRecentPayments);
+      } else {
+        setStats({
+          active_courses_count: 0,
+          finished_courses_count: 0,
+          students_count: 0,
+          trainers_count: 0,
+        });
+        setPaymentStats({
+          total_amount: 0,
+          paid_amount: 0,
+          pending_amount: 0,
+          monthly_revenue: 0,
+          active_courses: 0,
+          finished_courses: 0,
+          total_students: 0,
+          completed_count: 0,
+        });
+        setRecentPayments([]);
+      }
     } finally {
       setLoading(false);
     }

@@ -106,6 +106,10 @@ const Students = () => {
       setStudents(response.data.data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
+      if (import.meta.env.DEV) {
+        const { sampleStudents } = await import('../../data/sampleDashboardData');
+        setStudents(sampleStudents);
+      }
     } finally {
       setLoading(false);
     }

@@ -23,7 +23,6 @@ const Dashboard = () => {
       const response = await api.get('/dashboard/stats');
       
       if (response?.data) {
-        // Handle both direct data and nested data structure
         const data = response.data.data || response.data;
         const newStats = {
           students: data.students ?? data.students_count ?? 0,
@@ -31,20 +30,24 @@ const Dashboard = () => {
           courses: data.courses ?? data.active_courses ?? data.active_courses_count ?? 0,
           packages: data.packages ?? data.packages_count ?? 0,
         };
-        console.log('Setting stats:', newStats);
-        setStats(newStats);
+        const hasData = [newStats.students, newStats.trainers, newStats.courses, newStats.packages].some((n) => n > 0);
+        if (hasData) {
+          setStats(newStats);
+        } else if (import.meta.env.DEV) {
+          const { sampleCustomerServiceStats } = await import('../../data/sampleDashboardData');
+          setStats(sampleCustomerServiceStats);
+        } else {
+          setStats(newStats);
+        }
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
-      console.error('Error response:', error.response);
-      
-      // Set default values on error
-      setStats({
-        students: 0,
-        trainers: 0,
-        courses: 0,
-        packages: 0,
-      });
+      if (import.meta.env.DEV) {
+        const { sampleCustomerServiceStats } = await import('../../data/sampleDashboardData');
+        setStats(sampleCustomerServiceStats);
+      } else {
+        setStats({ students: 0, trainers: 0, courses: 0, packages: 0 });
+      }
     } finally {
       setLoading(false);
     }

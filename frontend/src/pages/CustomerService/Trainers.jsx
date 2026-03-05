@@ -55,8 +55,12 @@ const Trainers = () => {
       }
     } catch (error) {
       console.error('Error fetching trainers:', error);
-      console.error('Error response:', error.response);
-      setTrainers([]);
+      if (import.meta.env.DEV) {
+        const { sampleTrainers } = await import('../../data/sampleDashboardData');
+        setTrainers(sampleTrainers);
+      } else {
+        setTrainers([]);
+      }
     } finally {
       setLoading(false);
     }

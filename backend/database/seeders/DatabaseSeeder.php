@@ -24,14 +24,22 @@ class DatabaseSeeder extends Seeder
         // ========================================
         // 1. System Users
         // ========================================
-        
-        $adminUser = User::create([
-            'name' => 'مدير النظام',
-            'email' => 'admin@letspeak.com',
-            'password' => Hash::make('password'),
-            'role' => 'admin',
-            'status' => 'active',
-        ]);
+        // حساب الإدارة: إيميل وكلمة مرور من .env (شخص واحد يفتحه)
+        $adminEmail = env('ADMIN_EMAIL', 'admin@letspeak.online');
+        $adminPassword = env('ADMIN_PASSWORD', 'Admin@123');
+        if (empty($adminPassword) && $adminEmail === 'admin@letspeak.online') {
+            $adminPassword = 'Admin@123'; // للتطوير المحلي فقط إن لم يُضبط
+        }
+
+        $adminUser = User::updateOrCreate(
+            ['email' => $adminEmail],
+            [
+                'name'     => 'مدير النظام',
+                'password' => Hash::make($adminPassword),
+                'role'     => 'admin',
+                'status'   => 'active',
+            ]
+        );
 
         $csUser = User::create([
             'name' => 'أحمد خدمة العملاء',

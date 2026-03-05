@@ -87,10 +87,11 @@ export const AuthProvider = ({ children }) => {
       }
       // محلياً فقط: Fallback للعرض التجريبي
       const demoUsers = {
-        customer_service: { id: 1, name: 'موظف خدمة العملاء', email: 'cs@letspeak.com', role: 'customer_service' },
-        trainer: { id: 2, name: 'المدرب محمد', email: 'trainer@letspeak.com', role: 'trainer' },
-        finance: { id: 3, name: 'موظف المالية', email: 'finance@letspeak.com', role: 'finance' },
-        accounting: { id: 3, name: 'موظف المالية', email: 'acc@letspeak.com', role: 'accounting' },
+        admin:            { id: 0, name: 'مدير النظام',       email: 'admin@letspeak.com',   role: 'admin' },
+        customer_service: { id: 1, name: 'موظف خدمة العملاء', email: 'cs@letspeak.com',      role: 'customer_service' },
+        trainer:          { id: 2, name: 'المدرب محمد',        email: 'trainer@letspeak.com', role: 'trainer' },
+        finance:          { id: 3, name: 'موظف المالية',       email: 'finance@letspeak.com', role: 'finance' },
+        accounting:       { id: 3, name: 'موظف المالية',       email: 'acc@letspeak.com',     role: 'accounting' },
       };
       
       const userData = demoUsers[role];

@@ -42,6 +42,9 @@ const Login = () => {
 
     const navigateByRole = (role) => {
         switch (role) {
+            case 'admin':
+                navigate('/admin');
+                break;
             case 'customer_service':
                 navigate('/customer-service');
                 break;
@@ -58,6 +61,15 @@ const Login = () => {
     };
 
     const roleCards = [
+        {
+            role: 'admin',
+            title: 'الإدارة',
+            subtitle: 'Admin',
+            description: 'إدارة المستخدمين والصلاحيات',
+            icon: '🛡️',
+            color: 'from-purple-500 to-purple-600',
+            hoverColor: 'hover:from-purple-600 hover:to-purple-700',
+        },
         {
             role: 'customer_service',
             title: 'خدمة العملاء',

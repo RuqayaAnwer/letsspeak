@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\TrainerController as ApiTrainerController;
 use App\Http\Controllers\Api\LectureController as ApiLectureController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\Api\AdminController;
 use App\Models\Trainer;
 
 /*
@@ -118,3 +119,12 @@ Route::prefix('trainer')->middleware('simple.auth')->group(function () {
 
 // Courses Nearing Completion
 Route::get('/courses/nearing-completion', [CourseController::class, 'nearingCompletion']);
+
+// Admin Routes — مدير النظام فقط
+Route::prefix('admin')->middleware('simple.auth')->group(function () {
+    Route::get('/dashboard', [AdminController::class, 'dashboard']);
+    Route::get('/users', [AdminController::class, 'users']);
+    Route::post('/users', [AdminController::class, 'storeUser']);
+    Route::put('/users/{id}', [AdminController::class, 'updateUser']);
+    Route::patch('/users/{id}/toggle-status', [AdminController::class, 'toggleStatus']);
+});

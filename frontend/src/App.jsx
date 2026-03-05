@@ -51,6 +51,8 @@ import CourseAlerts from './pages/CustomerService/CourseAlerts';
 import CourseDetails from './pages/CustomerService/CourseDetails';
 import MyTimes from './pages/Trainer/MyTimes';
 import Achievements from './pages/Trainer/Achievements';
+import AdminDashboard from './pages/Admin/Dashboard';
+import AdminUsers from './pages/Admin/Users';
 
 // Components
 import Layout from './components/Layout';
@@ -84,6 +86,7 @@ const AppRoutes = () => {
 
   const getDefaultRoute = () => {
     switch (user?.role) {
+      case 'admin': return '/admin';
       case 'customer_service': return '/customer-service';
       case 'trainer': return '/trainer';
       case 'finance': return '/finance';
@@ -97,6 +100,24 @@ const AppRoutes = () => {
       <Route 
         path="/login" 
         element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Login />} 
+      />
+
+      {/* Admin Routes */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminUsers />
+          </ProtectedRoute>
+        }
       />
 
       {/* Customer Service Routes */}

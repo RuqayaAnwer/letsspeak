@@ -52,6 +52,11 @@ const Layout = ({ children }) => {
 
   const getNavItems = () => {
     switch (user?.role) {
+      case 'admin':
+        return [
+          { path: '/admin',       label: 'لوحة التحكم',    icon: '🛡️' },
+          { path: '/admin/users', label: 'المستخدمون',     icon: '👥' },
+        ];
       case 'customer_service':
         return [
           { path: '/customer-service', label: 'لوحة التحكم', icon: '📊' },
@@ -87,9 +92,10 @@ const Layout = ({ children }) => {
 
   const getRoleTitle = () => {
     switch (user?.role) {
+      case 'admin':            return 'الإدارة';
       case 'customer_service': return 'خدمة العملاء';
-      case 'trainer': return 'المدرب';
-      case 'finance': return 'المالية';
+      case 'trainer':          return 'المدرب';
+      case 'finance':          return 'المالية';
       default: return '';
     }
   };
