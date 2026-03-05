@@ -15,7 +15,7 @@ class AuthController extends Controller
     public function devLogin(Request $request)
     {
         $request->validate([
-            'role' => 'required|in:customer_service,trainer,accounting,finance',
+            'role' => 'required|in:admin,customer_service,trainer,accounting,finance',
         ]);
 
         $user = User::where('role', $request->role)->first();
