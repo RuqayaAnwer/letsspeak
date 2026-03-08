@@ -164,6 +164,36 @@ class AdminController extends Controller
     }
 
     /**
+     * إعادة تعيين كلمة مرور موظف (للمدير فقط — عند النسيان أو لأغراض أمنية).
+     * كلمات المرور لا تُخزّن قابلة للعرض؛ يمكن تعيين كلمة جديدة فقط.
+     */
+    public function resetPassword(Request $request, int $id): JsonResponse
+    {
+        if ($err = $this->requireAdmin($request)) return $err;
+
+        $user = User::findOrFail($id);
+
+        if ($user->role === 'trainer') {
+            return response()->json(['success' => false, 'message' => 'إعادة تعيين كلمة مرور المدربين من صفحة المدربين'], 403);
+        }
+
+        $request->validate([
+            'password' => 'required|string|min:6|confirmed',
+        ], [
+            'password.min'       => 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.',
+            'password.confirmed' => 'تأكيد كلمة المرور غير مطابق.',
+        ]);
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تعيين كلمة المرور الجديدة. يرجى إبلاغ الموظف بها بشكل آمن.',
+        ]);
+    }
+
+    /**
      * تعطيل/تفعيل حساب موظف
      */
     public function toggleStatus(Request $request, int $id): JsonResponse

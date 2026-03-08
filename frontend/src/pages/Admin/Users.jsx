@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, UserCheck, UserX, Shield, Users, DollarSign, GraduationCap } from 'lucide-react';
+import { Plus, Search, Edit2, UserCheck, UserX, Shield, Users, DollarSign, GraduationCap, Lock, Eye, EyeOff } from 'lucide-react';
 import api from '../../api/axios';
 import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -28,6 +28,14 @@ const AdminUsers = () => {
   const [submitting, setSubmitting]   = useState(false);
   const [formData, setFormData]       = useState({ name: '', email: '', password: '', role: 'customer_service' });
   const [actionLoading, setActionLoading] = useState(null);
+  const [resetPasswordModal, setResetPasswordModal] = useState({
+    open: false,
+    user: null,
+    password: '',
+    password_confirmation: '',
+    submitting: false,
+    showPassword: false,
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -108,6 +116,46 @@ const AdminUsers = () => {
     }
   };
 
+  const openResetPasswordModal = (user) => {
+    setResetPasswordModal({
+      open: true,
+      user,
+      password: '',
+      password_confirmation: '',
+      submitting: false,
+      showPassword: false,
+    });
+  };
+
+  const closeResetPasswordModal = () => {
+    setResetPasswordModal({ open: false, user: null, password: '', password_confirmation: '', submitting: false, showPassword: false });
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    const { user, password, password_confirmation } = resetPasswordModal;
+    if (!user?.id) return;
+    if (password.length < 6) {
+      alert('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+      return;
+    }
+    if (password !== password_confirmation) {
+      alert('تأكيد كلمة المرور غير مطابق');
+      return;
+    }
+    setResetPasswordModal(prev => ({ ...prev, submitting: true }));
+    try {
+      await api.post(`/admin/users/${user.id}/reset-password`, { password, password_confirmation });
+      alert('تم تعيين كلمة المرور الجديدة. يرجى إبلاغ الموظف بها بشكل آمن.');
+      closeResetPasswordModal();
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.errors?.password?.[0] || 'حدث خطأ';
+      alert(msg);
+    } finally {
+      setResetPasswordModal(prev => ({ ...prev, submitting: false }));
+    }
+  };
+
   const getRoleInfo = (role) => roleLabels[role] ?? { label: role, color: 'bg-gray-100 text-gray-700', icon: Users };
 
   return (
@@ -120,6 +168,9 @@ const AdminUsers = () => {
             إدارة المستخدمين
           </h1>
           <p className="page-subtitle">إضافة وتعديل موظفي النظام</p>
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+            كلمات المرور لا تُعرض لأسباب أمنية. يمكنك إعادة تعيينها من زر «إعادة تعيين كلمة المرور» أو من نافذة التعديل.
+          </p>
         </div>
         <button onClick={() => openModal()} className="btn-primary flex items-center gap-2 text-sm px-4 py-2">
           <Plus className="w-4 h-4" />
@@ -181,14 +232,24 @@ const AdminUsers = () => {
                       {u.status === 'active' ? 'نشط' : 'معطّل'}
                     </span>
                     {u.role !== 'trainer' && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleToggleStatus(u); }}
-                        disabled={actionLoading === u.id}
-                        className={`text-xs px-2 py-1 rounded-lg transition-colors flex items-center gap-1 ${u.status === 'active' ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'}`}
-                      >
-                        {u.status === 'active' ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
-                        {u.status === 'active' ? 'تعطيل' : 'تفعيل'}
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openResetPasswordModal(u); }}
+                          className="text-xs px-2 py-1 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-1"
+                          title="إعادة تعيين كلمة المرور"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
+                          كلمة المرور
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleToggleStatus(u); }}
+                          disabled={actionLoading === u.id}
+                          className={`text-xs px-2 py-1 rounded-lg transition-colors flex items-center gap-1 ${u.status === 'active' ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'}`}
+                        >
+                          {u.status === 'active' ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                          {u.status === 'active' ? 'تعطيل' : 'تفعيل'}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -241,25 +302,32 @@ const AdminUsers = () => {
                       </td>
                       <td className="text-sm text-[var(--color-text-muted)]">{u.created_at ?? '-'}</td>
                       <td>
-                        {u.role !== 'trainer' && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => openModal(u)}
-                              className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-600 transition-colors"
-                              title="تعديل"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleToggleStatus(u)}
-                              disabled={actionLoading === u.id}
-                              className={`p-1.5 rounded-lg transition-colors ${u.status === 'active' ? 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'}`}
-                              title={u.status === 'active' ? 'تعطيل' : 'تفعيل'}
-                            >
-                              {u.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                            </button>
-                          </div>
-                        )}
+                    {u.role !== 'trainer' && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openModal(u)}
+                          className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="تعديل"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openResetPasswordModal(u)}
+                          className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-gray-400 hover:text-amber-600 transition-colors"
+                          title="إعادة تعيين كلمة المرور"
+                        >
+                          <Lock className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleToggleStatus(u)}
+                          disabled={actionLoading === u.id}
+                          className={`p-1.5 rounded-lg transition-colors ${u.status === 'active' ? 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'}`}
+                          title={u.status === 'active' ? 'تعطيل' : 'تفعيل'}
+                        >
+                          {u.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    )}
                       </td>
                     </tr>
                   );
@@ -336,6 +404,60 @@ const AdminUsers = () => {
             <button type="button" onClick={closeModal} className="btn-secondary">إلغاء</button>
             <button type="submit" disabled={submitting} className="btn-primary">
               {submitting ? 'جاري الحفظ...' : editingUser ? 'تحديث' : 'إضافة'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* إعادة تعيين كلمة المرور */}
+      <Modal
+        isOpen={resetPasswordModal.open}
+        onClose={closeResetPasswordModal}
+        title={`إعادة تعيين كلمة المرور — ${resetPasswordModal.user?.name || ''}`}
+      >
+        <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            تعيين كلمة مرور جديدة للموظف. كلمات المرور لا تُعرض لأسباب أمنية؛ يمكن تعيين كلمة جديدة فقط.
+          </p>
+          <div>
+            <label className="label">كلمة المرور الجديدة *</label>
+            <div className="relative">
+              <input
+                type={resetPasswordModal.showPassword ? 'text' : 'password'}
+                value={resetPasswordModal.password}
+                onChange={(e) => setResetPasswordModal(prev => ({ ...prev, password: e.target.value }))}
+                className="input pr-10 w-full"
+                placeholder="6 أحرف على الأقل"
+                dir="ltr"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => setResetPasswordModal(prev => ({ ...prev, showPassword: !prev.showPassword }))}
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {resetPasswordModal.showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="label">تأكيد كلمة المرور *</label>
+            <input
+              type={resetPasswordModal.showPassword ? 'text' : 'password'}
+              value={resetPasswordModal.password_confirmation}
+              onChange={(e) => setResetPasswordModal(prev => ({ ...prev, password_confirmation: e.target.value }))}
+              className="input w-full"
+              placeholder="أعد إدخال كلمة المرور"
+              dir="ltr"
+              required
+              minLength={6}
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
+            <button type="button" onClick={closeResetPasswordModal} className="btn-secondary">إلغاء</button>
+            <button type="submit" disabled={resetPasswordModal.submitting} className="btn-primary">
+              {resetPasswordModal.submitting ? 'جاري الحفظ...' : 'تعيين كلمة المرور'}
             </button>
           </div>
         </form>
