@@ -127,6 +127,7 @@ Route::prefix('admin')->middleware('simple.auth')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard']);
     Route::get('/users', [AdminController::class, 'users']);
     Route::post('/users', [AdminController::class, 'storeUser']);
+    Route::get('/users/{id}/show-password', [AdminController::class, 'showPassword']);
     Route::put('/users/{id}', [AdminController::class, 'updateUser']);
     Route::post('/users/{id}/reset-password', [AdminController::class, 'resetPassword']);
     Route::patch('/users/{id}/toggle-status', [AdminController::class, 'toggleStatus']);

@@ -99,6 +99,8 @@ class AdminController extends Controller
             'role'     => $request->role,
             'status'   => 'active',
         ]);
+        $user->recoverable_password = $request->password;
+        $user->save();
 
         return response()->json([
             'success' => true,
@@ -144,6 +146,7 @@ class AdminController extends Controller
         if ($request->has('email'))    $user->email  = $request->email;
         if ($request->has('password') && $request->password) {
             $user->password = Hash::make($request->password);
+            $user->recoverable_password = $request->password;
         }
         if ($request->has('role'))   $user->role   = $request->role;
         if ($request->has('status')) $user->status = $request->status;
@@ -164,8 +167,37 @@ class AdminController extends Controller
     }
 
     /**
+     * عرض كلمة مرور موظف للمدير (عند نسيان الموظف لها). المدربون غير مدعومين.
+     */
+    public function showPassword(Request $request, int $id): JsonResponse
+    {
+        if ($err = $this->requireAdmin($request)) return $err;
+
+        $user = User::findOrFail($id);
+
+        if ($user->role === 'trainer') {
+            return response()->json(['success' => false, 'message' => 'عرض كلمة مرور المدربين من صفحة المدربين'], 403);
+        }
+
+        $password = $user->recoverable_password;
+
+        if ($password === null || $password === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'كلمة المرور غير محفوظة لهذا الحساب. استخدم «إعادة تعيين كلمة المرور» لتعيين كلمة جديدة ثم يمكنك عرضها هنا لاحقاً.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success'  => true,
+            'password' => $password,
+            'name'     => $user->name,
+            'email'    => $user->email,
+        ]);
+    }
+
+    /**
      * إعادة تعيين كلمة مرور موظف (للمدير فقط — عند النسيان أو لأغراض أمنية).
-     * كلمات المرور لا تُخزّن قابلة للعرض؛ يمكن تعيين كلمة جديدة فقط.
      */
     public function resetPassword(Request $request, int $id): JsonResponse
     {
@@ -185,6 +217,7 @@ class AdminController extends Controller
         ]);
 
         $user->password = Hash::make($request->password);
+        $user->recoverable_password = $request->password;
         $user->save();
 
         return response()->json([

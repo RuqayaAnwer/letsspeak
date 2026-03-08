@@ -36,6 +36,13 @@ const AdminUsers = () => {
     submitting: false,
     showPassword: false,
   });
+  const [showPasswordModal, setShowPasswordModal] = useState({
+    open: false,
+    user: null,
+    password: null,
+    loading: false,
+    error: null,
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -89,10 +96,10 @@ const AdminUsers = () => {
 
       if (editingUser) {
         await api.put(`/admin/users/${editingUser.id}`, payload);
-        alert('تم تحديث بيانات الموظف بنجاح');
+        alert(formData.password ? 'تم تحديث بيانات الموظف وكلمة المرور. يمكنك عرضها لاحقاً من زر «عرض كلمة المرور».' : 'تم تحديث بيانات الموظف بنجاح');
       } else {
         await api.post('/admin/users', payload);
-        alert('تم إضافة الموظف بنجاح');
+        alert('تم إضافة الموظف بنجاح. يمكنك عرض كلمة المرور من زر «عرض كلمة المرور» بجانب الموظف.');
       }
       closeModal();
       fetchUsers();
@@ -131,6 +138,25 @@ const AdminUsers = () => {
     setResetPasswordModal({ open: false, user: null, password: '', password_confirmation: '', submitting: false, showPassword: false });
   };
 
+  const openShowPasswordModal = async (user) => {
+    setShowPasswordModal({ open: true, user, password: null, loading: true, error: null });
+    try {
+      const res = await api.get(`/admin/users/${user.id}/show-password`);
+      setShowPasswordModal(prev => ({ ...prev, password: res.data?.password ?? null, loading: false, error: null }));
+    } catch (err) {
+      const msg = err.response?.data?.message || 'تعذر عرض كلمة المرور';
+      setShowPasswordModal(prev => ({ ...prev, password: null, loading: false, error: msg }));
+    }
+  };
+
+  const closeShowPasswordModal = () => {
+    setShowPasswordModal({ open: false, user: null, password: null, loading: false, error: null });
+  };
+
+  const copyPasswordToClipboard = (text) => {
+    navigator.clipboard?.writeText(text).then(() => alert('تم نسخ كلمة المرور')).catch(() => {});
+  };
+
   const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
     const { user, password, password_confirmation } = resetPasswordModal;
@@ -146,7 +172,7 @@ const AdminUsers = () => {
     setResetPasswordModal(prev => ({ ...prev, submitting: true }));
     try {
       await api.post(`/admin/users/${user.id}/reset-password`, { password, password_confirmation });
-      alert('تم تعيين كلمة المرور الجديدة. يرجى إبلاغ الموظف بها بشكل آمن.');
+      alert('تم تعيين كلمة المرور. يمكنك عرضها في أي وقت من زر «عرض كلمة المرور» بجانب الموظف.');
       closeResetPasswordModal();
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.errors?.password?.[0] || 'حدث خطأ';
@@ -169,7 +195,7 @@ const AdminUsers = () => {
           </h1>
           <p className="page-subtitle">إضافة وتعديل موظفي النظام</p>
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-            كلمات المرور لا تُعرض لأسباب أمنية. يمكنك إعادة تعيينها من زر «إعادة تعيين كلمة المرور» أو من نافذة التعديل.
+            اضغط «عرض كلمة المرور» لرؤية كلمة مرور الموظف عند نسيانها. الحسابات المضافة أو التي تم إعادة تعيين كلمتها تُحفظ كلمتها لعرضها لاحقاً.
           </p>
         </div>
         <button onClick={() => openModal()} className="btn-primary flex items-center gap-2 text-sm px-4 py-2">
@@ -234,12 +260,20 @@ const AdminUsers = () => {
                     {u.role !== 'trainer' && (
                       <div className="flex items-center gap-1">
                         <button
+                          onClick={(e) => { e.stopPropagation(); openShowPasswordModal(u); }}
+                          className="text-xs px-2 py-1 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-1"
+                          title="عرض كلمة المرور"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          عرض كلمة المرور
+                        </button>
+                        <button
                           onClick={(e) => { e.stopPropagation(); openResetPasswordModal(u); }}
                           className="text-xs px-2 py-1 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-1"
                           title="إعادة تعيين كلمة المرور"
                         >
                           <Lock className="w-3.5 h-3.5" />
-                          كلمة المرور
+                          تعيين جديدة
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleToggleStatus(u); }}
@@ -310,6 +344,13 @@ const AdminUsers = () => {
                           title="تعديل"
                         >
                           <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openShowPasswordModal(u)}
+                          className="p-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-gray-400 hover:text-green-600 transition-colors"
+                          title="عرض كلمة المرور"
+                        >
+                          <Eye className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => openResetPasswordModal(u)}
@@ -417,7 +458,7 @@ const AdminUsers = () => {
       >
         <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
           <p className="text-sm text-[var(--color-text-secondary)]">
-            تعيين كلمة مرور جديدة للموظف. كلمات المرور لا تُعرض لأسباب أمنية؛ يمكن تعيين كلمة جديدة فقط.
+            تعيين كلمة مرور جديدة للموظف. بعد الحفظ يمكنك عرضها في أي وقت من زر «عرض كلمة المرور».
           </p>
           <div>
             <label className="label">كلمة المرور الجديدة *</label>
@@ -461,6 +502,58 @@ const AdminUsers = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* عرض كلمة المرور */}
+      <Modal
+        isOpen={showPasswordModal.open}
+        onClose={closeShowPasswordModal}
+        title={showPasswordModal.user ? `كلمة المرور — ${showPasswordModal.user.name}` : 'كلمة المرور'}
+      >
+        <div className="space-y-4">
+          {showPasswordModal.loading && (
+            <div className="flex justify-center py-6">
+              <LoadingSpinner />
+            </div>
+          )}
+          {!showPasswordModal.loading && showPasswordModal.error && (
+            <>
+              <p className="text-sm text-red-600 dark:text-red-400">{showPasswordModal.error}</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={closeShowPasswordModal} className="btn-secondary">إغلاق</button>
+                {showPasswordModal.user && (
+                  <button
+                    type="button"
+                    onClick={() => { closeShowPasswordModal(); openResetPasswordModal(showPasswordModal.user); }}
+                    className="btn-primary"
+                  >
+                    إعادة تعيين كلمة المرور
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+          {!showPasswordModal.loading && !showPasswordModal.error && showPasswordModal.password != null && (
+            <>
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                يمكنك تزويد الموظف بها عند نسيانها.
+              </p>
+              <div className="rounded-lg bg-gray-100 dark:bg-gray-700/50 p-3 font-mono text-sm break-all" dir="ltr">
+                {showPasswordModal.password}
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => copyPasswordToClipboard(showPasswordModal.password)}
+                  className="btn-primary"
+                >
+                  نسخ كلمة المرور
+                </button>
+                <button type="button" onClick={closeShowPasswordModal} className="btn-secondary">إغلاق</button>
+              </div>
+            </>
+          )}
+        </div>
       </Modal>
     </div>
   );
