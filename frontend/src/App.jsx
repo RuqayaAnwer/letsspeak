@@ -53,6 +53,7 @@ import MyTimes from './pages/Trainer/MyTimes';
 import Achievements from './pages/Trainer/Achievements';
 import AdminDashboard from './pages/Admin/Dashboard';
 import AdminUsers from './pages/Admin/Users';
+import ChangePassword from './pages/shared/ChangePassword';
 
 // Components
 import Layout from './components/Layout';
@@ -262,6 +263,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['customer_service', 'trainer', 'finance']}>
             <CourseDetailsShared />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/change-password"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'customer_service', 'trainer', 'finance']}>
+            <ChangePassword />
           </ProtectedRoute>
         }
       />

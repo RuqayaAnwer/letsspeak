@@ -130,6 +130,38 @@ class AuthController extends Controller
     }
 
     /**
+     * تغيير كلمة مرور المستخدم الحالي (يتطلب تسجيل دخول)
+     */
+    public function changePassword(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'غير مصرح'], 401);
+        }
+
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password'     => 'required|string|min:6|confirmed',
+        ], [
+            'new_password.min'       => 'كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل.',
+            'new_password.confirmed' => 'تأكيد كلمة المرور غير مطابق.',
+        ]);
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json(['message' => 'كلمة المرور الحالية غير صحيحة'], 422);
+        }
+
+        if (Hash::check($request->new_password, $user->password)) {
+            return response()->json(['message' => 'كلمة المرور الجديدة يجب أن تختلف عن الحالية'], 422);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح']);
+    }
+
+    /**
      * Register a new user
      */
     public function register(Request $request)
