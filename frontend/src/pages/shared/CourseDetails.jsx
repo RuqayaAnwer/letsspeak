@@ -19,6 +19,7 @@ import {
   CheckCircle,
   MessageSquare,
   Trash2,
+  PlayCircle,
 } from 'lucide-react';
 
 /**
@@ -126,6 +127,8 @@ const CourseDetails = () => {
     student_ids: [],
   });
 
+  // تفعيل بدء الكورس الفعلي (للمدرب)
+  const [startingCourse, setStartingCourse] = useState(false);
 
   // Packages and trainers for renewal reset modal
   const [packages, setPackages] = useState([]);
@@ -246,6 +249,23 @@ const CourseDetails = () => {
       console.error('Error deleting course:', error);
       const errorMessage = error.response?.data?.message || error.message || 'حدث خطأ أثناء حذف الكورس';
       alert(`فشل حذف الكورس: ${errorMessage}`);
+    }
+  };
+
+  // تفعيل بدء الكورس الفعلي (للمدرب أو خدمة العملاء)
+  const handleStartCourse = async () => {
+    if (!course?.id) return;
+    try {
+      setStartingCourse(true);
+      const res = await api.put(`/courses/${course.id}/actual-start`, {});
+      if (res.data) {
+        setCourse(res.data);
+        if (res.data.lectures) setLectures(res.data.lectures);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'فشل تفعيل بدء الكورس');
+    } finally {
+      setStartingCourse(false);
     }
   };
 
@@ -1240,6 +1260,28 @@ const CourseDetails = () => {
               )}
             </div>
             <p className="page-subtitle">رقم الكورس: #{course.id}</p>
+            {/* تاريخ أول دفعة vs تاريخ بدء الكورس الفعلي */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-gray-600 dark:text-gray-400">
+              <span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">تاريخ أول دفعة:</span>{' '}
+                {course.start_date ? formatDateShort(course.start_date) : '—'}
+              </span>
+              <span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">تاريخ بدء الكورس الفعلي:</span>{' '}
+                {course.actual_start_date ? formatDateShort(course.actual_start_date) : 'لم يبدأ بعد'}
+                {(isTrainer || isCustomerService) && !course.actual_start_date && (
+                  <button
+                    type="button"
+                    onClick={handleStartCourse}
+                    disabled={startingCourse}
+                    className="mr-2 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 text-[11px] font-medium"
+                  >
+                    <PlayCircle className="w-3.5 h-3.5" />
+                    {startingCourse ? 'جاري التفعيل...' : 'بدء الكورس'}
+                  </button>
+                )}
+              </span>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">

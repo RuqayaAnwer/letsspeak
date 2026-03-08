@@ -62,6 +62,7 @@ Route::get('/courses', [CourseController::class, 'index']);
 Route::post('/courses', [CourseController::class, 'store']);
 Route::get('/courses/{course}', [CourseController::class, 'show']);
 Route::put('/courses/{course}', [CourseController::class, 'update']);
+    Route::put('/courses/{course}/actual-start', [CourseController::class, 'startCourse']);
     Route::put('/courses/{course}/status', [CourseController::class, 'updateStatus']);
     Route::put('/courses/{course}/renewal-alert-status', [CourseController::class, 'updateRenewalAlertStatus']);
     Route::post('/courses/{course}/confirm-evaluation', [CourseController::class, 'confirmEvaluationSent']);

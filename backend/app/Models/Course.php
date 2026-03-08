@@ -19,6 +19,7 @@ class Course extends Model
         'title',
         'lectures_count',
         'start_date',
+        'actual_start_date',
         'lecture_time',
         'lecture_days',
         'status',
@@ -40,6 +41,7 @@ class Course extends Model
     protected $casts = [
         'lecture_days' => 'array',
         'start_date' => 'date',
+        'actual_start_date' => 'date',
         'finished_at' => 'datetime',
         'renewed_with_trainer' => 'boolean',
         'is_dual' => 'boolean',
@@ -99,11 +101,11 @@ class Course extends Model
     }
 
     /**
-     * Get all lectures for this course.
+     * Get all lectures for this course (ordered by date then time).
      */
     public function lectures(): HasMany
     {
-        return $this->hasMany(Lecture::class);
+        return $this->hasMany(Lecture::class)->orderBy('date')->orderBy('time');
     }
 
     /**

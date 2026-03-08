@@ -397,6 +397,45 @@ class CourseController extends Controller
     }
 
     /**
+     * تفعيل بدء الكورس الفعلي (للمدرب أو خدمة العملاء).
+     * يحدّث actual_start_date دون المساس بتاريخ أول دفعة (start_date).
+     */
+    public function startCourse(Request $request, Course $course)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'غير مصرح'], 401);
+        }
+
+        // المدرب فقط لكرساته، أو خدمة العملاء/الإدارة
+        $isTrainerOwner = $user->role === 'trainer' && $user->trainer && (int) $course->trainer_id === (int) $user->trainer->id;
+        $isStaff = in_array($user->role, ['customer_service', 'admin'], true);
+        if (!$isTrainerOwner && !$isStaff) {
+            return response()->json(['message' => 'غير مصرح لتفعيل بدء هذا الكورس'], 403);
+        }
+
+        $request->validate([
+            'actual_start_date' => 'nullable|date',
+        ]);
+
+        $date = $request->filled('actual_start_date')
+            ? $request->actual_start_date
+            : now()->toDateString();
+
+        $course->actual_start_date = $date;
+        $course->save();
+
+        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);
+        $course->makeVisible('coursePackage');
+        $courseArray = $course->toArray();
+        if ($course->coursePackage) {
+            $courseArray['course_package'] = $course->coursePackage->toArray();
+        }
+
+        return response()->json($courseArray);
+    }
+
+    /**
      * Update course status with logging
      * Updated: 2025-12-21 - Added status change confirmation and logging
      */
