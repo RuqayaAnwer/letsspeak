@@ -43,6 +43,17 @@ const AdminUsers = () => {
     loading: false,
     error: null,
   });
+  const [addTrainerModal, setAddTrainerModal] = useState({
+    open: false,
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    min_level: '',
+    max_level: '',
+    notes: '',
+    submitting: false,
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -182,6 +193,52 @@ const AdminUsers = () => {
     }
   };
 
+  const openAddTrainerModal = () => {
+    setAddTrainerModal({
+      open: true,
+      name: '',
+      email: '',
+      phone: '',
+      password: '',
+      min_level: '',
+      max_level: '',
+      notes: '',
+      submitting: false,
+    });
+  };
+
+  const closeAddTrainerModal = () => {
+    setAddTrainerModal({ open: false, name: '', email: '', phone: '', password: '', min_level: '', max_level: '', notes: '', submitting: false });
+  };
+
+  const handleAddTrainerSubmit = async (e) => {
+    e.preventDefault();
+    const { name, email, phone, password, min_level, max_level, notes } = addTrainerModal;
+    if (!name.trim()) {
+      alert('الاسم مطلوب');
+      return;
+    }
+    setAddTrainerModal(prev => ({ ...prev, submitting: true }));
+    try {
+      await api.post('/trainers', {
+        name: name.trim(),
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        password: password || undefined,
+        min_level: min_level || undefined,
+        max_level: max_level || undefined,
+        notes: notes.trim() || undefined,
+      });
+      alert('تم إضافة المدرب بنجاح. يمكنك عرض كلمة المرور من زر «عرض كلمة المرور» بعد اختيار المدربون في الفلتر.');
+      closeAddTrainerModal();
+      fetchUsers();
+    } catch (err) {
+      alert(err.response?.data?.message || 'حدث خطأ عند إضافة المدرب');
+    } finally {
+      setAddTrainerModal(prev => ({ ...prev, submitting: false }));
+    }
+  };
+
   const getRoleInfo = (role) => roleLabels[role] ?? { label: role, color: 'bg-gray-100 text-gray-700', icon: Users };
 
   return (
@@ -198,10 +255,16 @@ const AdminUsers = () => {
             اضغط «عرض كلمة المرور» لرؤية كلمة مرور الموظف عند نسيانها. الحسابات المضافة أو التي تم إعادة تعيين كلمتها تُحفظ كلمتها لعرضها لاحقاً.
           </p>
         </div>
-        <button onClick={() => openModal()} className="btn-primary flex items-center gap-2 text-sm px-4 py-2">
-          <Plus className="w-4 h-4" />
-          إضافة موظف
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => openModal()} className="btn-primary flex items-center gap-2 text-sm px-4 py-2">
+            <Plus className="w-4 h-4" />
+            إضافة موظف
+          </button>
+          <button onClick={openAddTrainerModal} className="btn-secondary flex items-center gap-2 text-sm px-4 py-2 border-green-500 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20">
+            <GraduationCap className="w-4 h-4" />
+            إضافة مدرب
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -554,6 +617,114 @@ const AdminUsers = () => {
             </>
           )}
         </div>
+      </Modal>
+
+      {/* إضافة مدرب */}
+      <Modal
+        isOpen={addTrainerModal.open}
+        onClose={closeAddTrainerModal}
+        title="إضافة مدرب جديد"
+      >
+        <form onSubmit={handleAddTrainerSubmit} className="space-y-4">
+          <div>
+            <label className="label">اسم المدرب *</label>
+            <input
+              type="text"
+              value={addTrainerModal.name}
+              onChange={(e) => setAddTrainerModal(prev => ({ ...prev, name: e.target.value }))}
+              className="input w-full"
+              placeholder="أدخل اسم المدرب"
+              required
+            />
+          </div>
+          <div>
+            <label className="label">البريد الإلكتروني</label>
+            <input
+              type="email"
+              value={addTrainerModal.email}
+              onChange={(e) => setAddTrainerModal(prev => ({ ...prev, email: e.target.value }))}
+              className="input w-full"
+              placeholder="trainer@example.com"
+              dir="ltr"
+            />
+          </div>
+          <div>
+            <label className="label">رقم الهاتف</label>
+            <input
+              type="tel"
+              value={addTrainerModal.phone}
+              onChange={(e) => setAddTrainerModal(prev => ({ ...prev, phone: e.target.value }))}
+              className="input w-full"
+              placeholder="07xxxxxxxxx"
+              dir="ltr"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">أقل مستوى</label>
+              <select
+                value={addTrainerModal.min_level}
+                onChange={(e) => setAddTrainerModal(prev => ({ ...prev, min_level: e.target.value }))}
+                className="select w-full"
+              >
+                <option value="">اختر المستوى</option>
+                <option value="L1">L1</option>
+                <option value="L2">L2</option>
+                <option value="L3">L3</option>
+                <option value="L4">L4</option>
+                <option value="L5">L5</option>
+                <option value="L6">L6</option>
+                <option value="L7">L7</option>
+                <option value="L8">L8</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">أعلى مستوى</label>
+              <select
+                value={addTrainerModal.max_level}
+                onChange={(e) => setAddTrainerModal(prev => ({ ...prev, max_level: e.target.value }))}
+                className="select w-full"
+              >
+                <option value="">اختر المستوى</option>
+                <option value="L1">L1</option>
+                <option value="L2">L2</option>
+                <option value="L3">L3</option>
+                <option value="L4">L4</option>
+                <option value="L5">L5</option>
+                <option value="L6">L6</option>
+                <option value="L7">L7</option>
+                <option value="L8">L8</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="label">كلمة المرور (اختياري — إن تركت فارغة تُستخدم 12345678)</label>
+            <input
+              type="password"
+              value={addTrainerModal.password}
+              onChange={(e) => setAddTrainerModal(prev => ({ ...prev, password: e.target.value }))}
+              className="input w-full"
+              placeholder="6 أحرف على الأقل"
+              dir="ltr"
+              minLength={6}
+            />
+          </div>
+          <div>
+            <label className="label">ملاحظات</label>
+            <textarea
+              value={addTrainerModal.notes}
+              onChange={(e) => setAddTrainerModal(prev => ({ ...prev, notes: e.target.value }))}
+              className="input w-full min-h-[80px]"
+              placeholder="أضف أي ملاحظات..."
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
+            <button type="button" onClick={closeAddTrainerModal} className="btn-secondary">إلغاء</button>
+            <button type="submit" disabled={addTrainerModal.submitting} className="btn-primary">
+              {addTrainerModal.submitting ? 'جاري الإضافة...' : 'إضافة المدرب'}
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

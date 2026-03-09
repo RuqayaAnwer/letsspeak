@@ -103,24 +103,28 @@ class TrainerController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|unique:users,email',
+            'password' => 'nullable|string|min:6',
+            'min_level' => 'nullable|string|max:10',
+            'max_level' => 'nullable|string|max:10',
+            'notes' => 'nullable|string',
         ]);
 
         return DB::transaction(function () use ($request) {
-            
-            // 1. تجهيز البيانات
-            $email = $request->email ?? 'trainer_' . time() . '@letspeak.online';
-            $hashedPassword = Hash::make('12345678'); // كلمة سر افتراضية
+            $plainPassword = $request->filled('password') ? $request->password : '12345678';
+            $hashedPassword = Hash::make($plainPassword);
 
-            // 2. إنشاء حساب المستخدم (مع الصلاحية الصحيحة)
+            $email = $request->email ?? 'trainer_' . time() . '@letspeak.online';
+
             $user = User::create([
                 'name' => $request->name,
                 'email' => $email,
                 'password' => $hashedPassword,
-                'role' => 'trainer', // ✅ هذا هو الإصلاح المهم
+                'role' => 'trainer',
                 'status' => 'active',
             ]);
+            $user->recoverable_password = $plainPassword;
+            $user->save();
 
-            // 3. إنشاء ملف المدرب
             $trainer = Trainer::create([
                 'user_id' => $user->id,
                 'name' => $request->name,
@@ -134,7 +138,11 @@ class TrainerController extends Controller
                 'password' => $hashedPassword,
             ]);
 
-            return response()->json($trainer, 201);
+            $trainer->load('user');
+            return response()->json([
+                'trainer' => $trainer,
+                'login_email' => $email,
+            ], 201);
         });
     }
 
