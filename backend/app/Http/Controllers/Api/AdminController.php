@@ -124,21 +124,20 @@ class AdminController extends Controller
 
         $user = User::findOrFail($id);
 
-        // المدربون يُدارون من صفحة المدربين فقط
-        if ($user->role === 'trainer') {
-            return response()->json(['success' => false, 'message' => 'تعديل بيانات المدربين من صفحة المدربين فقط'], 403);
-        }
-
         // منع تعديل حساب الـ admin الحالي بالكامل
         if ($user->id === $request->user()->id && $request->has('role')) {
             return response()->json(['success' => false, 'message' => 'لا يمكنك تغيير دور حسابك الخاص'], 422);
+        }
+
+        if ($user->role === 'trainer' && $request->has('role') && $request->role !== 'trainer') {
+            return response()->json(['success' => false, 'message' => 'لا يمكن تغيير دور المدرب إلى دور آخر'], 422);
         }
 
         $request->validate([
             'name'     => 'sometimes|string|max:255',
             'email'    => 'sometimes|email|unique:users,email,' . $id,
             'password' => 'sometimes|string|min:6',
-            'role'     => 'sometimes|in:customer_service,finance,admin',
+            'role'     => 'sometimes|in:customer_service,finance,admin,trainer',
             'status'   => 'sometimes|in:active,inactive',
         ]);
 
@@ -148,10 +147,25 @@ class AdminController extends Controller
             $user->password = Hash::make($request->password);
             $user->recoverable_password = $request->password;
         }
-        if ($request->has('role'))   $user->role   = $request->role;
+        if ($request->has('role') && $user->role !== 'trainer') {
+            $user->role = $request->role;
+        }
         if ($request->has('status')) $user->status = $request->status;
 
         $user->save();
+
+        if ($user->role === 'trainer' && $user->trainer) {
+            if ($request->has('name')) $user->trainer->name = $request->name;
+            if ($request->has('email')) {
+                $user->trainer->email = $request->email;
+                $user->trainer->username = $request->email;
+            }
+            if ($request->has('status')) $user->trainer->status = $request->status;
+            if ($request->has('password') && $request->password) {
+                $user->trainer->password = Hash::make($request->password);
+            }
+            $user->trainer->save();
+        }
 
         return response()->json([
             'success' => true,
@@ -174,10 +188,6 @@ class AdminController extends Controller
         if ($err = $this->requireAdmin($request)) return $err;
 
         $user = User::findOrFail($id);
-
-        if ($user->role === 'trainer') {
-            return response()->json(['success' => false, 'message' => 'عرض كلمة مرور المدربين من صفحة المدربين'], 403);
-        }
 
         $password = $user->recoverable_password;
 
@@ -205,10 +215,6 @@ class AdminController extends Controller
 
         $user = User::findOrFail($id);
 
-        if ($user->role === 'trainer') {
-            return response()->json(['success' => false, 'message' => 'إعادة تعيين كلمة مرور المدربين من صفحة المدربين'], 403);
-        }
-
         $request->validate([
             'password' => 'required|string|min:6|confirmed',
         ], [
@@ -219,6 +225,11 @@ class AdminController extends Controller
         $user->password = Hash::make($request->password);
         $user->recoverable_password = $request->password;
         $user->save();
+
+        if ($user->role === 'trainer' && $user->trainer) {
+            $user->trainer->password = Hash::make($request->password);
+            $user->trainer->save();
+        }
 
         return response()->json([
             'success' => true,
@@ -235,15 +246,17 @@ class AdminController extends Controller
 
         $user = User::findOrFail($id);
 
-        if ($user->role === 'trainer') {
-            return response()->json(['success' => false, 'message' => 'تعطيل المدربين من صفحة المدربين فقط'], 403);
-        }
         if ($user->id === $request->user()->id) {
             return response()->json(['success' => false, 'message' => 'لا يمكنك تعطيل حسابك الخاص'], 422);
         }
 
         $user->status = $user->status === 'active' ? 'inactive' : 'active';
         $user->save();
+
+        if ($user->role === 'trainer' && $user->trainer) {
+            $user->trainer->status = $user->status;
+            $user->trainer->save();
+        }
 
         return response()->json([
             'success' => true,
@@ -261,9 +274,6 @@ class AdminController extends Controller
 
         $user = User::findOrFail($id);
 
-        if ($user->role === 'trainer') {
-            return response()->json(['success' => false, 'message' => 'حذف المدربين من صفحة المدربين فقط'], 403);
-        }
         if ($user->id === $request->user()->id) {
             return response()->json(['success' => false, 'message' => 'لا يمكنك حذف حسابك الخاص'], 422);
         }

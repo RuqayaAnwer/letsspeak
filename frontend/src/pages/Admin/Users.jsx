@@ -320,7 +320,7 @@ const AdminUsers = () => {
                 <div
                   key={u.id}
                   className="card p-3 space-y-2 cursor-pointer hover:border-primary-400 transition-all"
-                  onClick={() => u.role !== 'trainer' && openModal(u)}
+                  onClick={() => openModal(u)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -337,43 +337,41 @@ const AdminUsers = () => {
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400'}`}>
                       {u.status === 'active' ? 'نشط' : 'معطّل'}
                     </span>
-                    {u.role !== 'trainer' && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openShowPasswordModal(u); }}
-                          className="text-xs px-2 py-1 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-1"
-                          title="عرض كلمة المرور"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          عرض كلمة المرور
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openResetPasswordModal(u); }}
-                          className="text-xs px-2 py-1 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-1"
-                          title="إعادة تعيين كلمة المرور"
-                        >
-                          <Lock className="w-3.5 h-3.5" />
-                          تعيين جديدة
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleToggleStatus(u); }}
-                          disabled={actionLoading === u.id}
-                          className={`text-xs px-2 py-1 rounded-lg transition-colors flex items-center gap-1 ${u.status === 'active' ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'}`}
-                        >
-                          {u.status === 'active' ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
-                          {u.status === 'active' ? 'تعطيل' : 'تفعيل'}
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }}
-                          disabled={actionLoading === u.id}
-                          className="text-xs px-2 py-1 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1"
-                          title="حذف نهائي"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          حذف
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openShowPasswordModal(u); }}
+                        className="text-xs px-2 py-1 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-1"
+                        title="عرض كلمة المرور"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        عرض كلمة المرور
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openResetPasswordModal(u); }}
+                        className="text-xs px-2 py-1 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-1"
+                        title="إعادة تعيين كلمة المرور"
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                        تعيين جديدة
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleToggleStatus(u); }}
+                        disabled={actionLoading === u.id}
+                        className={`text-xs px-2 py-1 rounded-lg transition-colors flex items-center gap-1 ${u.status === 'active' ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'}`}
+                      >
+                        {u.status === 'active' ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                        {u.status === 'active' ? 'تعطيل' : 'تفعيل'}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }}
+                        disabled={actionLoading === u.id}
+                        className="text-xs px-2 py-1 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1"
+                        title="حذف نهائي"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        حذف
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -425,7 +423,6 @@ const AdminUsers = () => {
                       </td>
                       <td className="text-sm text-[var(--color-text-muted)]">{u.created_at ?? '-'}</td>
                       <td>
-                    {u.role !== 'trainer' && (
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => openModal(u)}
@@ -465,7 +462,6 @@ const AdminUsers = () => {
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    )}
                       </td>
                     </tr>
                   );
