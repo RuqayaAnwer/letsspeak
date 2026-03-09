@@ -34,7 +34,7 @@ class TrainerController extends Controller
             });
         }
 
-        $trainers = $query->withCount('courses')->latest()->get();
+        $trainers = $query->withCount('courses')->orderBy('created_at', 'desc')->get();
 
         // Calculate weekly lectures count
         $trainers = $trainers->map(function ($trainer) {

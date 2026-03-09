@@ -65,7 +65,7 @@ class AdminController extends Controller
             });
         }
 
-        $users = $query->orderBy('role')->orderBy('name')->get()
+        $users = $query->orderBy('created_at', 'desc')->get()
             ->map(fn($u) => [
                 'id'         => $u->id,
                 'name'       => $u->name,
@@ -249,6 +249,30 @@ class AdminController extends Controller
             'success' => true,
             'message' => $user->status === 'active' ? 'تم تفعيل الحساب' : 'تم تعطيل الحساب',
             'status'  => $user->status,
+        ]);
+    }
+
+    /**
+     * حذف حساب موظف
+     */
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        if ($err = $this->requireAdmin($request)) return $err;
+
+        $user = User::findOrFail($id);
+
+        if ($user->role === 'trainer') {
+            return response()->json(['success' => false, 'message' => 'حذف المدربين من صفحة المدربين فقط'], 403);
+        }
+        if ($user->id === $request->user()->id) {
+            return response()->json(['success' => false, 'message' => 'لا يمكنك حذف حسابك الخاص'], 422);
+        }
+
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حذف الموظف بنجاح',
         ]);
     }
 }

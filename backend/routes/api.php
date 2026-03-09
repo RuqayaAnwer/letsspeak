@@ -131,4 +131,5 @@ Route::prefix('admin')->middleware('simple.auth')->group(function () {
     Route::put('/users/{id}', [AdminController::class, 'updateUser']);
     Route::post('/users/{id}/reset-password', [AdminController::class, 'resetPassword']);
     Route::patch('/users/{id}/toggle-status', [AdminController::class, 'toggleStatus']);
+    Route::delete('/users/{id}', [AdminController::class, 'destroy']);
 });

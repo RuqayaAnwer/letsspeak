@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, UserCheck, UserX, Shield, Users, DollarSign, GraduationCap, Lock, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, Edit2, UserCheck, UserX, Shield, Users, DollarSign, GraduationCap, Lock, Eye, EyeOff, Trash2 } from 'lucide-react';
 import api from '../../api/axios';
 import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -129,6 +129,20 @@ const AdminUsers = () => {
       alert(res.data.status === 'active' ? 'تم تفعيل الحساب' : 'تم تعطيل الحساب');
     } catch (err) {
       alert(err.response?.data?.message || 'حدث خطأ');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (!confirm(`هل أنت متأكد من حذف الموظف "${user.name}" نهائياً؟ لا يمكن التراجع عن هذا الإجراء.`)) return;
+    setActionLoading(user.id);
+    try {
+      await api.delete(`/admin/users/${user.id}`);
+      setUsers(prev => prev.filter(u => u.id !== user.id));
+      alert('تم حذف الموظف بنجاح');
+    } catch (err) {
+      alert(err.response?.data?.message || 'حدث خطأ أثناء الحذف');
     } finally {
       setActionLoading(null);
     }
@@ -299,7 +313,7 @@ const AdminUsers = () => {
           <div className="md:hidden space-y-2">
             {users.length === 0 ? (
               <div className="text-center py-12 text-[var(--color-text-muted)]">لا يوجد مستخدمون</div>
-            ) : users.map((u) => {
+            ) : users.map((u, index) => {
               const roleInfo = getRoleInfo(u.role);
               const RoleIcon = roleInfo.icon;
               return (
@@ -309,7 +323,10 @@ const AdminUsers = () => {
                   onClick={() => u.role !== 'trainer' && openModal(u)}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm text-[var(--color-text-primary)]">{u.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">{index + 1}</span>
+                      <span className="font-semibold text-sm text-[var(--color-text-primary)]">{u.name}</span>
+                    </div>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${roleInfo.color}`}>
                       <RoleIcon className="w-3 h-3" />
                       {roleInfo.label}
@@ -346,6 +363,15 @@ const AdminUsers = () => {
                           {u.status === 'active' ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
                           {u.status === 'active' ? 'تعطيل' : 'تفعيل'}
                         </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }}
+                          disabled={actionLoading === u.id}
+                          className="text-xs px-2 py-1 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1"
+                          title="حذف نهائي"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          حذف
+                        </button>
                       </div>
                     )}
                   </div>
@@ -371,12 +397,12 @@ const AdminUsers = () => {
               <tbody>
                 {users.length === 0 ? (
                   <tr><td colSpan="7" className="text-center py-10 text-[var(--color-text-muted)]">لا يوجد مستخدمون</td></tr>
-                ) : users.map((u) => {
+                ) : users.map((u, index) => {
                   const roleInfo = getRoleInfo(u.role);
                   const RoleIcon = roleInfo.icon;
                   return (
                     <tr key={u.id}>
-                      <td className="text-sm">{u.id}</td>
+                      <td className="text-sm font-bold text-gray-500">{index + 1}</td>
                       <td>
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center flex-shrink-0">
@@ -429,6 +455,14 @@ const AdminUsers = () => {
                           title={u.status === 'active' ? 'تعطيل' : 'تفعيل'}
                         >
                           {u.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(u)}
+                          disabled={actionLoading === u.id}
+                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors"
+                          title="حذف نهائي"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     )}
