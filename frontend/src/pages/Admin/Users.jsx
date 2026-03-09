@@ -680,6 +680,7 @@ const AdminUsers = () => {
               className="input w-full"
               placeholder="trainer@example.com"
               dir="ltr"
+              autoComplete="new-email"
             />
           </div>
           <div>
@@ -691,6 +692,7 @@ const AdminUsers = () => {
               className="input w-full"
               placeholder="07xxxxxxxxx"
               dir="ltr"
+              autoComplete="new-phone"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
