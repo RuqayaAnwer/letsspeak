@@ -1036,15 +1036,33 @@ const TrainerPayroll = () => {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center justify-between gap-1 flex-wrap">
                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">بونص/خصم:</span>
-                      <span className={`text-sm font-medium ${
-                        (payroll.bonus_deduction || 0) >= 0 
-                          ? 'text-green-600 dark:text-green-400' 
-                          : 'text-red-600 dark:text-red-400'
-                      }`}>
-                        {formatCurrency(payroll.bonus_deduction || 0)}
-                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBonusModal({
+                            open: true,
+                            trainerId: payroll.trainer_id,
+                            trainerName: getTrainerName(payroll),
+                            bonusDeduction: payroll.bonus_deduction || '',
+                            notes: payroll.bonus_deduction_notes || '',
+                          });
+                        }}
+                        className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all min-h-[36px] ${
+                          payroll.bonus_deduction && payroll.bonus_deduction !== 0
+                            ? payroll.bonus_deduction > 0
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                        }`}
+                      >
+                        {payroll.bonus_deduction && payroll.bonus_deduction !== 0
+                          ? payroll.bonus_deduction > 0
+                            ? `+${formatCurrency(payroll.bonus_deduction)}`
+                            : formatCurrency(payroll.bonus_deduction)
+                          : 'إضافة بونص/خصم'}
+                      </button>
                     </div>
                     
                     <div className="flex items-center gap-1">

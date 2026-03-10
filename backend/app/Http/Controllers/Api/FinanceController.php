@@ -652,12 +652,13 @@ class FinanceController extends Controller
                 'pending' => $pendingAmount,
             ]);
             
-            // Current month revenue - use database query
-            $currentMonth = now()->month;
-            $currentYear = now()->year;
+            // Current month revenue - use business timezone (Iraq) so "شهر الحالي" matches user calendar
+            $businessTz = config('app.business_timezone', 'Asia/Baghdad');
+            $now = \Carbon\Carbon::now($businessTz);
+            $startOfMonth = $now->copy()->startOfMonth()->format('Y-m-d');
+            $endOfMonth = $now->copy()->endOfMonth()->format('Y-m-d');
             $monthlyRevenue = (float) Payment::where('status', 'completed')
-                ->whereMonth('payment_date', $currentMonth)
-                ->whereYear('payment_date', $currentYear)
+                ->whereBetween('payment_date', [$startOfMonth, $endOfMonth])
                 ->sum('amount');
             
             // Active courses

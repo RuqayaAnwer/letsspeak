@@ -65,7 +65,13 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
+
+    /*
+    | Business timezone for financial stats (e.g. "current month" revenue).
+    | Use this so إيرادات الشهر matches the calendar month in Iraq.
+    */
+    'business_timezone' => env('APP_BUSINESS_TIMEZONE', 'Asia/Baghdad'),
 
     /*
     |--------------------------------------------------------------------------
