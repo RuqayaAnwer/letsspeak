@@ -149,12 +149,14 @@ class LecturePostponementService
 
     /**
      * Max postponements for a course: from package (بمزاجي/التوازن=1, السرعة=3) or 3 for custom.
+     * Never returns 0: if DB has null/0 (e.g. migration not run), fallback to 3.
      */
     public function getMaxPostponementsForCourse(Course $course): int
     {
         $course->loadMissing('coursePackage');
         if ($course->coursePackage) {
-            return (int) $course->coursePackage->max_postponements;
+            $max = (int) $course->coursePackage->max_postponements;
+            return $max > 0 ? $max : 3;
         }
         return 3; // كورس مخصص
     }

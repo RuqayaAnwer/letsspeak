@@ -773,12 +773,13 @@ const CreateCourse = () => {
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="label">تاريخ البدء *</label>
+                <label className="label">تاريخ أول محاضرة *</label>
                 <input
                   type="date"
                   value={formData.start_date}
                   onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                   className="input"
+                  placeholder="موعد أول محاضرة في الكورس"
                   required
                 />
               </div>

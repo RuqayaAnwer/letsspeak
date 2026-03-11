@@ -46,6 +46,22 @@ const CourseDetails = () => {
     return course?.course_package?.name || course?.coursePackage?.name || 'كورس بدون باقة';
   };
 
+  // تنسيق أيام المحاضرات للعرض (أحد، ثلاثاء، خميس)
+  const formatLectureDays = (days) => {
+    if (!days || (Array.isArray(days) && days.length === 0)) return '—';
+    const daysMap = { sun: 'أحد', mon: 'اثنين', tue: 'ثلاثاء', wed: 'أربعاء', thu: 'خميس', fri: 'جمعة', sat: 'سبت' };
+    const order = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const arr = Array.isArray(days) ? [...days] : [days];
+    const sorted = arr.slice().sort((a, b) => {
+      const keyA = String(a).trim().toLowerCase().slice(0, 3);
+      const keyB = String(b).trim().toLowerCase().slice(0, 3);
+      const iA = order.indexOf(keyA);
+      const iB = order.indexOf(keyB);
+      return (iA === -1 ? 99 : iA) - (iB === -1 ? 99 : iB);
+    });
+    return sorted.map((d) => daysMap[String(d).trim().toLowerCase().slice(0, 3)] || String(d)).join('، ');
+  };
+
   // ترتيب المحاضرات حسب التاريخ ثم الوقت (المحاضرة التعويضية تظهر في مكانها الزمني)
   const sortLecturesByDate = (list) => {
     if (!Array.isArray(list) || list.length === 0) return list;
@@ -1265,8 +1281,12 @@ const CourseDetails = () => {
               )}
             </div>
             <p className="page-subtitle">رقم الكورس: #{course.id}</p>
-            {/* تاريخ أول دفعة vs تاريخ بدء الكورس الفعلي */}
+            {/* أيام المحاضرات + تاريخ أول دفعة + تاريخ بدء الكورس الفعلي */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-gray-600 dark:text-gray-400">
+              <span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">أيام المحاضرات:</span>{' '}
+                {formatLectureDays(course.lecture_days)}
+              </span>
               <span>
                 <span className="font-medium text-gray-700 dark:text-gray-300">تاريخ أول دفعة:</span>{' '}
                 {course.start_date ? formatDateShort(course.start_date) : '—'}
@@ -2334,7 +2354,7 @@ const CourseDetails = () => {
                       <AlertTriangle className="w-5 h-5 text-red-600" />
                     )}
                     <span className="text-sm">
-                      التأجيلات: {postponementStats.total_postponements} / {postponementStats.max_allowed}
+                      التأجيلات: {postponementStats.total_postponements} / {(postponementStats.max_allowed > 0 ? postponementStats.max_allowed : 3)}
                       {!postponementStats.can_postpone && ' (تم الوصول للحد الأقصى)'}
                     </span>
                   </div>
