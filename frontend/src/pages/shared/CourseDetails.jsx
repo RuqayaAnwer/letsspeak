@@ -1,6 +1,6 @@
 // Updated: 2025-12-21 - Added trainer payment column in lectures table
 // Status change confirmation modal with logging
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
@@ -58,9 +58,14 @@ const CourseDetails = () => {
       return tA.localeCompare(tB);
     });
   };
+
+  // محاضرة أصلية مؤجلة (لم تعد تُعقد في هذا الموعد؛ تظهر للسجل فقط)
+  const isPostponedOriginal = (lecture) =>
+    ['postponed_by_trainer', 'postponed_by_student', 'postponed_holiday'].includes(lecture?.attendance);
   
   const [course, setCourse] = useState(null);
   const [lectures, setLectures] = useState([]);
+  const sortedLectures = useMemo(() => sortLecturesByDate(lectures), [lectures]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editedLectures, setEditedLectures] = useState({});
@@ -260,7 +265,7 @@ const CourseDetails = () => {
       const res = await api.put(`/courses/${course.id}/actual-start`, {});
       if (res.data) {
         setCourse(res.data);
-        if (res.data.lectures) setLectures(res.data.lectures);
+        if (res.data.lectures) setLectures(sortLecturesByDate(res.data.lectures));
       }
     } catch (err) {
       alert(err.response?.data?.message || 'فشل تفعيل بدء الكورس');
@@ -557,11 +562,11 @@ const CourseDetails = () => {
     }));
     
     // Update the lecture in the lectures array for immediate UI feedback
-    setLectures(prev => prev.map(lecture => 
+    setLectures(prev => sortLecturesByDate(prev.map(lecture => 
       lecture.id === lectureId 
         ? { ...lecture, trainer_payment_status: value }
         : lecture
-    ));
+    )));
   };
 
   /**
@@ -643,11 +648,11 @@ const CourseDetails = () => {
       await api.put(`/lectures/${selectedLecture.id}`, payload);
       
       // Update local state with normalized values
-      setLectures(prev => prev.map(l => 
+      setLectures(prev => sortLecturesByDate(prev.map(l => 
         l.id === selectedLecture.id 
           ? { ...l, date: dateSent, time: timeSent || l.time }
           : l
-      ));
+      )));
       
       // Clear selection
       setSelectedLecture(null);
@@ -1404,10 +1409,9 @@ const CourseDetails = () => {
               جدول المحاضرات
             </h2>
             <span className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">
-              {lectures.filter((l) => {
-                // Check if lecture is completed based on is_completed flag or attendance
+              {sortedLectures.filter((l) => {
                 return l.is_completed || l.attendance === 'present' || l.attendance === 'absent';
-              }).length} / {course?.lectures_count || lectures.length} مكتمل
+              }).length} / {course?.lectures_count || sortedLectures.length} مكتمل
             </span>
           </div>
           
@@ -1492,9 +1496,9 @@ const CourseDetails = () => {
           </div>
         )}
 
-        {/* Mobile Cards View */}
+        {/* Mobile Cards View - مرتبة حسب التاريخ */}
         <div className="md:hidden space-y-2 p-2">
-          {lectures.map((lecture) => {
+          {sortedLectures.map((lecture) => {
             const rawEdited = editedLectures[lecture.id] || {};
             const lectureDate = new Date(lecture.date);
             const today = new Date();
@@ -1503,6 +1507,7 @@ const CourseDetails = () => {
             const isToday = lectureDate.getTime() === today.getTime();
             const isFuture = lectureDate > today;
             const isMakeup = lecture.is_makeup;
+            const isPostponedOrig = isPostponedOriginal(lecture);
             const isSelected = selectedLecture?.id === lecture.id;
             
             const modifyStatus = canModifyLecture(lecture);
@@ -1576,14 +1581,19 @@ const CourseDetails = () => {
                       ? 'bg-primary-50 dark:bg-primary-900/10 border-primary-300 dark:border-primary-700'
                       : isMakeup && !isCompleted
                         ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-700'
-                        : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50'
+                        : isPostponedOrig
+                          ? 'bg-gray-100 dark:bg-gray-800/70 border-gray-300 dark:border-gray-600'
+                          : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50'
                 }`}
               >
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">رقم المحاضرة</span>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap">
                       <span className="text-xs font-bold text-gray-800 dark:text-white">{lecture.lecture_number}</span>
+                      {isPostponedOrig && (
+                        <span className="text-xs text-amber-700 dark:text-amber-400 font-medium whitespace-nowrap" title="محاضرة أصلية تم تأجيلها">أصلية مؤجلة</span>
+                      )}
                       {isMakeup && (
                         <span className="text-xs text-green-600 dark:text-green-400 font-medium whitespace-nowrap" title="محاضرة تعويضية">تعويضية</span>
                       )}
@@ -1867,7 +1877,7 @@ const CourseDetails = () => {
               </tr>
             </thead>
             <tbody>
-              {lectures.map((lecture) => {
+              {sortedLectures.map((lecture) => {
                 const rawEdited = editedLectures[lecture.id] || {};
                 const lectureDate = new Date(lecture.date);
                 const today = new Date();
@@ -1876,6 +1886,7 @@ const CourseDetails = () => {
                 const isToday = lectureDate.getTime() === today.getTime();
                 const isFuture = lectureDate > today;
                 const isMakeup = lecture.is_makeup;
+                const isPostponedOrig = isPostponedOriginal(lecture);
                 const isSelected = selectedLecture?.id === lecture.id;
                 
                 // Check if lecture can be modified
@@ -1985,12 +1996,19 @@ const CourseDetails = () => {
                     } ${
                       isMakeup && !isCompleted ? 'bg-green-50 dark:bg-green-900/10' : ''
                     } ${
+                      isPostponedOrig ? 'bg-gray-100 dark:bg-gray-800/50' : ''
+                    } ${
                       isSelected ? 'ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-900/20' : ''
                     }`}
                   >
                     <td className="border-l border-[var(--color-border)] px-1 py-0.5 font-bold text-[var(--color-text-primary)] text-[10px] text-center align-middle">
-                      <div className="flex items-center justify-center gap-0.5">
+                      <div className="flex items-center justify-center gap-0.5 flex-wrap">
                         {lecture.lecture_number}
+                        {isPostponedOrig && (
+                          <span className="text-xs text-amber-700 dark:text-amber-400 font-medium whitespace-nowrap" title="محاضرة أصلية تم تأجيلها">
+                            أصلية مؤجلة
+                          </span>
+                        )}
                         {isMakeup && (
                           <span className="text-xs text-green-600 dark:text-green-400 font-medium whitespace-nowrap" title="محاضرة تعويضية">
                             تعويضية
