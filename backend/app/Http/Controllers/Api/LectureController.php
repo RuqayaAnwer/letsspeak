@@ -318,6 +318,30 @@ class LectureController extends Controller
             'is_completed' => 'sometimes|boolean',
         ]);
 
+        // غائب ولديه محاولة تأجيل → تأجيل تلقائي بدل حفظ غائب
+        if (isset($validated['attendance']) && $validated['attendance'] === 'absent') {
+            $lecture->load('course.coursePackage');
+            $limitCheck = $this->postponementService->checkPostponementLimit($lecture->course);
+            if ($limitCheck['allowed']) {
+                $next = $this->postponementService->getNextCourseDayAfter(
+                    $lecture->course,
+                    $lecture->date ? $lecture->date->format('Y-m-d') : now()->format('Y-m-d'),
+                    $lecture->time ?? $lecture->course->lecture_time
+                );
+                $result = $this->postponementService->postpone(
+                    $lecture,
+                    $next['date'],
+                    $next['time'],
+                    'student',
+                    'غائب - تأجيل تلقائي',
+                    $request->user(),
+                    false
+                );
+                $statusCode = $result['success'] ? 200 : 422;
+                return response()->json($result, $statusCode);
+            }
+        }
+
         // Save old status for payroll recalculation
         $oldTrainerPaymentStatus = $lecture->trainer_payment_status ?? 'unpaid';
         

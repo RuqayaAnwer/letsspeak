@@ -9,12 +9,11 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | Maximum Postponements Per Course
+    | Maximum Postponements Per Course (fallback)
     |--------------------------------------------------------------------------
     |
-    | The maximum number of times lectures can be postponed within a single course.
-    | This helps maintain course structure and prevents abuse of the postponement feature.
-    | Set to 0 for unlimited postponements (not recommended).
+    | Used only when course has no package (custom course). Package limits override:
+    | بمزاجي/التوازن = 1, السرعة = 3, كورس مخصص = 3 (this default).
     |
     */
     'max_postponements' => env('COURSE_MAX_POSTPONEMENTS', 3),

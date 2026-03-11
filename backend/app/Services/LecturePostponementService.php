@@ -109,14 +109,22 @@ class LecturePostponementService
             ]);
         }
 
-        // Step 5: Perform the postponement in a transaction
+        // Step 5: Decide path: if new date is a course day → cascade; else normal makeup
+        $course = $lecture->course;
+        $course->loadMissing('coursePackage');
+        $newDateCarbon = Carbon::parse($newDate);
+        $newTimeResolved = $newTime ?? $lecture->time ?? $course->lecture_time;
+
+        if ($this->courseHasDay($course, $newDate)) {
+            return $this->postponeWithCascade($lecture, $newDate, $newTimeResolved, $postponedBy, $reason);
+        }
+
+        // Normal path: mark original postponed + create makeup
         try {
             return DB::transaction(function () use ($lecture, $newDate, $newTime, $postponedBy, $reason) {
-                // Mark original lecture as postponed
                 $this->markAsPostponed($lecture, $postponedBy, $reason);
-
-                // Create new makeup lecture
                 $newLecture = $this->createMakeupLecture($lecture, $newDate, $newTime);
+                $lecture->course->increment('postponements_used');
 
                 return $this->successResponse(
                     'تم تأجيل المحاضرة بنجاح وإنشاء محاضرة تعويضية.',
@@ -140,17 +148,26 @@ class LecturePostponementService
     }
 
     /**
+     * Max postponements for a course: from package (بمزاجي/التوازن=1, السرعة=3) or 3 for custom.
+     */
+    public function getMaxPostponementsForCourse(Course $course): int
+    {
+        $course->loadMissing('coursePackage');
+        if ($course->coursePackage) {
+            return (int) $course->coursePackage->max_postponements;
+        }
+        return 3; // كورس مخصص
+    }
+
+    /**
      * Check if the course has reached its postponement limit.
-     * 
-     * The limit is configurable via config('courses.max_postponements').
-     * Default is 3 postponements per course.
-     * 
+     *
      * @param Course $course
      * @return array ['allowed' => bool, 'message' => string, 'current' => int, 'max' => int]
      */
     public function checkPostponementLimit(Course $course): array
     {
-        $maxPostponements = config('courses.max_postponements', 3);
+        $maxPostponements = $this->getMaxPostponementsForCourse($course);
         $currentPostponements = $course->postponement_count;
 
         if ($currentPostponements >= $maxPostponements) {
@@ -339,7 +356,7 @@ class LecturePostponementService
             'date' => $newDate,
             'time' => $lectureTime,
             'attendance' => Lecture::ATTENDANCE_PENDING,
-            'payment_status' => 'unpaid',
+            'trainer_payment_status' => 'unpaid',
             'is_makeup' => true,
             'makeup_for' => $originalLecture->id,
             'notes' => "محاضرة تعويضية للمحاضرة رقم {$originalLecture->lecture_number}",
@@ -381,8 +398,11 @@ class LecturePostponementService
                         );
                     }
                     
-                    // Decrement course lectures count
+                    // Decrement course lectures count and postponements used
                     $lecture->course->decrement('lectures_count');
+                    if ($lecture->course->postponements_used > 0) {
+                        $lecture->course->decrement('postponements_used');
+                    }
                     
                     // Delete the makeup lecture
                     $makeupLecture->delete();
@@ -428,9 +448,9 @@ class LecturePostponementService
      */
     public function getPostponementStats(Course $course): array
     {
-        $totalPostponements = $course->lectures()->postponed()->count();
+        $totalPostponements = $course->postponement_count;
         $makeupLectures = $course->lectures()->makeup()->count();
-        $maxAllowed = config('courses.max_postponements', 3);
+        $maxAllowed = $this->getMaxPostponementsForCourse($course);
         $remaining = max(0, $maxAllowed - $totalPostponements);
 
         return [
@@ -440,6 +460,170 @@ class LecturePostponementService
             'remaining' => $remaining,
             'can_postpone' => $remaining > 0,
         ];
+    }
+
+    /**
+     * Carbon dayOfWeek (0=Sun..6=Sat) to short key.
+     */
+    protected function dayOfWeekToKey(int $dayOfWeek): string
+    {
+        $map = [0 => 'sun', 1 => 'mon', 2 => 'tue', 3 => 'wed', 4 => 'thu', 5 => 'fri', 6 => 'sat'];
+        return $map[$dayOfWeek] ?? 'sun';
+    }
+
+    /**
+     * Normalize course lecture_days to lowercase short keys (sun, mon, ...).
+     */
+    protected function normalizeLectureDays(Course $course): array
+    {
+        $days = $course->lecture_days ?? [];
+        $longToShort = [
+            'sunday' => 'sun', 'monday' => 'mon', 'tuesday' => 'tue', 'wednesday' => 'wed',
+            'thursday' => 'thu', 'friday' => 'fri', 'saturday' => 'sat',
+        ];
+        $result = [];
+        foreach ($days as $d) {
+            $key = is_string($d) ? strtolower($d) : '';
+            if (strlen($key) === 3) {
+                $result[] = $key;
+            } elseif (isset($longToShort[$key])) {
+                $result[] = $longToShort[$key];
+            }
+        }
+        return array_values(array_unique($result));
+    }
+
+    /**
+     * Whether the given date (Y-m-d) falls on a course lecture day.
+     */
+    public function courseHasDay(Course $course, string $dateYmd): bool
+    {
+        $courseDays = $this->normalizeLectureDays($course);
+        if (empty($courseDays)) {
+            return false;
+        }
+        $dayOfWeek = Carbon::parse($dateYmd)->dayOfWeek;
+        $key = $this->dayOfWeekToKey($dayOfWeek);
+        return in_array($key, $courseDays, true);
+    }
+
+    /**
+     * First course day on or after the given date. Returns ['date' => 'Y-m-d', 'time' => 'H:i'].
+     */
+    public function getNextCourseDayAfter(Course $course, string $afterDateYmd, ?string $time = null): array
+    {
+        $courseDays = $this->normalizeLectureDays($course);
+        if (empty($courseDays)) {
+            $fallback = Carbon::parse($afterDateYmd)->addDay()->format('Y-m-d');
+            return ['date' => $fallback, 'time' => $time ?? $course->lecture_time ?? '09:00'];
+        }
+
+        $dayMap = ['sun' => 0, 'mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6];
+        $dayOrder = array_map(fn ($k) => $dayMap[$k] ?? 0, $courseDays);
+        $current = Carbon::parse($afterDateYmd)->startOfDay();
+        $maxIterations = 14;
+        $iterations = 0;
+
+        while ($iterations < $maxIterations) {
+            $dow = $current->dayOfWeek;
+            if (in_array($dow, $dayOrder, true)) {
+                return [
+                    'date' => $current->format('Y-m-d'),
+                    'time' => $time ?? $course->lecture_time ?? '09:00',
+                ];
+            }
+            $current->addDay();
+            $iterations++;
+        }
+
+        $fallback = Carbon::parse($afterDateYmd)->addDay()->format('Y-m-d');
+        return ['date' => $fallback, 'time' => $time ?? $course->lecture_time ?? '09:00'];
+    }
+
+    /**
+     * Postpone by shifting: move this lecture to new date and shift all subsequent lectures.
+     * New date must be a course day (caller checks).
+     */
+    protected function postponeWithCascade(
+        Lecture $lecture,
+        string $newDate,
+        ?string $newTime,
+        string $postponedBy,
+        ?string $reason = null
+    ): array {
+        $course = $lecture->course;
+        $courseDays = $this->normalizeLectureDays($course);
+        if (empty($courseDays)) {
+            return $this->errorResponse(self::RESULT_ERROR_INVALID_DATE, 'أيام الكورس غير محددة.');
+        }
+
+        $dayMap = ['sun' => 0, 'mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6];
+        $dayOrder = array_values(array_map(fn ($k) => $dayMap[$k] ?? 0, $courseDays));
+
+        // All lectures (including makeup) ordered by date, time, id — exclude already postponed
+        $ordered = $course->lectures()
+            ->whereNotIn('attendance', [
+                Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
+                Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
+                Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
+            ])
+            ->orderBy('date')
+            ->orderBy('time')
+            ->orderBy('id')
+            ->get();
+
+        $idx = $ordered->search(fn ($l) => (int) $l->id === (int) $lecture->id);
+        if ($idx === false || $idx === null) {
+            return $this->errorResponse(self::RESULT_ERROR_CANNOT_POSTPONE, 'المحاضرة غير موجودة في الجدول.');
+        }
+
+        $time = $newTime ?? $lecture->time ?? $course->lecture_time ?? '09:00';
+        $currentDate = Carbon::parse($newDate)->startOfDay();
+
+        // Build new dates for this lecture and all following
+        $updates = [];
+        foreach ($ordered as $i => $l) {
+            if ($i < $idx) {
+                continue;
+            }
+            $updates[] = [
+                'lecture' => $l,
+                'date' => $currentDate->format('Y-m-d'),
+                'time' => $time,
+            ];
+            // Next course day
+            $dow = $currentDate->dayOfWeek;
+            $pos = array_search($dow, $dayOrder, true);
+            $nextPos = $pos === false ? 0 : (($pos + 1) % count($dayOrder));
+            $nextDow = $dayOrder[$nextPos];
+            $currentDate->addDay();
+            while ($currentDate->dayOfWeek !== $nextDow) {
+                $currentDate->addDay();
+            }
+        }
+
+        try {
+            return DB::transaction(function () use ($lecture, $postponedBy, $reason, $updates) {
+                foreach ($updates as $u) {
+                    $u['lecture']->update([
+                        'date' => $u['date'],
+                        'time' => $u['time'],
+                    ]);
+                }
+                $lecture->course->increment('postponements_used');
+
+                return $this->successResponse(
+                    'تم تأجيل المحاضرة بنجاح مع زحف بقية المحاضرات.',
+                    [
+                        'original_lecture' => $lecture->fresh(),
+                        'shifted_count' => count($updates),
+                    ]
+                );
+            });
+        } catch (\Exception $e) {
+            Log::error('Postponement cascade failed', ['lecture_id' => $lecture->id, 'error' => $e->getMessage()]);
+            return $this->errorResponse('error', 'حدث خطأ أثناء تأجيل المحاضرة: ' . $e->getMessage());
+        }
     }
 
     /**

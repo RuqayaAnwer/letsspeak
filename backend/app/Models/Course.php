@@ -36,6 +36,7 @@ class Course extends Model
         'renewal_status',
         'renewal_alert_status',
         'last_evaluation_milestone',
+        'postponements_used',
     ];
 
     protected $casts = [
@@ -109,11 +110,11 @@ class Course extends Model
     }
 
     /**
-     * Number of postponed lectures (for postponement limit check).
+     * Number of postponements used (for limit check). Stored on course so cascade postponements count too.
      */
     public function getPostponementCountAttribute(): int
     {
-        return $this->lectures()->postponed()->count();
+        return (int) ($this->attributes['postponements_used'] ?? 0);
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Models\CoursePackage;
 use App\Models\CourseStatusHistory;
 use App\Models\ActivityLog;
 use App\Models\Payment;
+use App\Services\LecturePostponementService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -735,6 +736,33 @@ class CourseController extends Controller
 
                 // Prepare update data based on user role
                 $updateData = [];
+
+                // غائب ولديه محاولة تأجيل → تأجيل تلقائي (لا نحفظ غائب)
+                if (isset($lectureData['attendance']) && $lectureData['attendance'] === 'absent') {
+                    $lecture->load('course.coursePackage');
+                    $postponementService = app(LecturePostponementService::class);
+                    $limitCheck = $postponementService->checkPostponementLimit($lecture->course);
+                    if ($limitCheck['allowed']) {
+                        $next = $postponementService->getNextCourseDayAfter(
+                            $lecture->course,
+                            $lecture->date ? $lecture->date->format('Y-m-d') : now()->format('Y-m-d'),
+                            $lecture->time ?? $lecture->course->lecture_time
+                        );
+                        $result = $postponementService->postpone(
+                            $lecture,
+                            $next['date'],
+                            $next['time'],
+                            'student',
+                            'غائب - تأجيل تلقائي',
+                            $user,
+                            false
+                        );
+                        if ($result['success']) {
+                            $updatedCount++;
+                            continue;
+                        }
+                    }
+                }
                 
                 // All users can update attendance, activity, homework, notes
                 if (isset($lectureData['attendance'])) {
