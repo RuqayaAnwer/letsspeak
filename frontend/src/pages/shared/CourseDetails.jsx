@@ -162,26 +162,19 @@ const CourseDetails = () => {
    * - Past lectures: Can be modified
    */
   const canModifyLecture = (lecture) => {
+    // For postponement, users frequently need to edit future lectures.
+    // Instead of locking the UI, we'll allow selection.
+    // Time validation can be enforced by the backend or specific actions if needed.
     const lectureDate = new Date(lecture.date);
     lectureDate.setHours(0, 0, 0, 0);
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Future lecture - cannot be modified
-    if (lectureDate > today) {
-      return {
-        canModify: false,
-        reason: 'محاضرة مستقبلية - لا يمكن التعديل',
-        type: 'future'
-      };
-    }
-    
-    // Today's lecture or past lecture - can be modified
     return {
       canModify: true,
       reason: null,
-      type: lectureDate.getTime() === today.getTime() ? 'today' : 'past'
+      type: lectureDate > today ? 'future' : (lectureDate.getTime() === today.getTime() ? 'today' : 'past')
     };
   };
 
@@ -1610,12 +1603,18 @@ const CourseDetails = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">رقم المحاضرة</span>
                     <div className="flex items-center gap-1 flex-wrap">
-                      <span className="text-xs font-bold text-gray-800 dark:text-white">{lecture.lecture_number}</span>
+                      <span className={`text-xs font-bold ${isPostponedOrig ? 'text-gray-400 line-through' : 'text-gray-800 dark:text-white'}`}>
+                        {lecture.lecture_number}
+                      </span>
                       {isPostponedOrig && (
-                        <span className="text-xs text-amber-700 dark:text-amber-400 font-medium whitespace-nowrap" title="محاضرة أصلية تم تأجيلها">أصلية مؤجلة</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-bold whitespace-nowrap" title="محاضرة أصلية تم تأجيلها">
+                          مؤجلة
+                        </span>
                       )}
                       {isMakeup && (
-                        <span className="text-xs text-green-600 dark:text-green-400 font-medium whitespace-nowrap" title="محاضرة تعويضية">تعويضية</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-bold whitespace-nowrap" title="محاضرة تعويضية">
+                          تعويضية
+                        </span>
                       )}
                     </div>
                   </div>
@@ -2021,16 +2020,18 @@ const CourseDetails = () => {
                       isSelected ? 'ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-900/20' : ''
                     }`}
                   >
-                    <td className="border-l border-[var(--color-border)] px-1 py-0.5 font-bold text-[var(--color-text-primary)] text-[10px] text-center align-middle">
-                      <div className="flex items-center justify-center gap-0.5 flex-wrap">
-                        {lecture.lecture_number}
+                    <td className="border-l border-[var(--color-border)] px-1 py-1 font-bold text-[var(--color-text-primary)] text-[10px] text-center align-middle">
+                      <div className="flex flex-col items-center justify-center gap-1 flex-wrap">
+                        <span className={isPostponedOrig ? 'text-gray-400 line-through' : ''}>
+                          {lecture.lecture_number}
+                        </span>
                         {isPostponedOrig && (
-                          <span className="text-xs text-amber-700 dark:text-amber-400 font-medium whitespace-nowrap" title="محاضرة أصلية تم تأجيلها">
-                            أصلية مؤجلة
+                          <span className="text-[9px] px-1 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-bold whitespace-nowrap" title="محاضرة أصلية تم تأجيلها">
+                            مؤجلة
                           </span>
                         )}
                         {isMakeup && (
-                          <span className="text-xs text-green-600 dark:text-green-400 font-medium whitespace-nowrap" title="محاضرة تعويضية">
+                          <span className="text-[9px] px-1 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 font-bold whitespace-nowrap" title="محاضرة تعويضية">
                             تعويضية
                           </span>
                         )}

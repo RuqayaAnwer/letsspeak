@@ -109,6 +109,28 @@ class LecturePostponementService
             ]);
         }
 
+        // Add specific rule: Can't postpone to a day which already has another lecture for the SAME course
+        // (Unless we are in cascade mode where everything shifts, but even then, shifting to an existing day is tricky, 
+        //  but the rule primarily prevents putting two lectures of the same course on the exact same date manually)
+        $sameDayLectureExists = Lecture::where('course_id', $lecture->course->id)
+            ->where('id', '!=', $lecture->id)
+            ->whereDate('date', $newDateCarbon->format('Y-m-d'))
+            ->whereNotIn('attendance', [
+                Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
+                Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
+                Lecture::ATTENDANCE_POSTPONED_HOLIDAY
+            ])
+            ->exists();
+
+        if ($sameDayLectureExists && !$this->courseHasDay($lecture->course, $newDate)) {
+            // If it's a day that causes cascading, the cascade logic will push the existing one.
+            // But if it's NOT a course day (meaning it generates a makeup), it should fail if there's already a lecture.
+             return $this->errorResponse(
+                self::RESULT_ERROR_CONFLICT,
+                'لا يمكن جدولة محاضرة في يوم يحتوي بالفعل على محاضرة أخرى لنفس الكورس.'
+             );
+        }
+
         // Step 5: Decide path: if new date is a course day → cascade; else normal makeup
         $course = $lecture->course;
         $course->loadMissing('coursePackage');
@@ -155,6 +177,15 @@ class LecturePostponementService
     {
         $course->loadMissing('coursePackage');
         if ($course->coursePackage) {
+            $name = $course->coursePackage->name ?? '';
+            if (str_contains($name, 'سرعة') || str_contains($name, 'السرعة')) {
+                return 3;
+            }
+            if (str_contains($name, 'مزاجي') || str_contains($name, 'توازن') || str_contains($name, 'التوازن')) {
+                return 1;
+            }
+            
+            // Fallback to database value if names don't match exactly
             $max = (int) $course->coursePackage->max_postponements;
             return $max > 0 ? $max : 3;
         }
@@ -606,19 +637,32 @@ class LecturePostponementService
 
         try {
             return DB::transaction(function () use ($lecture, $postponedBy, $reason, $updates) {
-                foreach ($updates as $u) {
+                // 1. Mark the original lecture as postponed
+                $this->markAsPostponed($lecture, $postponedBy, $reason);
+
+                // 2. The first item in $updates corresponds to the original lecture's new slot. 
+                // We create a makeup lecture here instead of mutating the original lecture's date.
+                $firstUpdate = $updates[0];
+                $newLecture = $this->createMakeupLecture($lecture, $firstUpdate['date'], $firstUpdate['time']);
+
+                // 3. Shift the rest of the subsequent lectures
+                $count = count($updates);
+                for ($i = 1; $i < $count; $i++) {
+                    $u = $updates[$i];
                     $u['lecture']->update([
                         'date' => $u['date'],
                         'time' => $u['time'],
                     ]);
                 }
+
                 $lecture->course->increment('postponements_used');
 
                 return $this->successResponse(
-                    'تم تأجيل المحاضرة بنجاح مع زحف بقية المحاضرات.',
+                    'تم تأجيل المحاضرة بنجاح مع زحف بقية المحاضرات وإنشاء محاضرة تعويضية.',
                     [
                         'original_lecture' => $lecture->fresh(),
-                        'shifted_count' => count($updates),
+                        'new_lecture_id' => $newLecture->id,
+                        'shifted_count' => $count - 1,
                     ]
                 );
             });

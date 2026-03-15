@@ -7,36 +7,34 @@ const Achievements = () => {
   const [achievements, setAchievements] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedPeriod, setSelectedPeriod] = useState('current'); // 'current' | 'previous'
 
   useEffect(() => {
-    fetchAchievements();
-  }, []);
+    fetchAchievements(selectedPeriod);
+  }, [selectedPeriod]);
 
-  const fetchAchievements = async () => {
+  const fetchAchievements = async (period = 'current') => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/trainer/achievements');
-      console.log('Achievements response:', response);
+      const response = await api.get('/trainer/achievements', {
+        params: { period }
+      });
       if (response?.data?.success) {
         setAchievements(response.data.data);
       } else {
         setError(response?.data?.message || 'فشل تحميل البيانات');
       }
-    } catch (error) {
-      console.error('Error fetching achievements:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      
+    } catch (err) {
       let errorMessage = 'حدث خطأ أثناء تحميل البيانات';
-      if (error.response?.status === 401) {
+      if (err.response?.status === 401) {
         errorMessage = 'غير مصرح - يرجى تسجيل الدخول مرة أخرى';
-      } else if (error.response?.status === 403) {
+      } else if (err.response?.status === 403) {
         errorMessage = 'غير مصرح - ليس لديك صلاحية للوصول إلى هذه الصفحة';
-      } else if (error.response?.status === 404) {
+      } else if (err.response?.status === 404) {
         errorMessage = 'لم يتم العثور على ملف المدرب. يرجى الاتصال بالمسؤول.';
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
       }
       setError(errorMessage);
     } finally {
@@ -73,16 +71,45 @@ const Achievements = () => {
     );
   }
 
+  const periodLabel = achievements?.period?.label || (selectedPeriod === 'previous' ? 'الشهر السابق' : 'الشهر الحالي');
+
   return (
     <div className="space-y-3 sm:space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
-        <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
-          <Trophy className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
+      {/* Header + Month selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2 sm:mb-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
+            <Trophy className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
+          </div>
+          <h1 className="text-lg sm:text-3xl font-bold text-gray-800 dark:text-white">
+            إنجازاتي
+          </h1>
         </div>
-        <h1 className="text-lg sm:text-3xl font-bold text-gray-800 dark:text-white">
-          إنجازاتي
-        </h1>
+        {/* اختيار الشهر */}
+        <div className="flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 p-0.5">
+          <button
+            type="button"
+            onClick={() => setSelectedPeriod('current')}
+            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+              selectedPeriod === 'current'
+                ? 'bg-primary-500 text-white shadow'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            الشهر الحالي
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedPeriod('previous')}
+            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+              selectedPeriod === 'previous'
+                ? 'bg-primary-500 text-white shadow'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            الشهر السابق
+          </button>
+        </div>
       </div>
 
       {/* Monthly Earnings Section */}
@@ -94,7 +121,7 @@ const Achievements = () => {
                 <TrendingUp className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
               </div>
               <h2 className="text-sm sm:text-2xl font-bold text-gray-800 dark:text-white">
-                استحقاقي لهذا الشهر
+                استحقاقي لشهر {periodLabel}
               </h2>
             </div>
           </div>
@@ -186,7 +213,7 @@ const Achievements = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm sm:text-lg font-bold text-white">الإجمالي</p>
-                    <p className="text-[10px] sm:text-xs text-white/80">استحقاق الشهر الحالي</p>
+                    <p className="text-[10px] sm:text-xs text-white/80">استحقاق شهر {periodLabel}</p>
                   </div>
                 </div>
                 <p className="text-base sm:text-3xl font-bold text-white mr-2 sm:mr-0 flex-shrink-0">
@@ -202,7 +229,7 @@ const Achievements = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-md sm:shadow-lg overflow-hidden">
         <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-sm sm:text-xl font-semibold text-gray-800 dark:text-white">
-            إحصائيات الشهر الحالي
+            إحصائيات شهر {periodLabel}
           </h2>
         </div>
         <div className="p-3 sm:p-6">

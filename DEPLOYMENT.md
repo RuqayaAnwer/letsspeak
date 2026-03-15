@@ -1,5 +1,58 @@
 # دليل النشر على السيرفر
 
+## رفع التغييرات الحالية (خطوات سريعة)
+
+التعديلات الأخيرة تشمل: **البونص/الخصم على الموبايل** (Frontend) و**إصلاح إيرادات الشهر** (Backend).
+
+### أ) على جهازك — Git ورفع إلى GitHub
+
+```bash
+cd C:\Users\MSI\Desktop\letspeak
+
+# إضافة ملفات الكود فقط (بدون .env أو backups)
+git add backend/app/Http/Controllers/Api/FinanceController.php backend/config/app.php
+git add frontend/src/pages/Accounting/TrainerPayroll.jsx
+
+# commit و push
+git commit -m "Fix: bonus/deduction on mobile + monthly revenue timezone (Asia/Baghdad)"
+git push origin production-v1
+```
+
+### ب) على سيرفر الـ Backend (Ubuntu — api.letspeak.online)
+
+اتصل عبر SSH ثم:
+
+```bash
+cd /var/www/letsspeak/backend
+# أو المسار الفعلي لمجلد الـ backend على السيرفر
+
+git pull origin production-v1
+
+# تحديث الـ config والـ cache
+php artisan config:clear
+php artisan config:cache
+php artisan optimize
+```
+
+(اختياري) في ملف `.env` على السيرفر يمكنك إضافة للتأكد من توقيت العراق:
+```env
+APP_BUSINESS_TIMEZONE=Asia/Baghdad
+```
+
+### ج) الـ Frontend (sys.letspeak.online)
+
+**على جهازك:**
+
+```bash
+cd C:\Users\MSI\Desktop\letspeak\frontend
+npm install
+npm run build
+```
+
+**رفع الملفات:** ارفع **محتويات** مجلد `frontend/dist` إلى المجلد الذي يخدم منه الموقع sys.letspeak.online (عبر FileZilla / SFTP أو لوحة Hostinger — استبدال الملفات القديمة بنفس الأسماء).
+
+---
+
 ## 1. إعدادات Backend (Laravel)
 
 ### على السيرفر، تأكد من ضبط ملف `.env`:

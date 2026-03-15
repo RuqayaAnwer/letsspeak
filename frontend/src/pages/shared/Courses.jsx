@@ -13,7 +13,11 @@ const Courses = () => {
   // Helper function to get package name (handles custom packages)
   const getPackageName = (course) => {
     if (course?.is_custom) return 'مخصص';
-    return (course?.course_package || course?.coursePackage)?.name || '-';
+    const pkg = course?.course_package || course?.coursePackage;
+    if (pkg?.name) return pkg.name;
+    // كورس بدون باقة = مخصص (احتياط إذا لم يُرسل is_custom)
+    if (course?.course_package_id == null && !pkg) return 'مخصص';
+    return '-';
   };
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -461,25 +465,21 @@ const Courses = () => {
                       <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الباقة</span>
                       <div className="text-right flex items-center gap-1.5">
                         <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{course.id}</span>
-                        {(course.is_custom || course.course_package || course.coursePackage) ? (
-                          <>
-                            <div className="flex items-center gap-1">
-                              <div className="text-sm font-medium text-gray-800 dark:text-white">
-                                {getPackageName(course)}
-                              </div>
-                              {isDualCourse(course) && (
-                                <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
-                                  ثنائي
-                                </span>
-                              )}
+                        <>
+                          <div className="flex items-center gap-1">
+                            <div className="text-sm font-medium text-gray-800 dark:text-white">
+                              {getPackageName(course)}
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
-                            </div>
-                          </>
-                        ) : (
-                          <span className="text-gray-400 text-sm">-</span>
-                        )}
+                            {isDualCourse(course) && (
+                              <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
+                                ثنائي
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            ({course.lectures_count ?? (course.course_package || course.coursePackage)?.lectures_count ?? 0} محاضرة)
+                          </div>
+                        </>
                       </div>
                     </div>
                     
@@ -621,23 +621,19 @@ const Courses = () => {
                     }`}
                   >
                     <td className="px-2 py-2 text-center text-gray-800 dark:text-white">
-                      {(course.is_custom || course.course_package || course.coursePackage) ? (
-                        <div className="flex flex-col items-center gap-0.5">
-                          <div className="flex items-center gap-1">
-                            <span className="text-[10px] font-medium">{getPackageName(course)}</span>
-                            {isDualCourse(course) && (
-                              <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold">
-                                ثنائي
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[9px] text-gray-500 dark:text-gray-400">
-                            ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
-                          </span>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] font-medium">{getPackageName(course)}</span>
+                          {isDualCourse(course) && (
+                            <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold">
+                              ثنائي
+                            </span>
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-gray-400 text-[10px]">-</span>
-                      )}
+                        <span className="text-[9px] text-gray-500 dark:text-gray-400">
+                          ({course.lectures_count ?? (course.course_package || course.coursePackage)?.lectures_count ?? 0} محاضرة)
+                        </span>
+                      </div>
                     </td>
                     <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
                       <div className="flex items-center justify-center gap-1 flex-wrap">
@@ -786,14 +782,18 @@ const Courses = () => {
 
       {/* Render courses grouped by trainer */}
       {trainerGroups.map((trainerGroup, index) => {
-        const sectionKey = `trainer-${trainerGroup.trainerId}`;
+        const sectionKey = `trainer-${trainerGroup.trainerId}-${index}`;
         const totalCount = trainerGroup.courses.length;
         
-        return renderCourseTable(
-          trainerGroup.courses, 
-          `${trainerGroup.trainerName} (${totalCount})`, 
-          'text-blue-600 dark:text-blue-400', 
-          sectionKey
+        return (
+          <div key={sectionKey}>
+            {renderCourseTable(
+              trainerGroup.courses, 
+              `${trainerGroup.trainerName} (${totalCount})`, 
+              'text-blue-600 dark:text-blue-400', 
+              sectionKey
+            )}
+          </div>
         );
       })}
 
@@ -1179,14 +1179,10 @@ const Courses = () => {
                               <div>
                                 <p className="text-gray-500 dark:text-gray-400">المبلغ المتبقي</p>
                                 <p className="text-sm sm:text-lg font-bold text-orange-600 dark:text-orange-400">
-                                  {(() => {
-                                    const totalPrice = parseFloat(studentPaymentsModal.course?.total_price || 0);
-                                    const totalPaid = studentPaymentsModal.payments
-                                      .filter(p => p.status === 'paid' || p.status === 'completed')
-                                      .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-                                    const remaining = Math.max(0, totalPrice - totalPaid);
-                                    return formatCurrency(remaining);
-                                  })()}
+                                  {formatCurrency(studentPaymentsModal.payments
+                                    .filter(p => p.status === 'pending' || p.status === 'unpaid' || p.status === 'partial')
+                                    .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                                        )}
                                 </p>
                               </div>
                               <div className="col-span-2 sm:col-span-1">

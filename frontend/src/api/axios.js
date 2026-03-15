@@ -6,7 +6,8 @@ const defaultAdapter = axios.defaults.adapter;
 
 // محلياً: استخدم /api ليمر عبر بروكسي Vite → api.letspeak.online (تجنب CORS)
 // على السيرفر: استخدم الرابط المباشر
-const baseURL = import.meta.env.DEV ? '/api' : 'https://api.letspeak.online/api';
+const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://api.letspeak.online';
+const baseURL = import.meta.env.DEV ? '/api' : `${apiBase.replace(/\/$/, '')}/api`;
 
 const api = axios.create({
   baseURL,
