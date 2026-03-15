@@ -2,7 +2,8 @@ import { useContext, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
-import { Menu, X, Lock } from 'lucide-react';
+import { Menu, X, Lock, Settings } from 'lucide-react';
+import UserSettingsModal from './UserSettingsModal';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -16,6 +17,7 @@ const Layout = ({ children }) => {
     return saved !== null ? JSON.parse(saved) : true;
   });
   const [isMobile, setIsMobile] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Check screen size
   useEffect(() => {
@@ -153,43 +155,56 @@ const Layout = ({ children }) => {
 
         {/* Bottom Section */}
         <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-xs font-bold">
-                  {user?.name?.charAt(0)?.toUpperCase()}
-                </span>
+          <div className="flex justify-between items-center gap-2">
+            
+            {/* User Profile Info */}
+            <div className="flex items-center gap-3 min-w-0 flex-1 pl-2">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden border-2 border-white dark:border-gray-700">
+                  {user?.avatar ? (
+                    <img 
+                      src={`${import.meta.env.VITE_API_URL}/storage/${user.avatar}`} 
+                      alt={user?.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-white text-sm font-bold">
+                      {user?.name?.charAt(0)?.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                {/* Active Indicator dot */}
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
               </div>
-              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{user?.name}</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate">{user?.name}</span>
+                <span className="text-xs text-blue-500 font-medium truncate">{getRoleTitle()}</span>
+              </div>
             </div>
-            <button
-              onClick={toggleTheme}
-              className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
-              title={theme === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن'}
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
+
+            {/* Actions (Settings & Theme) */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400 transition-colors flex-shrink-0"
+                title={theme === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن'}
+              >
+                {theme === 'dark' ? '☀️' : '🌙'}
+              </button>
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all flex-shrink-0"
+                title="إعدادات الحساب وكلمة المرور"
+              >
+                <Settings className="w-5 h-5 hover:rotate-90 transition-transform duration-300" />
+              </button>
+            </div>
+            
           </div>
-          <Link
-            to="/change-password"
-            className={`w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-all text-sm sm:text-base mb-2 ${
-              location.pathname === '/change-password'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-          >
-            <Lock className="w-4 h-4" />
-            <span>تغيير كلمة المرور</span>
-          </Link>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40 text-sm sm:text-base"
-          >
-            <span>🚪</span>
-            <span>تسجيل الخروج</span>
-          </button>
         </div>
       </aside>
+
+      <UserSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       {/* Top Header with Logo */}
       <header 

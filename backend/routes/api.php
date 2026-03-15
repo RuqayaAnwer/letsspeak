@@ -27,6 +27,7 @@ use App\Models\Trainer;
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/dev-login', [AuthController::class, 'devLogin']);
 Route::post('/auth/logout', [AuthController::class, 'logout']);
+Route::post('/auth/profile', [AuthController::class, 'updateProfile'])->middleware('simple.auth');
 Route::post('/auth/change-password', [AuthController::class, 'changePassword'])->middleware('simple.auth');
 
 // Dashboard Stats

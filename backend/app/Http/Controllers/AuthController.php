@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Trainer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -159,6 +160,73 @@ class AuthController extends Controller
         $user->save();
 
         return response()->json(['message' => 'تم تغيير كلمة المرور بنجاح']);
+    }
+
+    /**
+     * تحديث الملف الشخصي (الاسم، الصورة، وبشكل إضافي كلمة المرور)
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'غير مصرح'], 401);
+        }
+
+        $rules = [
+            'name' => 'nullable|string|max:255',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ];
+
+        // Validate password update if provided
+        if ($request->filled('current_password')) {
+            $rules['current_password'] = 'required|string';
+            $rules['new_password'] = 'required|string|min:6';
+        }
+
+        $request->validate($rules);
+
+        // Update password if provided
+        if ($request->filled('current_password')) {
+            if (!Hash::check($request->current_password, $user->password)) {
+                return response()->json(['message' => 'كلمة المرور الحالية غير صحيحة'], 422);
+            }
+            if (Hash::check($request->new_password, $user->password)) {
+                return response()->json(['message' => 'كلمة المرور الجديدة يجب أن تختلف عن الحالية'], 422);
+            }
+            $user->password = Hash::make($request->new_password);
+        }
+
+        // Update name
+        if ($request->filled('name')) {
+            $user->name = $request->name;
+            // إبقاء اسم المدرب محدثاً إن أمكن
+            if ($user->trainer) {
+                $user->trainer->name = $request->name;
+                $user->trainer->save();
+            }
+        }
+
+        // Update avatar
+        if ($request->hasFile('avatar')) {
+            // Delete old avatar if exists
+            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+            // Store new avatar
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->avatar = $path;
+        }
+
+        $user->save();
+
+        if ($user->role === 'trainer') {
+            $user->load('trainer');
+        }
+
+        return response()->json([
+            'message' => 'تم تحديث الملف الشخصي بنجاح',
+            'user' => $user
+        ]);
     }
 
     /**
