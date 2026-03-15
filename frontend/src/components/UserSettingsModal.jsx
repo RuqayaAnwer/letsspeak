@@ -8,7 +8,8 @@ const UserSettingsModal = ({ isOpen, onClose }) => {
   const [name, setName] = useState(user?.name || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [avatarPreview, setAvatarPreview] = useState(user?.avatar ? `${import.meta.env.VITE_API_URL}/storage/${user.avatar}` : null);
+  const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://api.letspeak.online';
+  const [avatarPreview, setAvatarPreview] = useState(user?.avatar ? `${apiBase}/storage/${user.avatar}` : null);
   const [avatarFile, setAvatarFile] = useState(null);
   
   const [loading, setLoading] = useState(false);

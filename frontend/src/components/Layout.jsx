@@ -163,7 +163,7 @@ const Layout = ({ children }) => {
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden border-2 border-white dark:border-gray-700">
                   {user?.avatar ? (
                     <img 
-                      src={`${import.meta.env.VITE_API_URL}/storage/${user.avatar}`} 
+                      src={`${import.meta.env.VITE_API_BASE_URL || 'https://api.letspeak.online'}/storage/${user.avatar}`} 
                       alt={user?.name} 
                       className="w-full h-full object-cover"
                     />
