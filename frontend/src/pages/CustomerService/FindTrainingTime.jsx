@@ -429,7 +429,11 @@ const FindTrainingTime = () => {
                       <p className="font-medium text-[var(--color-text-primary)] truncate text-xs sm:text-sm">
                         {trainer.name}
                       </p>
-                      <p className="text-[9px] sm:text-xs text-[var(--color-text-muted)] truncate">
+                      <p className="text-[9px] sm:text-xs text-primary-600 dark:text-primary-400 font-medium truncate mt-0.5">
+                        متفرغ {trainer.free_days_count || selectedDaysCount} أيام: {' '}
+                        {trainer.free_days ? trainer.free_days.map(id => weekDaysOptions.find(d => d.id === id)?.name).filter(Boolean).join('، ') : ''}
+                      </p>
+                      <p className="text-[8px] sm:text-[10px] text-[var(--color-text-muted)] truncate mt-0.5">
                         {trainer.phone || trainer.email}
                       </p>
                     </div>

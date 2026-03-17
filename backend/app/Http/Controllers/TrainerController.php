@@ -621,13 +621,16 @@ public function store(Request $request)
             'dates' => 'required|array|min:1',
             'dates.*' => 'required|date',
             'time' => 'required|date_format:H:i',
+            'min_days_count' => 'nullable|integer|min:1|max:7'
         ]);
 
         $weekDays = $request->week_days;
         $dates = $request->dates;
         $time = $request->time;
+        // If min_days_count is provided, we need that many days. Otherwise, we need ALL requested week_days.
+        $minDaysCount = $request->min_days_count ?? count($weekDays);
 
-        // Get all trainers (filter by status if exists, otherwise get all)
+        // Get all active trainers
         $allTrainers = Trainer::with('user:id,name,email')
             ->where(function($q) {
                 $q->where('status', 'active')
@@ -637,59 +640,84 @@ public function store(Request $request)
 
         $availableTrainers = [];
 
+        // Group dates by day of week
+        $datesByWeekDay = [];
+        foreach ($dates as $date) {
+            $dayOfWeek = Carbon::parse($date)->dayOfWeek;
+            $datesByWeekDay[$dayOfWeek][] = $date;
+        }
+
         foreach ($allTrainers as $trainer) {
-            $isAvailable = true;
+            $unavailability = TrainerUnavailability::where('trainer_id', $trainer->id)->first();
+            $unavailableDays = $unavailability->unavailable_days ?? [];
+            $unavailableTimes = $unavailability->unavailable_times ?? [];
 
-            // Check for conflicts in all dates
-            foreach ($dates as $date) {
-                // Check if trainer has a lecture at this date/time
-                $conflict = Lecture::whereHas('course', function ($q) use ($trainer) {
-                    $q->where('trainer_id', $trainer->id)
-                      ->where('status', 'active');
-                })
-                ->where('date', $date)
-                ->where('time', $time)
-                ->whereNotIn('attendance', ['postponed_by_trainer', 'postponed_by_student', 'postponed_holiday'])
-                ->exists();
+            $freeWeekDaysCount = 0;
+            $trainerFreeDays = [];
 
-                if ($conflict) {
-                    $isAvailable = false;
-                    break;
+            foreach ($weekDays as $weekDay) {
+                if (!isset($datesByWeekDay[$weekDay])) {
+                    continue;
                 }
 
-                // Check trainer unavailability
-                $unavailability = TrainerUnavailability::where('trainer_id', $trainer->id)->first();
-                if ($unavailability) {
-                    $dayName = Carbon::parse($date)->locale('en')->dayName;
-                    $unavailableDays = $unavailability->unavailable_days ?? [];
-                    
-                    if (in_array($dayName, $unavailableDays)) {
-                        $isAvailable = false;
+                $isDayConsistentlyFree = true;
+
+                foreach ($datesByWeekDay[$weekDay] as $date) {
+                    // Check if trainer has a lecture at this date/time
+                    $conflict = Lecture::whereHas('course', function ($q) use ($trainer) {
+                        $q->where('trainer_id', $trainer->id)
+                          ->where('status', 'active');
+                    })
+                    ->where('date', $date)
+                    ->where('time', $time)
+                    ->whereNotIn('attendance', ['postponed_by_trainer', 'postponed_by_student', 'postponed_holiday'])
+                    ->exists();
+
+                    if ($conflict) {
+                        $isDayConsistentlyFree = false;
                         break;
                     }
 
-                    // Check time-specific unavailability
-                    $unavailableTimes = $unavailability->unavailable_times ?? [];
-                    foreach ($unavailableTimes as $unavailableTime) {
-                        if (isset($unavailableTime['day']) && $unavailableTime['day'] === $dayName) {
-                            $from = $unavailableTime['from'] ?? null;
-                            $to = $unavailableTime['to'] ?? null;
-                            
-                            if ($from && $to && $time >= $from && $time <= $to) {
-                                $isAvailable = false;
-                                break 2;
+                    // Check trainer unavailability
+                    if ($unavailability) {
+                        $dayName = Carbon::parse($date)->locale('en')->dayName;
+                        
+                        // Check full day unavailability
+                        if (in_array($dayName, $unavailableDays)) {
+                            $isDayConsistentlyFree = false;
+                            break;
+                        }
+
+                        // Check time-specific unavailability
+                        foreach ($unavailableTimes as $unavailableTime) {
+                            if (isset($unavailableTime['day']) && strcasecmp($unavailableTime['day'], $dayName) === 0) {
+                                $from = $unavailableTime['from'] ?? null;
+                                $to = $unavailableTime['to'] ?? null;
+                                
+                                if ($from && $to && $time >= $from && $time <= $to) {
+                                    $isDayConsistentlyFree = false;
+                                    break 2;
+                                }
                             }
                         }
                     }
                 }
+
+                if ($isDayConsistentlyFree) {
+                    $freeWeekDaysCount++;
+                    $trainerFreeDays[] = $weekDay;
+                }
             }
 
-            if ($isAvailable) {
+            // Only add trainer if they have AT LEAST the required number of free days
+            if ($freeWeekDaysCount >= $minDaysCount) {
                 $availableTrainers[] = [
                     'id' => $trainer->id,
                     'name' => $trainer->user->name ?? $trainer->name,
                     'email' => $trainer->user->email ?? $trainer->email,
                     'phone' => $trainer->phone,
+                    'free_days_count' => $freeWeekDaysCount,
+                    'free_days' => $trainerFreeDays,
                 ];
             }
         }
