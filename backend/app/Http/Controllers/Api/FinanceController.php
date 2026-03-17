@@ -110,67 +110,68 @@ class FinanceController extends Controller
         $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->format('Y-m-d');
         $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d');
 
+        // OPTIMIZATION: 1. Fetch all completed lectures counts grouped by trainer
+        $completedLecturesCounts = \App\Models\Lecture::select('courses.trainer_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+            ->join('courses', 'lectures.course_id', '=', 'courses.id')
+            ->whereBetween('lectures.date', [$startDate, $endDate])
+            ->where(function ($query) {
+                $query->where('lectures.is_completed', true)
+                      ->orWhereIn('lectures.attendance', ['present', 'partially', 'absent']);
+            })
+            ->groupBy('courses.trainer_id')
+            ->pluck('count', 'trainer_id')
+            ->toArray();
+
+        // OPTIMIZATION: 2. Calculate renewals for the month in memory
+        $renewalsCountsByTrainer = [];
+        $renewalsInMonth = Course::with('students')
+            ->where('renewed_with_trainer', true)
+            ->whereMonth('start_date', $month)
+            ->whereYear('start_date', $year)
+            ->get();
+
+        foreach ($renewalsInMonth as $course) {
+            $cTrainerId = $course->trainer_id;
+            $studentIds = $course->students->pluck('id')->toArray();
+            
+            if (empty($studentIds)) {
+                continue;
+            }
+            
+            $previousCourse = Course::whereHas('students', function ($query) use ($studentIds) {
+                $query->whereIn('students.id', $studentIds);
+            })
+            ->where('id', '!=', $course->id)
+            ->where('start_date', '<', $course->start_date)
+            ->orderBy('start_date', 'desc')
+            ->first();
+            
+            if ($previousCourse && $previousCourse->trainer_id === $cTrainerId) {
+                $renewalsCountsByTrainer[$cTrainerId] = ($renewalsCountsByTrainer[$cTrainerId] ?? 0) + 1;
+            }
+        }
+
+        // OPTIMIZATION: 3. Pre-fetch all related payrolls
+        $existingPayrolls = TrainerPayroll::where('month', $month)
+            ->where('year', $year)
+            ->get()
+            ->keyBy('trainer_id');
+
         $payrolls = [];
         $renewalsData = []; // To track renewals for competition bonus
+        $payrollsToSave = []; // Accumulate to bulk insert/update later mostly
 
         // Loop through ALL trainers
         foreach ($trainers as $trainer) {
-            \Log::info('Processing trainer', [
-                'trainer_id' => $trainer->id,
-                'trainer_name' => $trainer->name,
-            ]);
             
-            // محاضرة مكتملة = تحتسب في المستحقات. "مدفوعة" = للتدقيق فقط (تم دفعها للمدرب).
-            $completedLectures = Lecture::whereHas('course', function ($query) use ($trainer) {
-                $query->where('trainer_id', $trainer->id);
-            })
-            ->whereBetween('date', [$startDate, $endDate])
-            ->where(function ($query) {
-                $query->where('is_completed', true)
-                      ->orWhereIn('attendance', ['present', 'partially', 'absent']);
-            })
-            ->count();
-
-            \Log::info('Trainer completed lectures', [
-                'trainer_id' => $trainer->id,
-                'completed_lectures' => $completedLectures,
-            ]);
+            // Get completed lectures from pre-calculated array
+            $completedLectures = $completedLecturesCounts[$trainer->id] ?? 0;
 
             // Calculate base pay
             $basePay = $completedLectures * $lectureRate;
 
-            // Get renewals count (courses with renewed_with_trainer = true that started in this month)
-            // AND verify that the previous course was with the same trainer
-            $renewalsCount = Course::where('trainer_id', $trainer->id)
-                ->where('renewed_with_trainer', true)
-                ->whereMonth('start_date', $month)
-                ->whereYear('start_date', $year)
-                ->get()
-                ->filter(function ($course) use ($trainer) {
-                    // Get students for this course
-                    $studentIds = $course->students->pluck('id')->toArray();
-                    if (empty($studentIds)) {
-                        return false; // No students, can't be a renewal
-                    }
-                    
-                    // Find previous course(s) for the same student(s)
-                    $previousCourse = Course::whereHas('students', function ($query) use ($studentIds) {
-                        $query->whereIn('students.id', $studentIds);
-                    })
-                    ->where('id', '!=', $course->id)
-                    ->where('start_date', '<', $course->start_date)
-                    ->orderBy('start_date', 'desc')
-                    ->first();
-                    
-                    // If there's a previous course, check if it was with the same trainer
-                    if ($previousCourse) {
-                        return $previousCourse->trainer_id === $trainer->id;
-                    }
-                    
-                    // If no previous course found, it's not a valid renewal
-                    return false;
-                })
-                ->count();
+            // Get renewals count from pre-calculated optimizations
+            $renewalsCount = $renewalsCountsByTrainer[$trainer->id] ?? 0;
 
             // Calculate renewal bonus using tiered system
             // 5 renewals = 50,000 د.ع, 7 renewals = 100,000 د.ع
@@ -198,15 +199,13 @@ class FinanceController extends Controller
             // Competition bonus will be calculated after we know all renewals
             $trainerCompetitionBonus = 0;
 
-            // Use firstOrCreate to ensure payroll record exists for all trainers (even with 0 balance)
-            // This guarantees all trainers appear in the list
-            $existingPayroll = TrainerPayroll::firstOrCreate(
-                [
+            // Use pre-fetched payroll
+            $existingPayroll = $existingPayrolls->get($trainer->id);
+            if (!$existingPayroll) {
+                $existingPayroll = TrainerPayroll::create([
                     'trainer_id' => $trainer->id,
                     'month' => $month,
                     'year' => $year,
-                ],
-                [
                     'lecture_rate' => $lectureRate,
                     'renewal_bonus_rate' => 0,
                     'completed_lectures' => 0,
@@ -216,8 +215,9 @@ class FinanceController extends Controller
                     'volume_bonus' => 0,
                     'competition_bonus' => 0,
                     'status' => 'draft',
-                ]
-            );
+                ]);
+                $existingPayrolls->put($trainer->id, $existingPayroll);
+            }
             
             $bonusDeduction = $existingPayroll->bonus_deduction ?? 0;
             $bonusDeductionNotes = $existingPayroll->bonus_deduction_notes ?? null;
