@@ -209,7 +209,7 @@ const Layout = ({ children }) => {
       {/* Top Header with Logo */}
       <header 
         className={`fixed top-0 left-0 right-0 h-14 sm:h-16 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-md z-30 transition-all duration-300 ${
-          sidebarOpen && !isMobile ? 'mr-64' : 'mr-0'
+          sidebarOpen && !isMobile ? 'mr-64 sm:mr-72' : 'mr-0'
         }`}
       >
         <div className="h-full flex items-center justify-start px-3 sm:px-6">
@@ -247,7 +247,7 @@ const Layout = ({ children }) => {
       {/* Main Content */}
       <main 
         className={`transition-all duration-300 pt-20 sm:pt-24 px-3 sm:px-4 md:px-6 lg:px-8 pb-4 sm:pb-6 md:pb-8 relative ${
-          sidebarOpen && !isMobile ? 'mr-64' : 'mr-0'
+          sidebarOpen && !isMobile ? 'mr-64 sm:mr-72' : 'mr-0'
         }`}
         style={{ zIndex: 1 }}
       >
