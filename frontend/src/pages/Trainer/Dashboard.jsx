@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Calendar, Clock, BookOpen } from 'lucide-react';
 import api from '../../api/axios';
 import { formatDateShort } from '../../utils/dateFormat';
+import PackageBadge from '../../components/PackageBadge';
 
 // Format time to 12-hour format
 const formatTime12Hour = (time24) => {
@@ -161,7 +162,7 @@ const Dashboard = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="text-xs font-semibold text-gray-800 dark:text-white truncate">
-                          {getPackageName(lecture.course)}
+                          <PackageBadge course={lecture.course} />
                         </h3>
                         <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
                           الطالب: {lecture.course?.student?.name || '-'}
@@ -202,7 +203,7 @@ const Dashboard = () => {
                       </div>
                       <div>
                         <h3 className="font-semibold text-gray-800 dark:text-white">
-                          {getPackageName(lecture.course)}
+                          <PackageBadge course={lecture.course} />
                         </h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           الطالب: {lecture.course?.student?.name || '-'}
@@ -258,7 +259,7 @@ const Dashboard = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="text-xs font-semibold text-gray-800 dark:text-white truncate">
-                          {getPackageName(lecture.course)}
+                          <PackageBadge course={lecture.course} />
                         </h3>
                         <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
                           الطالب: {lecture.course?.student?.name || '-'}
@@ -314,7 +315,7 @@ const Dashboard = () => {
                         {formatTime12Hour(lecture.time || lecture.course?.lecture_time)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-800 dark:text-white">
-                        {getPackageName(lecture.course)}
+                        <PackageBadge course={lecture.course} />
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                         {lecture.course?.student?.name || '-'}

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Plus, AlertTriangle, Info, X, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../api/axios';
 import { formatCurrency } from '../../utils/currencyFormat';
+import PackageBadge from '../../components/PackageBadge';
 
 // Updated: 2025-12-21 - Courses separated by status with smaller fonts
 const Courses = () => {
@@ -468,7 +469,7 @@ const Courses = () => {
                         <>
                           <div className="flex items-center gap-1">
                             <div className="text-sm font-medium text-gray-800 dark:text-white">
-                              {getPackageName(course)}
+                              <PackageBadge course={course} />
                             </div>
                             {isDualCourse(course) && (
                               <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
@@ -623,7 +624,7 @@ const Courses = () => {
                     <td className="px-2 py-2 text-center text-gray-800 dark:text-white">
                       <div className="flex flex-col items-center gap-0.5">
                         <div className="flex items-center gap-1">
-                          <span className="text-[10px] font-medium">{getPackageName(course)}</span>
+                          <PackageBadge course={course} className="text-[10px] font-medium" />
                           {isDualCourse(course) && (
                             <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold">
                               ثنائي

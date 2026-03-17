@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { AlertTriangle, HelpCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../api/axios';
 import { formatCurrency } from '../../utils/currencyFormat';
+import PackageBadge from '../../components/PackageBadge';
 
 const CourseAlerts = () => {
   // Helper function to get package name (handles custom packages)
@@ -280,7 +281,7 @@ const CourseAlerts = () => {
                               {(course.course_package || course.coursePackage || course.is_custom) ? (
                                 <>
                                   <span className="text-[10px] font-semibold text-gray-800 dark:text-white text-center">
-                                    {getPackageName(course)}
+                                    <PackageBadge course={course} />
                                   </span>
                                   <span className="text-[9px] text-gray-500 dark:text-gray-400 text-center">
                                     ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
@@ -418,7 +419,7 @@ const CourseAlerts = () => {
                       <td className="px-2 py-2 text-center text-gray-800 dark:text-white">
                         {(course.course_package || course.coursePackage || course.is_custom) ? (
                           <div className="flex flex-col items-center gap-0.5">
-                            <span className="text-[10px] font-medium">{getPackageName(course)}</span>
+                            <PackageBadge course={course} className="text-[10px] font-medium" />
                             <span className="text-[9px] text-gray-500 dark:text-gray-400">
                               ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
                             </span>

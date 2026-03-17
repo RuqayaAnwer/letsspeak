@@ -21,6 +21,7 @@ import {
   Trash2,
   PlayCircle,
 } from 'lucide-react';
+import PackageBadge from '../../components/PackageBadge';
 
 /**
  * CourseDetails Component
@@ -1245,7 +1246,7 @@ const CourseDetails = () => {
           </button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="page-title">{getPackageName(course)}</h1>
+              <h1 className="page-title flex items-center gap-2"><PackageBadge course={course} /></h1>
               {isCustomerService ? (
                 <select
                   ref={statusSelectRef}

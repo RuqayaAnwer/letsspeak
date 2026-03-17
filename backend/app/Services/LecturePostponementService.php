@@ -456,7 +456,16 @@ class LecturePostponementService
                 $course = $lecture->course;
                 $courseDays = $this->normalizeLectureDays($course);
                 
-                if (!empty($courseDays)) {
+                // Only reverse-cascade if the makeup was scheduled on a valid course day (which implies forward cascade occurred)
+                $wasCascaded = false;
+                if ($makeupLecture && !empty($courseDays)) {
+                    $makeupDateString = $makeupLecture->date instanceof \Carbon\Carbon 
+                        ? $makeupLecture->date->format('Y-m-d') 
+                        : Carbon::parse($makeupLecture->date)->format('Y-m-d');
+                    $wasCascaded = $this->courseHasDay($course, $makeupDateString);
+                }
+                
+                if (!empty($courseDays) && $wasCascaded) {
                     $dayMap = ['sun' => 0, 'mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6];
                     $dayOrder = array_values(array_map(fn ($k) => $dayMap[$k] ?? 0, $courseDays));
 
