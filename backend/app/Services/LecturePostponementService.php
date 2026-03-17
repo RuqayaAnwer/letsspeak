@@ -452,8 +452,54 @@ class LecturePostponementService
                     'notes' => null,
                 ]);
 
+                // Shifting back subsequent lectures to fill the gap (Reverse Cascade)
+                $course = $lecture->course;
+                $courseDays = $this->normalizeLectureDays($course);
+                
+                if (!empty($courseDays)) {
+                    $dayMap = ['sun' => 0, 'mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6];
+                    $dayOrder = array_values(array_map(fn ($k) => $dayMap[$k] ?? 0, $courseDays));
+
+                    // Get all active lectures (not postponed) ordered by date/time
+                    $ordered = $course->lectures()
+                        ->whereNotIn('attendance', [
+                            Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
+                            Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
+                            Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
+                        ])
+                        ->orderBy('date')
+                        ->orderBy('time')
+                        ->orderBy('id')
+                        ->get();
+
+                    $idx = $ordered->search(fn ($l) => (int) $l->id === (int) $lecture->id);
+                    if ($idx !== false) {
+                        $currentDate = Carbon::parse($lecture->date)->startOfDay();
+                        
+                        // Recalculate dates for all subsequent lectures
+                        for ($i = $idx + 1; $i < $ordered->count(); $i++) {
+                            $l = $ordered[$i];
+                            
+                            // Move to next valid course day
+                            $dow = $currentDate->dayOfWeek;
+                            $pos = array_search($dow, $dayOrder, true);
+                            $nextPos = $pos === false ? 0 : (($pos + 1) % count($dayOrder));
+                            $nextDow = $dayOrder[$nextPos];
+                            
+                            $currentDate->addDay();
+                            while ($currentDate->dayOfWeek !== $nextDow) {
+                                $currentDate->addDay();
+                            }
+                            
+                            $l->update([
+                                'date' => $currentDate->format('Y-m-d'),
+                            ]);
+                        }
+                    }
+                }
+
                 return $this->successResponse(
-                    'تم إلغاء التأجيل وحذف المحاضرة التعويضية بنجاح.',
+                    'تم إلغاء التأجيل وإرجاع تواريخ باقي المحاضرات بشكل تسلسلي.',
                     [
                         'lecture' => $lecture->fresh(),
                         'makeup_deleted' => $makeupLecture ? true : false,
