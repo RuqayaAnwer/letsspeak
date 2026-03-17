@@ -161,12 +161,12 @@ const Dashboard = () => {
                         <BookOpen className="w-4 h-4 text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-xs font-semibold text-gray-800 dark:text-white truncate">
-                          <PackageBadge course={lecture.course} />
-                        </h3>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                        <h3 className="text-xs font-bold text-gray-800 dark:text-white truncate">
                           الطالب: {lecture.course?.student?.name || '-'}
-                        </p>
+                        </h3>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                          <PackageBadge course={lecture.course} className="font-normal" />
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-1 border-t border-gray-200 dark:border-gray-600">
@@ -202,12 +202,12 @@ const Dashboard = () => {
                         <BookOpen className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-800 dark:text-white">
-                          <PackageBadge course={lecture.course} />
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <h3 className="font-bold text-gray-800 dark:text-white">
                           الطالب: {lecture.course?.student?.name || '-'}
-                        </p>
+                        </h3>
+                        <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          <PackageBadge course={lecture.course} className="font-normal" />
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -258,12 +258,12 @@ const Dashboard = () => {
                         <BookOpen className="w-4 h-4 text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-xs font-semibold text-gray-800 dark:text-white truncate">
-                          <PackageBadge course={lecture.course} />
-                        </h3>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                        <h3 className="text-xs font-bold text-gray-800 dark:text-white truncate">
                           الطالب: {lecture.course?.student?.name || '-'}
-                        </p>
+                        </h3>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                          <PackageBadge course={lecture.course} className="font-normal" />
+                        </div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-1.5 text-[10px]">
@@ -299,8 +299,8 @@ const Dashboard = () => {
                   <tr>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">التاريخ</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الوقت</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الباقة</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الطالب</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الباقة</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الحالة</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300">الإجراءات</th>
                   </tr>
@@ -314,11 +314,11 @@ const Dashboard = () => {
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400" dir="ltr">
                         {formatTime12Hour(lecture.time || lecture.course?.lecture_time)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-800 dark:text-white">
-                        <PackageBadge course={lecture.course} />
+                      <td className="px-4 py-3 text-sm text-gray-800 dark:text-white font-bold">
+                        {lecture.course?.student?.name || '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                        {lecture.course?.student?.name || '-'}
+                        <PackageBadge course={lecture.course} className="font-normal" />
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(lecture.status)}`}>

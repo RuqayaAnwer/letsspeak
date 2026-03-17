@@ -463,64 +463,39 @@ const Courses = () => {
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الباقة</span>
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الطالب</span>
                       <div className="text-right flex items-center gap-1.5">
                         <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{course.id}</span>
-                        <>
-                          <div className="flex items-center gap-1">
-                            <div className="text-sm font-medium text-gray-800 dark:text-white">
-                              <PackageBadge course={course} />
-                            </div>
-                            {isDualCourse(course) && (
-                              <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
-                                ثنائي
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            ({course.lectures_count ?? (course.course_package || course.coursePackage)?.lectures_count ?? 0} محاضرة)
-                          </div>
-                        </>
+                        <div className="flex items-center gap-1 flex-wrap justify-end">
+                          <span className="text-sm font-bold text-gray-800 dark:text-white">
+                            {course.is_dual && course.students?.length > 0
+                              ? course.students.map(s => s.name).join(' و ')
+                              : (course.student_name || course.student?.name || course.students?.[0]?.name || '-')}
+                          </span>
+                          {isDualCourse(course) && (
+                            <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
+                              ثنائي
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الطالب</span>
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الباقة</span>
                       <div className="flex items-center gap-1 flex-wrap justify-end max-w-[65%]">
-                        {course.is_dual && course.students && course.students.length > 1 ? (
-                          course.students.map((student, index) => (
-                            <div key={student.id} className="flex items-center gap-1">
-                              <span className="text-sm text-gray-800 dark:text-white">{student.name}</span>
-                              {!isTrainer && (
-                                <button
-                                  onClick={() => fetchStudentPayments(student.id, student.name, course.id, course)}
-                                  className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
-                                  title={`عرض تفاصيل دفعات ${student.name}`}
-                                >
-                                  <HelpCircle className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                              {index < course.students.length - 1 && <span className="text-gray-400 text-xs">،</span>}
-                            </div>
-                          ))
-                        ) : (
-                          <>
-                            <span className="text-sm text-gray-800 dark:text-white">
-                              {course.student_name || 
-                               (course.students && course.students.length > 0 
-                                 ? course.students.map(s => s.name).join(', ') 
-                                 : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
-                            </span>
-                            {getStudentId(course) && !isTrainer && (
-                              <button
-                                onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id, course)}
-                                className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
-                                title="عرض تفاصيل الدفعات والاشتراك"
-                              >
-                                <HelpCircle className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </>
+                        <PackageBadge course={course} className="text-sm font-normal text-gray-800 dark:text-white" />
+                        <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">
+                          ({course.lectures_count ?? (course.course_package || course.coursePackage)?.lectures_count ?? 0} محاضرة)
+                        </span>
+                        {getStudentId(course) && !isTrainer && (
+                          <button
+                            onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id, course)}
+                            className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer mr-2"
+                            title="عرض تفاصيل الدفعات والاشتراك"
+                          >
+                            <HelpCircle className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </div>
@@ -602,8 +577,8 @@ const Courses = () => {
             <table className="w-full text-xs">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>الباقة</th>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>الطالب</th>
+                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>الباقة</th>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>المدرب</th>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>الحالة</th>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>الإجراءات</th>
@@ -621,57 +596,36 @@ const Courses = () => {
                       is75Percent ? 'bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500' : ''
                     }`}
                   >
-                    <td className="px-2 py-2 text-center text-gray-800 dark:text-white">
+                    <td className="px-2 py-2 text-center text-gray-800 dark:text-white font-bold">
                       <div className="flex flex-col items-center gap-0.5">
                         <div className="flex items-center gap-1">
-                          <PackageBadge course={course} className="text-[10px] font-medium" />
+                          <span>
+                            {course.is_dual && course.students?.length > 0
+                              ? course.students.map(s => s.name).join(' و ')
+                              : (course.student_name || course.student?.name || course.students?.[0]?.name || '-')}
+                          </span>
                           {isDualCourse(course) && (
-                            <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold">
+                            <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold font-normal">
                               ثنائي
                             </span>
                           )}
                         </div>
-                        <span className="text-[9px] text-gray-500 dark:text-gray-400">
-                          ({course.lectures_count ?? (course.course_package || course.coursePackage)?.lectures_count ?? 0} محاضرة)
-                        </span>
                       </div>
                     </td>
                     <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
                       <div className="flex items-center justify-center gap-1 flex-wrap">
-                        {course.is_dual && course.students && course.students.length > 1 ? (
-                          course.students.map((student, index) => (
-                            <div key={student.id} className="flex items-center gap-1">
-                              <span>{student.name}</span>
-                              {!isTrainer && (
-                                <button
-                                  onClick={() => fetchStudentPayments(student.id, student.name, course.id, course)}
-                                  className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
-                                  title={`عرض تفاصيل دفعات ${student.name}`}
-                                >
-                                  <HelpCircle className="w-4 h-4" />
-                                </button>
-                              )}
-                              {index < course.students.length - 1 && <span className="text-gray-400">،</span>}
-                            </div>
-                          ))
-                        ) : (
-                          <>
-                            <span>
-                              {course.student_name || 
-                               (course.students && course.students.length > 0 
-                                 ? course.students.map(s => s.name).join(', ') 
-                                 : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
-                            </span>
-                            {getStudentId(course) && !isTrainer && (
-                              <button
-                                onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id, course)}
-                                className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
-                                title="عرض تفاصيل الدفعات والاشتراك"
-                              >
-                                <HelpCircle className="w-4 h-4" />
-                              </button>
-                            )}
-                          </>
+                        <PackageBadge course={course} className="text-[10px] font-normal" />
+                        <span className="text-[9px] text-gray-500 dark:text-gray-400 ml-1">
+                          ({course.lectures_count ?? (course.course_package || course.coursePackage)?.lectures_count ?? 0} محاضرة)
+                        </span>
+                        {getStudentId(course) && !isTrainer && (
+                          <button
+                            onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id, course)}
+                            className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer mr-1"
+                            title="عرض تفاصيل الدفعات والاشتراك"
+                          >
+                            <HelpCircle className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </td>

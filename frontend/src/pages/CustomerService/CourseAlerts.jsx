@@ -275,43 +275,51 @@ const CourseAlerts = () => {
                               <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500">#{course.id}</span>
                             </div>
                             
+                            {/* Student */}
+                            <div className="col-span-2 flex flex-col items-center gap-0.5 mb-1.5">
+                              <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400">الطالب</span>
+                              {course.is_dual && course.students && course.students.length > 1 ? (
+                                <div className="flex flex-col items-center gap-0.5 text-center">
+                                  {course.students.map(student => (
+                                    <span key={student.id} className="text-[10px] font-bold text-gray-800 dark:text-white">{student.name}</span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center gap-1">
+                                  <span className="text-[10px] font-bold text-gray-800 dark:text-white text-center">
+                                    {course.student_name || 
+                                     (course.students && course.students.length > 0 
+                                       ? course.students.map(s => s.name).join(', ') 
+                                       : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
+                                  </span>
+                                  {getStudentId(course) && (
+                                    <button
+                                      onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id)}
+                                      className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
+                                      title="عرض تفاصيل الدفعات والاشتراك"
+                                    >
+                                      <HelpCircle className="w-2.5 h-2.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            
                             {/* Package */}
                             <div className="col-span-2 flex flex-col items-center gap-0.5">
                               <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400">الباقة</span>
                               {(course.course_package || course.coursePackage || course.is_custom) ? (
                                 <>
-                                  <span className="text-[10px] font-semibold text-gray-800 dark:text-white text-center">
-                                    <PackageBadge course={course} />
+                                  <span className="text-[10px] font-normal text-gray-800 dark:text-white text-center">
+                                    <PackageBadge course={course} className="font-normal" />
                                   </span>
                                   <span className="text-[9px] text-gray-500 dark:text-gray-400 text-center">
                                     ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
                                   </span>
                                 </>
                               ) : (
-                                <span className="text-gray-400 text-[10px]">-</span>
+                                <span className="text-[10px] text-gray-400">-</span>
                               )}
-                            </div>
-                            
-                            {/* Student */}
-                            <div className="col-span-2 flex flex-col items-center gap-0.5">
-                              <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400">الطالب</span>
-                              <div className="flex items-center gap-1 justify-center flex-wrap">
-                                <span className="text-[10px] text-gray-800 dark:text-white text-center">
-                                  {course.student_name || 
-                                   (course.students && course.students.length > 0 
-                                     ? course.students.map(s => s.name).join(', ') 
-                                     : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
-                                </span>
-                                {getStudentId(course) && (
-                                  <button
-                                    onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id)}
-                                    className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer"
-                                    title="عرض تفاصيل الدفعات والاشتراك"
-                                  >
-                                    <HelpCircle className="w-2.5 h-2.5" />
-                                  </button>
-                                )}
-                              </div>
                             </div>
                             
                             {/* Trainer */}
@@ -398,8 +406,8 @@ const CourseAlerts = () => {
               <thead className="bg-orange-50 dark:bg-orange-900/20">
                 <tr>
                   <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>#</th>
-                  <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>الباقة</th>
                   <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>الطالب</th>
+                  <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>الباقة</th>
                   <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>المدرب</th>
                   <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>نسبة الإكتمال</th>
                   <th className="px-2 py-2 text-center text-[10px] font-semibold text-orange-800 dark:text-orange-300" style={{ textAlign: 'center' }}>الحالة</th>
@@ -416,21 +424,9 @@ const CourseAlerts = () => {
                       className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 hover:bg-orange-100 dark:hover:bg-orange-900/30"
                     >
                       <td className="px-2 py-2 text-center text-gray-800 dark:text-white text-[10px] font-medium">{course.id}</td>
-                      <td className="px-2 py-2 text-center text-gray-800 dark:text-white">
-                        {(course.course_package || course.coursePackage || course.is_custom) ? (
-                          <div className="flex flex-col items-center gap-0.5">
-                            <PackageBadge course={course} className="text-[10px] font-medium" />
-                            <span className="text-[9px] text-gray-500 dark:text-gray-400">
-                              ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-[10px]">-</span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
+                      <td className="px-2 py-2 text-center text-gray-800 dark:text-white text-[10px]">
                         <div className="flex items-center justify-center gap-1">
-                          <span>
+                          <span className="font-bold">
                             {course.student_name || 
                              (course.students && course.students.length > 0 
                                ? course.students.map(s => s.name).join(', ') 
@@ -446,6 +442,18 @@ const CourseAlerts = () => {
                             </button>
                           )}
                         </div>
+                      </td>
+                      <td className="px-2 py-2 text-center text-gray-800 dark:text-white">
+                        {(course.course_package || course.coursePackage || course.is_custom) ? (
+                          <div className="flex flex-col items-center gap-0.5">
+                            <PackageBadge course={course} className="text-[10px] font-normal" />
+                            <span className="text-[9px] text-gray-500 dark:text-gray-400">
+                              ({course.lectures_count || (course.course_package || course.coursePackage)?.lectures_count || 0} محاضرة)
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-[10px]">-</span>
+                        )}
                       </td>
                       <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
                         {course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'}

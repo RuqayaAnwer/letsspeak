@@ -1245,8 +1245,12 @@ const CourseDetails = () => {
             <ArrowRight className="w-5 h-5" />
           </button>
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="page-title flex items-center gap-2"><PackageBadge course={course} /></h1>
+            <div className="flex flex-wrap items-center gap-3 mb-1">
+              <h1 className="page-title flex items-center gap-2 font-bold">
+                {course.is_dual && course.students && course.students.length > 0
+                  ? course.students.map((s) => s.name).join(' و ')
+                  : (course.student_name || course.student?.name || course.students?.[0]?.name || '-')}
+              </h1>
               {isCustomerService ? (
                 <select
                   ref={statusSelectRef}
@@ -1432,7 +1436,7 @@ const CourseDetails = () => {
           {/* Student and Trainer Info - compact font for long names */}
           <div className="flex flex-wrap gap-3 text-xs">
           {/* Show students - handle both single and dual courses */}
-          {course.is_dual && course.students && course.students.length > 1 ? (
+          {course.is_dual && course.students && course.students.length > 1 && (
               <>
                 {course.students.map((student, index) => (
                   <button
@@ -1468,15 +1472,12 @@ const CourseDetails = () => {
                   </button>
                 ))}
               </>
-            ) : (
-              <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg max-w-full min-w-0" title={course.student?.name || course.students?.[0]?.name || 'غير محدد'}>
-                <User className="w-3.5 h-3.5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
-                <span className="text-[var(--color-text-muted)] flex-shrink-0">الطالب:</span>
-                <span className="font-semibold text-[var(--color-text-primary)] truncate">
-                  {course.student?.name || course.students?.[0]?.name || 'غير محدد'}
-                </span>
-              </div>
             )}
+
+            <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg max-w-full min-w-0" title="الباقة">
+              <PackageBadge course={course} className="font-normal text-[var(--color-text-primary)]" />
+            </div>
+
             {course.is_dual && (
               <div className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-lg">
                 <span className="badge badge-purple text-[10px]">كورس ثنائي</span>
