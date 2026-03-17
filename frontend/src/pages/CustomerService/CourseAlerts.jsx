@@ -45,42 +45,16 @@ const CourseAlerts = () => {
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      // جلب جميع الكورسات بدون pagination
-      let allCourses = [];
-      let currentPage = 1;
-      let hasMorePages = true;
       
-      while (hasMorePages) {
-        const response = await api.get('/courses', {
-          params: { page: currentPage, per_page: 100 }
-        });
-        
-        if (response?.data) {
-          let coursesData = [];
-          if (response.data.data && Array.isArray(response.data.data)) {
-            // Paginated response
-            coursesData = response.data.data;
-            const totalPages = response.data.last_page || 1;
-            hasMorePages = currentPage < totalPages;
-            currentPage++;
-          } else if (Array.isArray(response.data)) {
-            // Direct array response
-            coursesData = response.data;
-            hasMorePages = false;
-          }
-          
-          allCourses = [...allCourses, ...coursesData];
-          
-          // إذا لم يكن هناك pagination، توقف
-          if (!response.data.last_page) {
-            hasMorePages = false;
-          }
-        } else {
-          hasMorePages = false;
-        }
+      // جلب الكورسات القريبة من الانتهاء فقط (75% فأكثر) من الباك إند مباشرة بدلاً من جلب كل شيء والفلترة
+      const response = await api.get('/courses/nearing-completion');
+      
+      if (response?.data?.success && response?.data?.data) {
+        setCourses(response.data.data);
+      } else {
+        setCourses([]);
       }
       
-      setCourses(allCourses);
     } catch (error) {
       console.error('Error fetching courses:', error);
       setCourses([]);
@@ -111,8 +85,7 @@ const CourseAlerts = () => {
 
   // Check if course is at 75% completion
   const isAt75Percent = (course) => {
-    const percentage = calculateCompletionPercentage(course);
-    return percentage >= 75 && percentage < 100;
+    return true; // The backend now filters this for us
   };
 
   // Fetch student payments for a specific course

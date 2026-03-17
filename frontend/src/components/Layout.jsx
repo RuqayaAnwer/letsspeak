@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
 import { Menu, X, Lock, Settings } from 'lucide-react';
 import UserSettingsModal from './UserSettingsModal';
+import api from '../api/axios';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -18,6 +19,28 @@ const Layout = ({ children }) => {
   });
   const [isMobile, setIsMobile] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [alertsCount, setAlertsCount] = useState(0);
+
+  // Fetch alerts count for customer service users
+  useEffect(() => {
+    if (user?.role === 'customer_service') {
+      const fetchAlerts = async () => {
+        try {
+          const response = await api.get('/courses/nearing-completion');
+          if (response?.data?.success && response?.data?.data) {
+            setAlertsCount(response.data.data.length);
+          }
+        } catch (error) {
+          console.error('Error fetching alerts:', error);
+        }
+      };
+      
+      fetchAlerts();
+      // Optional: Refresh count periodically (e.g. every 5 min)
+      // const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
+      // return () => clearInterval(interval);
+    }
+  }, [user]);
 
   // Check screen size
   useEffect(() => {
@@ -66,7 +89,7 @@ const Layout = ({ children }) => {
           { path: '/customer-service/trainers', label: 'المدربين', icon: '🎓' },
           { path: '/courses', label: 'الكورسات', icon: '📚' },
           { path: '/customer-service/course-details', label: 'تفاصيل الكورسات', icon: '📋' },
-          { path: '/customer-service/alerts', label: 'التنبيهات', icon: '⚠️' },
+          { path: '/customer-service/alerts', label: 'التنبيهات', icon: '⚠️', badge: alertsCount > 0 ? alertsCount : null },
           { path: '/customer-service/packages', label: 'الباقات', icon: '📦' },
           { path: '/customer-service/find-time', label: 'أوقات التدريب', icon: '🕐' },
           { path: '/customer-service/activity-logs', label: 'سجل التعديلات', icon: '📝' },
@@ -139,14 +162,21 @@ const Layout = ({ children }) => {
               <li key={item.path}>
                 <Link
                   to={item.path}
-                  className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-all text-sm sm:text-base ${
+                  className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-all text-sm sm:text-base relative ${
                     location.pathname === item.path
                       ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
                   <span className="text-lg sm:text-xl">{item.icon}</span>
-                  <span className="truncate">{item.label}</span>
+                  <span className="truncate flex-1">{item.label}</span>
+                  
+                  {/* Notification Badge */}
+                  {item.badge !== undefined && item.badge !== null && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full absolute left-4">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
                 </Link>
               </li>
             ))}

@@ -663,30 +663,64 @@ class CourseController extends Controller
     }
 
     /**
-     * Get courses nearing completion (3 lectures or less remaining).
+     * Get courses nearing completion (completed 75% or more).
      */
     public function nearingCompletion(Request $request)
     {
-        $courses = Course::with(['trainer', 'student', 'coursePackage', 'lectures'])
+        $courses = Course::with(['trainer.user', 'student', 'students', 'coursePackage', 'lectures'])
             ->where('status', 'active')
             ->get()
             ->filter(function ($course) {
-                $completedLectures = $course->lectures->where('is_completed', true)->count();
-                $totalLectures = $course->lectures->count();
-                $remainingLectures = $totalLectures - $completedLectures;
-                return $remainingLectures <= 3 && $remainingLectures > 0;
+                $completedCount = $course->lectures->filter(function($l) {
+                    // تحقق من بيانات كل طالب
+                    if ($l->student_attendance && is_array($l->student_attendance)) {
+                        foreach ($l->student_attendance as $studentData) {
+                            if (is_array($studentData)) {
+                                $att = $studentData['attendance'] ?? null;
+                                if ($att === 'present' || $att === 'absent' || $att === 'partially') {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    return $l->is_completed || in_array($l->attendance, ['present', 'partially', 'absent']);
+                })->count();
+                
+                $totalLectures = $course->lectures->count() > 0 ? $course->lectures->count() : ($course->coursePackage->lectures_count ?? 0);
+                if ($totalLectures == 0) return false;
+                
+                $percentage = round(($completedCount / $totalLectures) * 100);
+                return $percentage >= 75 && $percentage < 100;
             })
             ->map(function ($course) {
-                $completedLectures = $course->lectures->where('is_completed', true)->count();
-                $totalLectures = $course->lectures->count();
+                $completedCount = $course->lectures->filter(function($l) {
+                    if ($l->student_attendance && is_array($l->student_attendance)) {
+                        foreach ($l->student_attendance as $st) {
+                            if (is_array($st) && in_array($st['attendance'] ?? '', ['present', 'absent', 'partially'])) return true;
+                        }
+                    }
+                    return $l->is_completed || in_array($l->attendance, ['present', 'partially', 'absent']);
+                })->count();
+                
+                $totalLectures = $course->lectures->count() > 0 ? $course->lectures->count() : ($course->coursePackage->lectures_count ?? 0);
+                
                 return [
                     'id' => $course->id,
+                    'is_dual' => $course->is_dual,
+                    'is_custom' => $course->is_custom,
                     'package' => $course->coursePackage,
+                    'course_package' => $course->coursePackage,
                     'student' => $course->student,
+                    'students' => $course->students,
+                    'student_name' => $course->student ? $course->student->name : null,
+                    'student_id' => $course->student_id,
                     'trainer' => $course->trainer,
-                    'completed_lectures' => $completedLectures,
+                    'trainer_name' => $course->trainer ? $course->trainer->name : null,
+                    'completed_lectures' => $completedCount,
                     'total_lectures' => $totalLectures,
-                    'remaining_lectures' => $totalLectures - $completedLectures,
+                    'remaining_lectures' => max(0, $totalLectures - $completedCount),
+                    'completion_percentage' => $totalLectures > 0 ? round(($completedCount / $totalLectures) * 100) : 0,
+                    'status' => $course->status,
                     'renewal_status' => $course->renewal_status ?? 'alert',
                 ];
             })
