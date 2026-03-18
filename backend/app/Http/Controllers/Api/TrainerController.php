@@ -372,8 +372,14 @@ class TrainerController extends Controller
         })
         ->where('date', $today)
         ->with(['course.student', 'course.students', 'course.coursePackage'])
-        ->orderBy('time')
         ->get()
+        ->unique(function ($item) {
+            return $item->course_id . '_' . $item->date;
+        })
+        ->sortBy(function ($lecture) {
+            return $lecture->time ?? $lecture->course->lecture_time ?? '23:59:59';
+        })
+        ->values()
         ->map(function ($lecture) {
             $course = $lecture->course;
             $displayStudent = $course->student ?? $course->students->sortByDesc(fn ($s) => $s->pivot->is_primary ?? 0)->first();
@@ -416,8 +422,15 @@ class TrainerController extends Controller
         })
         ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
         ->with(['course.student', 'course.students', 'course.coursePackage'])
-        ->orderBy('date')->orderBy('time')
         ->get()
+        ->unique(function ($item) {
+            return $item->course_id . '_' . $item->date;
+        })
+        ->sortBy(function ($lecture) {
+            $time = $lecture->time ?? $lecture->course->lecture_time ?? '23:59:59';
+            return $lecture->date . ' ' . $time;
+        })
+        ->values()
         ->map(function ($lecture) {
             $course = $lecture->course;
             $displayStudent = $course->student ?? $course->students->sortByDesc(fn ($s) => $s->pivot->is_primary ?? 0)->first();
@@ -531,20 +544,8 @@ class TrainerController extends Controller
             ->values();
             $coursesThisMonth = $courseIdsInMonth->count();
 
-            // المحاضرات المتبقية
-            if ($isCurrentMonth) {
-                $activeCourses = Course::where('trainer_id', $trainer->id)
-                    ->whereIn('status', ['active', 'paused'])
-                    ->with('lectures')
-                    ->get();
-                $remainingLectures = 0;
-                foreach ($activeCourses as $course) {
-                    $completedForCourse = $course->lectures->filter($isCompletedLecture)->count();
-                    $remainingLectures += max(0, (int) $course->lectures_count - $completedForCourse);
-                }
-            } else {
-                $remainingLectures = max(0, $totalLectures - $completedLectures);
-            }
+            // المحاضرات المتبقية لهذا الشهر
+            $remainingLectures = max(0, $totalLectures - $completedLectures);
 
             // Get renewals count for selected month
             $renewalsCount = Course::where('trainer_id', $trainer->id)
@@ -723,7 +724,7 @@ class TrainerController extends Controller
                                     'remaining' => $volumeRemaining60,
                                     'progress_percentage' => $volumeProgress60,
                                     'achieved' => $completedLectures >= $volumeTarget60,
-                                    'amount' => 0, // Will be set based on system config
+                                    'amount' => 30000,
                                     'label' => '60 محاضرة'
                                 ],
                                 [
@@ -732,7 +733,7 @@ class TrainerController extends Controller
                                     'remaining' => $volumeRemaining80,
                                     'progress_percentage' => $volumeProgress80,
                                     'achieved' => $completedLectures >= $volumeTarget80,
-                                    'amount' => 0, // Will be set based on system config
+                                    'amount' => 80000,
                                     'label' => '80 محاضرة'
                                 ]
                             ]

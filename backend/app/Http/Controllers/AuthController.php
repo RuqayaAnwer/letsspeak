@@ -30,9 +30,12 @@ class AuthController extends Controller
             $user->load('trainer');
         }
 
+        $tokenResult = $user->createToken('dev-token');
+
         return response()->json([
             'user' => $user,
-            'token' => 'dev-token-' . $user->id . '-' . time(),
+            'role' => $user->role,
+            'token' => $tokenResult->plainTextToken,
         ]);
     }
 
@@ -84,10 +87,12 @@ class AuthController extends Controller
             $role = $user->role ?: null;
         }
 
+        $tokenResult = $user->createToken('auth-token');
+
         return response()->json([
             'user' => $user,
             'role' => $role,
-            'token' => 'token-' . $user->id . '-' . time(),
+            'token' => $tokenResult->plainTextToken,
         ]);
     }
 
@@ -248,9 +253,11 @@ class AuthController extends Controller
             'role' => $request->role,
         ]);
 
+        $tokenResult = $user->createToken('auth-token');
+
         return response()->json([
             'user' => $user,
-            'token' => 'token-' . $user->id . '-' . time(),
+            'token' => $tokenResult->plainTextToken,
         ], 201);
     }
 }

@@ -426,6 +426,42 @@ class CourseController extends Controller
         $course->actual_start_date = $date;
         $course->save();
 
+        // ------------------------------------------------------------------
+        // Shift all pending lectures to align with the actual start date
+        // ------------------------------------------------------------------
+        if (is_array($course->lecture_days) && count($course->lecture_days) > 0) {
+            $dayMap = [
+                'sun' => \Carbon\Carbon::SUNDAY,
+                'mon' => \Carbon\Carbon::MONDAY,
+                'tue' => \Carbon\Carbon::TUESDAY,
+                'wed' => \Carbon\Carbon::WEDNESDAY,
+                'thu' => \Carbon\Carbon::THURSDAY,
+                'fri' => \Carbon\Carbon::FRIDAY,
+                'sat' => \Carbon\Carbon::SATURDAY,
+            ];
+            $lectureDays = array_map(fn($day) => $dayMap[$day] ?? -1, $course->lecture_days);
+            $currentDate = \Carbon\Carbon::parse($date);
+            
+            $pendingLectures = $course->lectures()
+                ->where('is_completed', false)
+                ->whereNotIn('attendance', ['present', 'absent', 'partially', 'postponed_by_student', 'postponed_by_trainer', 'postponed_holiday'])
+                ->orderBy('lecture_number')
+                ->get();
+                
+            foreach ($pendingLectures as $lecture) {
+                // Find next matching day
+                while (!in_array($currentDate->dayOfWeek, $lectureDays)) {
+                    $currentDate->addDay();
+                }
+                
+                $lecture->date = $currentDate->format('Y-m-d');
+                $lecture->save();
+                
+                // Move to next day for the next iteration
+                $currentDate->addDay();
+            }
+        }
+        
         $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);
         $course->makeVisible('coursePackage');
         $courseArray = $course->toArray();

@@ -27,11 +27,11 @@ use App\Models\Trainer;
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/dev-login', [AuthController::class, 'devLogin']);
 Route::post('/auth/logout', [AuthController::class, 'logout']);
-Route::post('/auth/profile', [AuthController::class, 'updateProfile'])->middleware('simple.auth');
-Route::post('/auth/change-password', [AuthController::class, 'changePassword'])->middleware('simple.auth');
+Route::post('/auth/profile', [AuthController::class, 'updateProfile'])->middleware('auth:sanctum');
+Route::post('/auth/change-password', [AuthController::class, 'changePassword'])->middleware('auth:sanctum');
 
 // Global API Routes (Protected)
-Route::middleware('simple.auth')->group(function () {
+Route::middleware('auth:sanctum')->group(function () {
     // Dashboard Stats
     Route::get('/dashboard/stats', [CustomerServiceController::class, 'dashboardStats']);
     Route::get('/statistics', [FinanceController::class, 'statistics']);
@@ -103,10 +103,13 @@ Route::middleware('simple.auth')->group(function () {
 
     // Activity Logs
     Route::get('/activity-logs', [ActivityLogController::class, 'index']);
+    
+    // Courses Nearing Completion
+    Route::get('/courses/nearing-completion', [CourseController::class, 'nearingCompletion']);
 });
 
 // Trainer Dashboard & Unavailability
-Route::prefix('trainer')->middleware('simple.auth')->group(function () {
+Route::prefix('trainer')->middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [ApiTrainerController::class, 'dashboard']);
     Route::get('/today-lectures', [ApiTrainerController::class, 'todayLectures']);
     Route::get('/next-week-lectures', [ApiTrainerController::class, 'nextWeekLectures']);
@@ -115,15 +118,11 @@ Route::prefix('trainer')->middleware('simple.auth')->group(function () {
     Route::post('/unavailability', [ApiTrainerController::class, 'saveUnavailability']);
 });
 
-// Courses Nearing Completion
-Route::get('/courses/nearing-completion', [CourseController::class, 'nearingCompletion']);
-
 // Admin Routes — مدير النظام فقط
-Route::prefix('admin')->middleware('simple.auth')->group(function () {
+Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard']);
     Route::get('/users', [AdminController::class, 'users']);
     Route::post('/users', [AdminController::class, 'storeUser']);
-    Route::get('/users/{id}/show-password', [AdminController::class, 'showPassword']);
     Route::put('/users/{id}', [AdminController::class, 'updateUser']);
     Route::post('/users/{id}/reset-password', [AdminController::class, 'resetPassword']);
     Route::patch('/users/{id}/toggle-status', [AdminController::class, 'toggleStatus']);

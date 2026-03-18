@@ -17,42 +17,41 @@ class AuthService
      */
     public function authenticate(string $username, string $password): ?array
     {
-        // Try system users first (by email)
+        // Try system users first (by email) - this includes trainers who have a linked User account
         $user = User::where('email', $username)
             ->where('status', 'active')
             ->first();
         
-        if ($user && Hash::check($password, $user->password)) {
+        // If not found by email, try searching by username in Trainer,
+        // then find the corresponding User.
+        if (!$user) {
+            $trainer = Trainer::where('username', $username)
+                ->where('status', 'active')
+                ->first();
+            
+            if ($trainer && $trainer->user_id) {
+                $user = User::find($trainer->user_id);
+            }
+        }
+        
+        if ($user && Hash::check($password, $user->password) && $user->status === 'active') {
+            
+            // Generate Sanctum token
+            $tokenResult = $user->createToken('auth-token');
+            
+            // Format standard response
             return [
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->role,
+                    // Load trainer info if role is trainer
+                    'trainer' => $user->role === 'trainer' ? $user->trainer : null,
                 ],
                 'type' => 'user',
                 'role' => $user->role,
-                'token' => $this->generateToken($user->id, 'user'),
-            ];
-        }
-
-        // Try trainers (by username)
-        $trainer = Trainer::where('username', $username)
-            ->where('status', 'active')
-            ->first();
-        
-        if ($trainer && Hash::check($password, $trainer->password)) {
-            return [
-                'user' => [
-                    'id' => $trainer->id,
-                    'name' => $trainer->name,
-                    'username' => $trainer->username,
-                    'email' => $trainer->email,
-                    'specialty' => $trainer->specialty,
-                ],
-                'type' => 'trainer',
-                'role' => 'trainer',
-                'token' => $this->generateToken($trainer->id, 'trainer'),
+                'token' => $tokenResult->plainTextToken,
             ];
         }
 
@@ -64,42 +63,33 @@ class AuthService
      */
     public function devLogin(string $role): ?array
     {
+        $user = null;
+        
         if ($role === 'trainer') {
             $trainer = Trainer::where('status', 'active')->first();
-            
-            if ($trainer) {
-                return [
-                    'user' => [
-                        'id' => $trainer->id,
-                        'name' => $trainer->name,
-                        'username' => $trainer->username,
-                        'email' => $trainer->email,
-                        'specialty' => $trainer->specialty,
-                    ],
-                    'type' => 'trainer',
-                    'role' => 'trainer',
-                    'token' => $this->generateToken($trainer->id, 'trainer'),
-                ];
+            if ($trainer && $trainer->user_id) {
+                $user = User::find($trainer->user_id);
             }
-            return null;
+        } else {
+            // For customer_service or finance
+            $user = User::where('role', $role)
+                ->where('status', 'active')
+                ->first();
         }
 
-        // For customer_service or finance
-        $user = User::where('role', $role)
-            ->where('status', 'active')
-            ->first();
-        
         if ($user) {
+            $tokenResult = $user->createToken('dev-token');
             return [
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->role,
+                    'trainer' => $user->role === 'trainer' ? $user->trainer : null,
                 ],
                 'type' => 'user',
                 'role' => $user->role,
-                'token' => $this->generateToken($user->id, 'user'),
+                'token' => $tokenResult->plainTextToken,
             ];
         }
 
@@ -111,47 +101,28 @@ class AuthService
      */
     public function validateToken(string $token): ?array
     {
-        // Token format: type-id-timestamp-signature
-        $parts = explode('-', $token);
-        
-        if (count($parts) < 3) {
+        // Not used anymore since we use auth:sanctum middleware,
+        // but kept for backward compatibility if any controller calls it.
+        $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+        if (!$accessToken) {
             return null;
         }
 
-        $type = $parts[0];
-        $id = (int) $parts[1];
-
-        if ($type === 'trainer') {
-            $trainer = Trainer::find($id);
-            if ($trainer && $trainer->status === 'active') {
-                return [
-                    'user' => [
-                        'id' => $trainer->id,
-                        'name' => $trainer->name,
-                        'username' => $trainer->username,
-                        'email' => $trainer->email,
-                        'specialty' => $trainer->specialty,
-                    ],
-                    'type' => 'trainer',
-                    'role' => 'trainer',
-                ];
-            }
-        } else {
-            $user = User::find($id);
-            if ($user && $user->status === 'active') {
-                return [
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'email' => $user->email,
-                        'role' => $user->role,
-                    ],
-                    'type' => 'user',
+        $user = $accessToken->tokenable;
+        if ($user && $user->status === 'active') {
+             return [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
                     'role' => $user->role,
-                ];
-            }
+                    'trainer' => $user->role === 'trainer' ? $user->trainer : null,
+                ],
+                'type' => 'user',
+                'role' => $user->role,
+            ];
         }
-
+        
         return null;
     }
 
@@ -160,10 +131,8 @@ class AuthService
      */
     protected function generateToken(int $userId, string $type): string
     {
-        $timestamp = time();
-        $signature = substr(md5("{$type}-{$userId}-{$timestamp}-secret"), 0, 16);
-        
-        return "{$type}-{$userId}-{$timestamp}-{$signature}";
+        // No longer used since we use Sanctum
+        return '';
     }
 
     /**

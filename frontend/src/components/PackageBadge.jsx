@@ -31,10 +31,10 @@ const MoodSmileIcon = ({ className }) => (
     strokeLinejoin="round" 
     className={className}
   >
-    <path d="M18.5 20.5A10 10 0 1 1 22 12" />
-    <path d="M7 10.5c0-2.5 4-2.5 4 0" />
-    <path d="M13 10.5c0-2.5 4-2.5 4 0" />
-    <path d="M8 14c0 4 8 4 8 0z" />
+    <circle cx="12" cy="12" r="10" />
+    <path d="M7 10c.5-2.5 3.5-2.5 4 0" />
+    <path d="M13 10c.5-2.5 3.5-2.5 4 0" />
+    <path d="M7 14.5c0 4 10 4 10 0" />
   </svg>
 );
 
@@ -89,7 +89,7 @@ const PackageBadge = ({ course, packageName, className = '' }) => {
     colorClass = 'text-red-500 dark:text-red-400';
   } else if (name.includes('مزاجي')) {
     Icon = MoodSmileIcon;
-    colorClass = 'text-pink-500 dark:text-pink-400';
+    colorClass = 'text-indigo-500 dark:text-indigo-400';
   } else if (name.includes('أساس')) {
     Icon = Zap;
     colorClass = 'text-green-500 dark:text-green-400';

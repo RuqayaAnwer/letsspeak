@@ -7,6 +7,14 @@ import { Plus, Search, CreditCard, X, Edit2, Info, ChevronLeft, ChevronRight } f
 import { formatDateSimple } from '../../utils/dateFormat';
 import { formatCurrency } from '../../utils/currencyFormat';
 
+
+// Helper to normalize amounts (so 150 becomes 150000)
+const normalizeAmount = (val) => {
+  const n = parseFloat(val);
+  if (isNaN(n)) return 0;
+  return (n > 0 && n < 1000) ? Math.floor(n * 1000) : Math.floor(n);
+};
+
 const Payments = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -285,7 +293,7 @@ const Payments = () => {
       const data = {
         student_id: parseInt(formData.student_id),
         course_id: parseInt(formData.course_id),
-        amount: parseFloat(formData.amount),
+        amount: normalizeAmount(formData.amount),
         payment_date: formData.date,
         status: 'completed',
         notes: formData.notes || '',
@@ -353,7 +361,7 @@ const Payments = () => {
         coursesPaymentsMap[courseId].payments.push({
           id: payment.id, // Use payment ID to ensure uniqueness
           date: paymentDate,
-          amount: parseFloat(payment.amount) || 0,
+          amount: normalizeAmount(payment.amount) || 0,
           created_at: payment.created_at, // Keep original creation date for sorting
           payment_date: payment.payment_date || payment.date, // Keep original payment date
         });
@@ -427,7 +435,7 @@ const Payments = () => {
       // Calculate total paid for this course and student
       const totalPaid = payments
         .filter(p => p.course_id === payment.course_id && p.student_id === payment.student_id && p.status === 'completed')
-        .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+        .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
       
       const remainingAmount = packagePrice - totalPaid;
       
@@ -436,7 +444,7 @@ const Payments = () => {
         course_id: payment.course_id.toString(),
         course_package_id: packageId.toString(),
         amount: remainingAmount > 0 ? remainingAmount.toString() : '',
-        remaining_amount: '0.00',
+        remaining_amount: '0',
         date: new Date().toISOString().split('T')[0],
         notes: 'دفعة المتبقي',
       });
@@ -559,7 +567,7 @@ const Payments = () => {
         p.student_id === payment.student_id && 
         p.status === 'completed'
       )
-      .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
     
     const remaining = studentPrice - totalPaid;
     
@@ -610,7 +618,7 @@ const Payments = () => {
     // Calculate total paid for this course
     const totalPaid = payments
       .filter(p => p.course_id === payment.course_id && p.student_id === payment.student_id && p.status === 'completed')
-      .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
     
     const remainingAmount = packagePrice - totalPaid;
     
@@ -685,12 +693,12 @@ const Payments = () => {
       course_id: payment.course_id?.toString() || '',
       course_package_id: packageId.toString(),
       amount: payment.amount?.toString() || '',
-      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toString() : '0',
       date: paymentDate, // This should be in YYYY-MM-DD format
       notes: payment.notes || '',
     });
     setRemainingPayment({
-      amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '',
+      amount: remainingAmount > 0 ? remainingAmount.toString() : '',
       date: todayDate, // Always set to today's date for remaining payment
       notes: '',
     });
@@ -699,7 +707,7 @@ const Payments = () => {
     console.log('Edit form data set:', {
       date: paymentDate,
       amount: payment.amount?.toString() || '',
-      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00'
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toString() : '0'
     });
     
     setIsEditModalOpen(true);
@@ -773,7 +781,7 @@ const Payments = () => {
       }
 
       // Validate amount
-      const amount = parseFloat(editFormData.amount);
+      const amount = normalizeAmount(editFormData.amount);
       if (isNaN(amount) || amount <= 0) {
         alert('يرجى إدخال مبلغ صحيح');
         setSubmitting(false);
@@ -837,7 +845,7 @@ const Payments = () => {
       }
       
       // If remaining payment amount is provided, create new payment
-      if (remainingPayment.amount && parseFloat(remainingPayment.amount) > 0) {
+      if (remainingPayment.amount && normalizeAmount(remainingPayment.amount) > 0) {
         // Validate remaining payment date
         if (!remainingPayment.date || remainingPayment.date.trim() === '') {
           alert('يرجى اختيار تاريخ الدفعة الثانية');
@@ -846,7 +854,7 @@ const Payments = () => {
         }
 
         // Validate remaining payment data
-        const remainingAmount = parseFloat(remainingPayment.amount);
+        const remainingAmount = normalizeAmount(remainingPayment.amount);
         if (isNaN(remainingAmount) || remainingAmount <= 0) {
           alert('مبلغ الدفعة المتبقية غير صالح');
           setSubmitting(false);
@@ -1094,18 +1102,18 @@ const Payments = () => {
       ? studentPrice 
       : (selectedPackage ? (selectedPackage.price || 0) : 0);
     
-    const paidAmount = parseFloat(formData.amount) || 0;
+    const paidAmount = normalizeAmount(formData.amount) || 0;
     const remainingAmount = packagePrice - paidAmount;
     
     setFormData({
       ...formData,
       course_package_id: packageId,
-      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toString() : '0',
     });
   };
 
   const handleAmountChange = (value) => {
-    const paidAmount = parseFloat(value) || 0;
+    const paidAmount = normalizeAmount(value) || 0;
     const selectedPackage = packages.find((p) => p.id.toString() === formData.course_package_id);
     const selectedCourse = courses.find(c => c.id === parseInt(formData.course_id));
     const isDual = selectedCourse?.is_dual || false;
@@ -1121,7 +1129,7 @@ const Payments = () => {
     setFormData({
       ...formData,
       amount: value,
-      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toString() : '0',
     });
   };
 
@@ -1601,7 +1609,7 @@ const Payments = () => {
                               // Calculate payment status for this student
                               const totalPaid = row.allPayments
                                 .filter(p => p.status === 'completed' || p.status === 'paid')
-                                .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                                .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
                               
                               const studentPrice = getStudentPrice(row.course);
                               const remaining = studentPrice > 0 ? Math.max(0, studentPrice - totalPaid) : 0;
@@ -1782,7 +1790,7 @@ const Payments = () => {
                         // Calculate payment status for this student
                         const totalPaid = row.allPayments
                           .filter(p => p.status === 'completed' || p.status === 'paid')
-                          .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                          .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
                         
                         const studentPrice = getStudentPrice(row.course);
                         const remaining = studentPrice > 0 ? Math.max(0, studentPrice - totalPaid) : 0;
@@ -1927,7 +1935,7 @@ const Payments = () => {
                   // Calculate total paid for this course and student
                   const totalPaid = payments
                     .filter(p => p.course_id?.toString() === courseId && p.student_id?.toString() === formData.student_id && p.status === 'completed')
-                    .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                    .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
                   
                   const remainingAmount = packagePrice - totalPaid;
                   
@@ -1935,7 +1943,7 @@ const Payments = () => {
                     ...formData,
                     course_id: courseId,
                     course_package_id: packageId.toString(),
-                    remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+                    remaining_amount: remainingAmount > 0 ? remainingAmount.toString() : '0',
                   });
                 }}
                 className="select"
@@ -1996,7 +2004,7 @@ const Payments = () => {
                 name="payment-remaining"
                 value={formData.remaining_amount}
                 className="input bg-[var(--color-bg-secondary)] cursor-not-allowed"
-                placeholder="0.00"
+                placeholder='0'
                 readOnly
                 disabled
               />
@@ -2180,11 +2188,11 @@ const Payments = () => {
     const packagePrice = getPackagePrice(rawPrice);
                     const totalPaid = payments
                       .filter(p => p.course_id === editingPayment?.course_id && p.student_id === editingPayment?.student_id && p.status === 'completed' && p.id !== editingPayment?.id)
-                      .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0) + (parseFloat(value) || 0);
+                      .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0) + (normalizeAmount(value) || 0);
                     const newRemaining = packagePrice - totalPaid;
                     setEditFormData(prev => ({
                       ...prev,
-                      remaining_amount: newRemaining > 0 ? newRemaining.toFixed(2) : '0.00',
+                      remaining_amount: newRemaining > 0 ? newRemaining.toString() : '0',
                     }));
                   }}
                   className="input text-xs sm:text-sm py-1.5 sm:py-2"
@@ -2247,7 +2255,7 @@ const Payments = () => {
                     onChange={(e) => {
                       const value = e.target.value;
                       const maxAmount = parseFloat(editFormData.remaining_amount) || 0;
-                      const numValue = parseFloat(value) || 0;
+                      const numValue = normalizeAmount(value) || 0;
                       setRemainingPayment({ 
                         ...remainingPayment, 
                         amount: numValue > maxAmount ? maxAmount.toString() : value 
@@ -2265,7 +2273,7 @@ const Payments = () => {
                 </div>
                 <div>
                   <label className="label text-[10px] sm:text-sm" htmlFor="remaining-payment-date">
-                    تاريخ الدفعة الثانية {remainingPayment.amount && parseFloat(remainingPayment.amount) > 0 ? '*' : ''}
+                    تاريخ الدفعة الثانية {remainingPayment.amount && normalizeAmount(remainingPayment.amount) > 0 ? '*' : ''}
                   </label>
                   <input
                     type="date"
@@ -2278,7 +2286,7 @@ const Payments = () => {
                       setRemainingPayment({ ...remainingPayment, date: newDate });
                     }}
                     className="input text-xs sm:text-sm py-1.5 sm:py-2"
-                    required={remainingPayment.amount && parseFloat(remainingPayment.amount) > 0}
+                    required={remainingPayment.amount && normalizeAmount(remainingPayment.amount) > 0}
                     max={new Date().toISOString().split('T')[0]}
                   />
                   {remainingPayment.date && (
@@ -2399,7 +2407,7 @@ const Payments = () => {
                                     <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
                                     <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
                                         {formatCurrency(studentData.payments
-                                          .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                                          .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0)
                                           )}
                                     </p>
                                   </div>
@@ -2410,7 +2418,7 @@ const Payments = () => {
                                         const course = paymentInfoModal.course;
                                         const studentPrice = getStudentPrice(course);
                                         const totalPaid = studentData.payments
-                                          .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                                          .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
                                         const remaining = studentPrice - totalPaid;
                                         return remaining > 0 ? remaining.toLocaleString('en-US') + ' د.ع' : '0 د.ع';
                                       })()}
@@ -2503,7 +2511,7 @@ const Payments = () => {
                               <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
                               <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
                                 {formatCurrency(paymentInfoModal.payments
-                                  .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                                  .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0)
                                   )}
                               </p>
                             </div>
@@ -2514,7 +2522,7 @@ const Payments = () => {
                                   const course = paymentInfoModal.course;
                                   const studentPrice = getStudentPrice(course);
                                   const totalPaid = paymentInfoModal.payments
-                                    .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                                    .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
                                   const remaining = studentPrice - totalPaid;
                                   return remaining > 0 ? remaining.toLocaleString('en-US') + ' د.ع' : '0 د.ع';
                                 })()}

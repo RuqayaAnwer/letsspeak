@@ -550,7 +550,7 @@ const Achievements = () => {
                               {level.target} محاضرة
                             </p>
                             <p className="text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                              {level.label}
+                              {formatCurrency(level.amount)}
                             </p>
                             {!isAchieved && remaining > 0 && (
                               <p className="text-[8px] sm:text-[9px] text-orange-600 dark:text-orange-400 mt-0.5 font-medium">

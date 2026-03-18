@@ -27,6 +27,15 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Sort lectures: pending first, completed/cancelled last
+  const sortedTodayLectures = [...todayLectures].sort((a, b) => {
+    const aCompleted = a.status === 'completed' || a.status === 'cancelled' || a.attendance === 'present' || a.attendance === 'absent';
+    const bCompleted = b.status === 'completed' || b.status === 'cancelled' || b.attendance === 'present' || b.attendance === 'absent';
+    if (aCompleted && !bCompleted) return 1;
+    if (!aCompleted && bCompleted) return -1;
+    return 0; // maintain original order otherwise (usually by time)
+  });
+
   useEffect(() => {
     fetchTodayLectures();
     fetchNext7DaysLectures();
@@ -150,10 +159,12 @@ const Dashboard = () => {
           <>
             {/* Mobile Cards View */}
             <div className="md:hidden space-y-2 p-2">
-              {todayLectures.map((lecture) => (
+              {sortedTodayLectures.map((lecture) => {
+                const isCompleted = lecture.status === 'completed' || lecture.status === 'cancelled' || lecture.attendance === 'present' || lecture.attendance === 'absent';
+                return (
                 <div
                   key={lecture.id}
-                  className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50"
+                  className={`p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 transition-opacity duration-300 ${isCompleted ? 'bg-gray-100 dark:bg-gray-800 opacity-60 grayscale-[30%]' : 'bg-gray-50 dark:bg-gray-700/50'}`}
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2">
@@ -178,23 +189,28 @@ const Dashboard = () => {
                         {getStatusLabel(lecture.status)}
                       </span>
                     </div>
-                    <Link
-                      to={`/courses/${lecture.course?.id}`}
-                      className="block w-full text-center px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-[10px]"
-                    >
-                      التفاصيل
-                    </Link>
+                    <div className="mt-2">
+                      <Link
+                        to={`/courses/${lecture.course?.id}`}
+                        className="block w-full text-center px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-[10px]"
+                      >
+                        التفاصيل
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Desktop View */}
             <div className="hidden md:block divide-y divide-gray-200 dark:divide-gray-700">
-              {todayLectures.map((lecture) => (
+              {sortedTodayLectures.map((lecture) => {
+                const isCompleted = lecture.status === 'completed' || lecture.status === 'cancelled' || lecture.attendance === 'present' || lecture.attendance === 'absent';
+                return (
                 <div
                   key={lecture.id}
-                  className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  className={`p-6 transition-all duration-300 ${isCompleted ? 'bg-gray-50/70 dark:bg-gray-800/70 opacity-60 grayscale-[30%] hover:bg-gray-100 dark:hover:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -218,16 +234,17 @@ const Dashboard = () => {
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(lecture.status)}`}>
                         {getStatusLabel(lecture.status)}
                       </span>
-                      <Link
-                        to={`/courses/${lecture.course?.id}`}
-                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                      >
-                        التفاصيل
-                      </Link>
+                        <Link
+                          to={`/courses/${lecture.course?.id}`}
+                          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                        >
+                          التفاصيل
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}

@@ -36,13 +36,7 @@ const AdminUsers = () => {
     submitting: false,
     showPassword: false,
   });
-  const [showPasswordModal, setShowPasswordModal] = useState({
-    open: false,
-    user: null,
-    password: null,
-    loading: false,
-    error: null,
-  });
+
   const [addTrainerModal, setAddTrainerModal] = useState({
     open: false,
     name: '',
@@ -107,10 +101,10 @@ const AdminUsers = () => {
 
       if (editingUser) {
         await api.put(`/admin/users/${editingUser.id}`, payload);
-        alert(formData.password ? 'تم تحديث بيانات الموظف وكلمة المرور. يمكنك عرضها لاحقاً من زر «عرض كلمة المرور».' : 'تم تحديث بيانات الموظف بنجاح');
+        alert('تم تحديث بيانات الموظف بنجاح');
       } else {
         await api.post('/admin/users', payload);
-        alert('تم إضافة الموظف بنجاح. يمكنك عرض كلمة المرور من زر «عرض كلمة المرور» بجانب الموظف.');
+        alert('تم إضافة الموظف بنجاح.');
       }
       closeModal();
       fetchUsers();
@@ -163,24 +157,6 @@ const AdminUsers = () => {
     setResetPasswordModal({ open: false, user: null, password: '', password_confirmation: '', submitting: false, showPassword: false });
   };
 
-  const openShowPasswordModal = async (user) => {
-    setShowPasswordModal({ open: true, user, password: null, loading: true, error: null });
-    try {
-      const res = await api.get(`/admin/users/${user.id}/show-password`);
-      setShowPasswordModal(prev => ({ ...prev, password: res.data?.password ?? null, loading: false, error: null }));
-    } catch (err) {
-      const msg = err.response?.data?.message || 'تعذر عرض كلمة المرور';
-      setShowPasswordModal(prev => ({ ...prev, password: null, loading: false, error: msg }));
-    }
-  };
-
-  const closeShowPasswordModal = () => {
-    setShowPasswordModal({ open: false, user: null, password: null, loading: false, error: null });
-  };
-
-  const copyPasswordToClipboard = (text) => {
-    navigator.clipboard?.writeText(text).then(() => alert('تم نسخ كلمة المرور')).catch(() => {});
-  };
 
   const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
@@ -197,7 +173,7 @@ const AdminUsers = () => {
     setResetPasswordModal(prev => ({ ...prev, submitting: true }));
     try {
       await api.post(`/admin/users/${user.id}/reset-password`, { password, password_confirmation });
-      alert('تم تعيين كلمة المرور. يمكنك عرضها في أي وقت من زر «عرض كلمة المرور» بجانب الموظف.');
+      alert('تم تعيين كلمة المرور الجديدة بنجاح.');
       closeResetPasswordModal();
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.errors?.password?.[0] || 'حدث خطأ';
@@ -243,7 +219,7 @@ const AdminUsers = () => {
         max_level: max_level || undefined,
         notes: notes.trim() || undefined,
       });
-      alert('تم إضافة المدرب بنجاح. يمكنك عرض كلمة المرور من زر «عرض كلمة المرور» بعد اختيار المدربون في الفلتر.');
+      alert('تم إضافة المدرب بنجاح.');
       closeAddTrainerModal();
       fetchUsers();
     } catch (err) {
@@ -266,7 +242,7 @@ const AdminUsers = () => {
           </h1>
           <p className="page-subtitle">إضافة وتعديل موظفي النظام</p>
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-            اضغط «عرض كلمة المرور» لرؤية كلمة مرور الموظف عند نسيانها. الحسابات المضافة أو التي تم إعادة تعيين كلمتها تُحفظ كلمتها لعرضها لاحقاً.
+            عند نسيان الموظف أو المدرب لكلمة المرور يمكنك إعادة تعيينها وتزويده بها.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -325,6 +301,17 @@ const AdminUsers = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">{index + 1}</span>
+                      {u.avatar ? (
+                        <img 
+                          src={`${import.meta.env.VITE_API_BASE_URL || 'https://api.letspeak.online'}/storage/${u.avatar}`} 
+                          alt={u.name}
+                          className="w-6 h-6 rounded-full object-cover shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+                          <span className="text-white text-[10px] font-bold">{u.name?.charAt(0)}</span>
+                        </div>
+                      )}
                       <span className="font-semibold text-sm text-[var(--color-text-primary)]">{u.name}</span>
                     </div>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${roleInfo.color}`}>
@@ -338,14 +325,7 @@ const AdminUsers = () => {
                       {u.status === 'active' ? 'نشط' : 'معطّل'}
                     </span>
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openShowPasswordModal(u); }}
-                        className="text-xs px-2 py-1 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-1"
-                        title="عرض كلمة المرور"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        عرض كلمة المرور
-                      </button>
+
                       <button
                         onClick={(e) => { e.stopPropagation(); openResetPasswordModal(u); }}
                         className="text-xs px-2 py-1 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-1"
@@ -403,9 +383,17 @@ const AdminUsers = () => {
                       <td className="text-sm font-bold text-gray-500">{index + 1}</td>
                       <td>
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center flex-shrink-0">
-                            <span className="text-white text-xs font-bold">{u.name?.charAt(0)}</span>
-                          </div>
+                          {u.avatar ? (
+                            <img 
+                              src={`${import.meta.env.VITE_API_BASE_URL || 'https://api.letspeak.online'}/storage/${u.avatar}`} 
+                              alt={u.name}
+                              className="w-8 h-8 rounded-full object-cover shadow-sm"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+                              <span className="text-white text-xs font-bold">{u.name?.charAt(0)}</span>
+                            </div>
+                          )}
                           <span className="font-semibold text-sm text-[var(--color-text-primary)]">{u.name}</span>
                         </div>
                       </td>
@@ -431,13 +419,7 @@ const AdminUsers = () => {
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => openShowPasswordModal(u)}
-                          className="p-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-gray-400 hover:text-green-600 transition-colors"
-                          title="عرض كلمة المرور"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+
                         <button
                           onClick={() => openResetPasswordModal(u)}
                           className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-gray-400 hover:text-amber-600 transition-colors"
@@ -551,7 +533,7 @@ const AdminUsers = () => {
       >
         <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
           <p className="text-sm text-[var(--color-text-secondary)]">
-            تعيين كلمة مرور جديدة للموظف. بعد الحفظ يمكنك عرضها في أي وقت من زر «عرض كلمة المرور».
+            تعيين كلمة مرور جديدة للموظف. بعد الحفظ تأكد من تزويد الموظف بها بشكل آمن.
           </p>
           <div>
             <label className="label">كلمة المرور الجديدة *</label>
@@ -597,57 +579,7 @@ const AdminUsers = () => {
         </form>
       </Modal>
 
-      {/* عرض كلمة المرور */}
-      <Modal
-        isOpen={showPasswordModal.open}
-        onClose={closeShowPasswordModal}
-        title={showPasswordModal.user ? `كلمة المرور — ${showPasswordModal.user.name}` : 'كلمة المرور'}
-      >
-        <div className="space-y-4">
-          {showPasswordModal.loading && (
-            <div className="flex justify-center py-6">
-              <LoadingSpinner />
-            </div>
-          )}
-          {!showPasswordModal.loading && showPasswordModal.error && (
-            <>
-              <p className="text-sm text-red-600 dark:text-red-400">{showPasswordModal.error}</p>
-              <div className="flex gap-2">
-                <button type="button" onClick={closeShowPasswordModal} className="btn-secondary">إغلاق</button>
-                {showPasswordModal.user && (
-                  <button
-                    type="button"
-                    onClick={() => { closeShowPasswordModal(); openResetPasswordModal(showPasswordModal.user); }}
-                    className="btn-primary"
-                  >
-                    إعادة تعيين كلمة المرور
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-          {!showPasswordModal.loading && !showPasswordModal.error && showPasswordModal.password != null && (
-            <>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                يمكنك تزويد الموظف بها عند نسيانها.
-              </p>
-              <div className="rounded-lg bg-gray-100 dark:bg-gray-700/50 p-3 font-mono text-sm break-all" dir="ltr">
-                {showPasswordModal.password}
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => copyPasswordToClipboard(showPasswordModal.password)}
-                  className="btn-primary"
-                >
-                  نسخ كلمة المرور
-                </button>
-                <button type="button" onClick={closeShowPasswordModal} className="btn-secondary">إغلاق</button>
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
+
 
       {/* إضافة مدرب */}
       <Modal

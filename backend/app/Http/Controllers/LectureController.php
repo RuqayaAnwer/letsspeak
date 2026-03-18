@@ -147,6 +147,32 @@ class LectureController extends Controller
             $updateData['time'] = $request->time;
         }
 
+        // Auto-postpone if absent and has limit
+        if ($request->has('attendance') && $request->input('attendance') === 'absent') {
+            $lecture->load('course.coursePackage');
+            $postponementService = app(\App\Services\LecturePostponementService::class);
+            $limitCheck = $postponementService->checkPostponementLimit($lecture->course);
+            if ($limitCheck['allowed']) {
+                $next = $postponementService->getNextCourseDayAfter(
+                    $lecture->course,
+                    $lecture->date ? \Carbon\Carbon::parse($lecture->date)->format('Y-m-d') : now()->format('Y-m-d'),
+                    $lecture->time ?? $lecture->course->lecture_time
+                );
+                $result = $postponementService->postpone(
+                    $lecture,
+                    $next['date'],
+                    $next['time'],
+                    'student',
+                    'غائب - تأجيل تلقائي',
+                    $user,
+                    false
+                );
+                if ($result['success']) {
+                    return response()->json($lecture->fresh());
+                }
+            }
+        }
+
         // Auto-complete lecture when attendance is set to 'present' or 'absent'
         if ($request->has('attendance')) {
             $attendance = $request->input('attendance');
@@ -224,6 +250,33 @@ class LectureController extends Controller
                 'notes' => $lectureData['notes'] ?? null,
                 'is_completed' => $lectureData['is_completed'] ?? null,
             ], fn($v) => $v !== null);
+
+            // Auto-postpone if absent and has limit
+            if (isset($lectureData['attendance']) && $lectureData['attendance'] === 'absent') {
+                $lecture->load('course.coursePackage');
+                $postponementService = app(\App\Services\LecturePostponementService::class);
+                $limitCheck = $postponementService->checkPostponementLimit($lecture->course);
+                if ($limitCheck['allowed']) {
+                    $next = $postponementService->getNextCourseDayAfter(
+                        $lecture->course,
+                        $lecture->date ? \Carbon\Carbon::parse($lecture->date)->format('Y-m-d') : now()->format('Y-m-d'),
+                        $lecture->time ?? $lecture->course->lecture_time
+                    );
+                    $result = $postponementService->postpone(
+                        $lecture,
+                        $next['date'],
+                        $next['time'],
+                        'student',
+                        'غائب - تأجيل تلقائي',
+                        $user,
+                        false
+                    );
+                    if ($result['success']) {
+                        $updatedCount++;
+                        continue;
+                    }
+                }
+            }
 
             // Auto-complete lecture when attendance is set to 'present' or 'absent'
             if (isset($lectureData['attendance'])) {

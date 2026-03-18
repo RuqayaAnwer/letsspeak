@@ -76,33 +76,8 @@ export const AuthProvider = ({ children }) => {
       return userWithRole;
     } catch (error) {
       console.error('Dev login error:', error);
-      // على الموقع الحقيقي لا نستخدم توكن وهمي — السيرفر سيرفضه (401)
-      const isProduction = typeof window !== 'undefined' && (
-        window.location.hostname !== 'localhost' &&
-        window.location.hostname !== '127.0.0.1'
-      );
-      if (isProduction) {
-        const msg = error.response?.data?.message || error.message || 'فشل التسجيل التجريبي';
-        throw new Error('على الموقع الحقيقي استخدم تسجيل الدخول العادي (البريد وكلمة المرور). إذا لم يوجد مستخدم للدور المطلوب أضفه من لوحة التحكم.');
-      }
-      // محلياً فقط: Fallback للعرض التجريبي
-      const demoUsers = {
-        admin:            { id: 0, name: 'مدير النظام',       email: 'admin@letspeak.com',   role: 'admin' },
-        customer_service: { id: 1, name: 'موظف خدمة العملاء', email: 'cs@letspeak.com',      role: 'customer_service' },
-        trainer:          { id: 2, name: 'المدرب محمد',        email: 'trainer@letspeak.com', role: 'trainer' },
-        finance:          { id: 3, name: 'موظف المالية',       email: 'finance@letspeak.com', role: 'finance' },
-        accounting:       { id: 3, name: 'موظف المالية',       email: 'acc@letspeak.com',     role: 'accounting' },
-      };
-      
-      const userData = demoUsers[role];
-      if (userData) {
-        const token = 'dev-token-' + userData.id + '-' + Date.now();
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
-        return userData;
-      }
-      throw error;
+      const msg = error.response?.data?.message || error.message || 'فشل التسجيل التجريبي';
+      throw new Error(msg);
     }
   };
 
