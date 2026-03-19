@@ -15,7 +15,7 @@ class PaymentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Payment::with(['course.trainer.user', 'course.coursePackage', 'course.students', 'student']);
+        $query = Payment::with(['course.trainer.user', 'course.coursePackage', 'course.students', 'student', 'course.payments']);
 
         // Filter by status
         if ($request->has('status')) {

@@ -84,6 +84,25 @@ const AccountingDashboard = () => {
     return badges[status] || 'badge-gray';
   };
 
+  // Shared helper for student price calculation
+  const getStudentPrice = (course) => {
+    if (!course) return 0;
+    const packageName = course.course_package?.name || course.coursePackage?.name || '';
+    const isDual = course.is_dual || false;
+
+    if (isDual) {
+      if (packageName.includes('بمزاجي') || packageName === 'بمزاجي') {
+        return 90000;
+      } else if (packageName.includes('توازن') || packageName.includes('التوازن') || packageName === 'التوازن') {
+        return 135000;
+      } else if (packageName.includes('سرعة') || packageName.includes('السرعة') || packageName === 'السرعة') {
+        return 225000;
+      }
+    }
+    const rawPrice = course.course_package?.price || course.coursePackage?.price || 0;
+    return parseFloat(rawPrice || 0);
+  };
+
   // Get payment completion status based on remaining amount
   const getPaymentStatus = (payment) => {
     const remaining = calculateRemainingAmount(payment);
@@ -93,46 +112,26 @@ const AccountingDashboard = () => {
     return 'completed'; // مكتمل
   };
 
-  // Calculate remaining amount for a payment using course data
+  // Calculate actual remaining amount for a payment using course data
   const calculateRemainingAmount = (payment) => {
     if (!payment.course) return 0;
     
     const course = payment.course;
-    const isDual = course.is_dual || false;
+    const studentId = payment.student_id || payment.student?.id;
+    const studentPrice = getStudentPrice(course);
     
-    // Get total amount and amount paid from course
-    const totalAmount = parseFloat(course.total_amount || 0);
-    const amountPaid = parseFloat(course.amount_paid || 0);
-    
-    // If we have total_amount and amount_paid from the course, use them
-    if (totalAmount > 0) {
-      // For dual courses, divide by number of students
-      if (isDual && course.students && course.students.length > 1) {
-        const studentCount = course.students.length;
-        const studentTotal = totalAmount / studentCount;
-        const studentPaid = amountPaid / studentCount;
-        const remaining = studentTotal - studentPaid;
-        return remaining > 0 ? remaining : 0;
-      } else {
-        // Single course
-        const remaining = totalAmount - amountPaid;
-        return remaining > 0 ? remaining : 0;
-      }
+    // Calculate total paid by THIS specific student in this course
+    let totalPaid = 0;
+    if (course.payments && Array.isArray(course.payments)) {
+      const studentPayments = course.payments.filter(p => p.student_id === studentId);
+      totalPaid = studentPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+    } else {
+      // Fallback if full payments array isn't loaded (backend missing course.payments)
+      totalPaid = parseFloat(payment.amount || 0);
     }
-    
-    // Fallback: use course package price if total_amount not available
-    const packagePrice = parseFloat(course.course_package?.price || course.coursePackage?.price || 0);
-    if (packagePrice > 0) {
-      let studentPrice = packagePrice;
-      if (isDual && course.students && course.students.length > 1) {
-        studentPrice = packagePrice / course.students.length;
-      }
-      // We can't accurately calculate without all payments, so we show package price - current payment
-      const remaining = studentPrice - parseFloat(payment.amount || 0);
-      return remaining > 0 ? remaining : 0;
-    }
-    
-    return 0;
+
+    const remaining = studentPrice - totalPaid;
+    return remaining > 0 ? remaining : 0;
   };
 
   if (loading) {
