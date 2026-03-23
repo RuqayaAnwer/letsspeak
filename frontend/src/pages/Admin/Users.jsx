@@ -26,7 +26,7 @@ const AdminUsers = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [submitting, setSubmitting]   = useState(false);
-  const [formData, setFormData]       = useState({ name: '', email: '', password: '', role: 'customer_service' });
+  const [formData, setFormData]       = useState({ name: '', email: '', password: '', role: 'customer_service', job_title: '', base_salary: 0 });
   const [actionLoading, setActionLoading] = useState(null);
   const [resetPasswordModal, setResetPasswordModal] = useState({
     open: false,
@@ -88,14 +88,14 @@ const AdminUsers = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingUser(null);
-    setFormData({ name: '', email: '', password: '', role: 'customer_service' });
+    setFormData({ name: '', email: '', password: '', role: 'customer_service', job_title: '', base_salary: 0 });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const payload = { name: formData.name, email: formData.email, role: formData.role };
+      const payload = { name: formData.name, email: formData.email, role: formData.role, job_title: formData.job_title, base_salary: formData.base_salary };
       if (editingUser && formData.password) payload.password = formData.password;
       if (!editingUser) payload.password = formData.password; // مطلوب عند الإضافة
 
