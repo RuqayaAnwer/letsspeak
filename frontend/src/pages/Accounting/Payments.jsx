@@ -530,21 +530,24 @@ const Payments = () => {
     
     const packageName = course.course_package?.name || course.coursePackage?.name || '';
     const isDual = course.is_dual || false;
+    const extraFee = parseFloat(course.extra_lectures_fee) || 0;
     
     // For dual courses, each student pays a fixed amount based on package
     if (isDual) {
+      let basePrice = 0;
       if (packageName.includes('بمزاجي') || packageName === 'بمزاجي') {
-        return 90000;
+        basePrice = 90000;
       } else if (packageName.includes('توازن') || packageName.includes('التوازن') || packageName === 'التوازن') {
-        return 135000;
+        basePrice = 135000;
       } else if (packageName.includes('سرعة') || packageName.includes('السرعة') || packageName === 'السرعة') {
-        return 225000;
+        basePrice = 225000;
       }
+      return basePrice + (extraFee / 2);
     }
     
     // For single courses, use the full package price (with conversion if needed)
     const rawPrice = course.course_package?.price || course.coursePackage?.price || 0;
-    return getPackagePrice(rawPrice);
+    return getPackagePrice(rawPrice) + extraFee;
   };
 
   // CRITICAL: Each course+student combination is calculated independently
@@ -1480,9 +1483,16 @@ const Payments = () => {
                               </span>
                             </td>
                             <td className="text-center text-xs py-2 px-2">
-                              <span className="font-medium text-[var(--color-text-primary)]">
-                                {payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}
-                              </span>
+                              <div className="flex flex-col items-center">
+                                <span className="font-medium text-[var(--color-text-primary)]">
+                                  {payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}
+                                </span>
+                                {payment.course?.extra_lectures_count > 0 && (
+                                  <span className="mt-1 badge badge-purple text-[9px] px-1 py-0.5 whitespace-nowrap">
+                                    + {payment.course?.extra_lectures_count} محاضرات إضافية (+ {formatCurrency(payment.course?.extra_lectures_fee)})
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="text-center text-xs py-2 px-2">
                               {(() => {
@@ -1853,9 +1863,16 @@ const Payments = () => {
                               </span>
                             </td>
                             <td className="text-center text-xs py-2 px-2">
-                              <span className="font-medium text-[var(--color-text-primary)]">
-                                {row.course?.course_package?.name || row.course?.coursePackage?.name || '-'}
-                              </span>
+                              <div className="flex flex-col items-center">
+                                <span className="font-medium text-[var(--color-text-primary)]">
+                                  {row.course?.course_package?.name || row.course?.coursePackage?.name || '-'}
+                                </span>
+                                {row.course?.extra_lectures_count > 0 && (
+                                  <span className="mt-1 badge badge-purple text-[9px] px-1 py-0.5 whitespace-nowrap">
+                                    + {row.course?.extra_lectures_count} محاضرات إضافية (+ {formatCurrency(row.course?.extra_lectures_fee)})
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="text-center text-xs py-2 px-2">
                               {firstDate ? formatDateSimple(firstDate) : '—'}

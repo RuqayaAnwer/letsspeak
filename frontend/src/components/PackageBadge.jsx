@@ -2,14 +2,14 @@ import React from 'react';
 import { Scale, Package, Zap, Globe, MessageCircle } from 'lucide-react';
 
 const SpeedClockIcon = ({ className }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     className={className}
   >
     <path d="M8.5 6.5A8 8 0 1 1 8.5 17.5" />
@@ -21,14 +21,14 @@ const SpeedClockIcon = ({ className }) => (
 );
 
 const MoodSmileIcon = ({ className }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2.5" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     className={className}
   >
     <circle cx="12" cy="12" r="10" />
@@ -39,14 +39,14 @@ const MoodSmileIcon = ({ className }) => (
 );
 
 const CustomSlidersIcon = ({ className }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     className={className}
   >
     <rect x="3" y="3" width="18" height="18" rx="3" />
@@ -61,7 +61,7 @@ const CustomSlidersIcon = ({ className }) => (
 
 const PackageBadge = ({ course, packageName, className = '' }) => {
   let name = packageName;
-  
+
   // If packageName is not explicitly provided, try to extract it from the course object
   if (!name && course) {
     if (course.is_custom) {

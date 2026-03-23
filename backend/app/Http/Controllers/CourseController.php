@@ -627,6 +627,97 @@ class CourseController extends Controller
     }
 
     /**
+     * Add extra lectures to a course (Customer Service & Admin).
+     */
+    public function addExtraLectures(Request $request, Course $course)
+    {
+        $user = $request->user();
+        $isStaff = in_array($user->role ?? '', ['customer_service', 'admin'], true);
+        if (!$isStaff) {
+            return response()->json(['message' => 'غير مصرح للقيام بهذه العملية'], 403);
+        }
+
+        $request->validate([
+            'count' => 'required|integer|min:1',
+            'fee'   => 'required|numeric|min:0',
+        ]);
+
+        $count = (int) $request->input('count');
+        $fee = (float) $request->input('fee');
+
+        $course->extra_lectures_count += $count;
+        $course->extra_lectures_fee += $fee;
+        
+        $course->lectures_count += $count;
+        $course->total_amount += $fee;
+        $course->save();
+
+        // Find the last active/scheduled lecture date to continue from
+        $lastLecture = $course->lectures()->orderBy('date', 'desc')->orderBy('time', 'desc')->first();
+        
+        $startDate = $lastLecture && $lastLecture->date 
+            ? Carbon::parse($lastLecture->date)->addDay()->startOfDay() 
+            : Carbon::parse($course->start_date)->startOfDay();
+
+        $dayMap = [
+            'sun' => Carbon::SUNDAY,
+            'mon' => Carbon::MONDAY,
+            'tue' => Carbon::TUESDAY,
+            'wed' => Carbon::WEDNESDAY,
+            'thu' => Carbon::THURSDAY,
+            'fri' => Carbon::FRIDAY,
+            'sat' => Carbon::SATURDAY,
+        ];
+
+        $lectureDays = is_array($course->lecture_days) && count($course->lecture_days) > 0
+            ? array_map(fn($day) => $dayMap[$day] ?? -1, $course->lecture_days)
+            : [];
+
+        $currentDate = $startDate->copy();
+        $lecturesCreated = 0;
+        
+        $lastNum = $lastLecture ? $lastLecture->lecture_number : 0;
+
+        while ($lecturesCreated < $count) {
+            if (empty($lectureDays) || in_array($currentDate->dayOfWeek, $lectureDays)) {
+                Lecture::create([
+                    'course_id' => $course->id,
+                    'lecture_number' => $lastNum + $lecturesCreated + 1,
+                    'date' => $currentDate->format('Y-m-d'),
+                    'time' => $course->lecture_time,
+                    'attendance' => 'pending',
+                    'is_extra' => true,
+                ]);
+                $lecturesCreated++;
+            }
+            $currentDate->addDay();
+        }
+
+        try {
+            ActivityLog::create([
+                'user_id' => $user->id ?? null,
+                'action' => 'add_extra_lectures',
+                'model_type' => Course::class,
+                'model_id' => $course->id,
+                'old_values' => ['lectures_count' => $course->lectures_count - $count, 'total_amount' => $course->total_amount - $fee],
+                'new_values' => ['lectures_count' => $course->lectures_count, 'total_amount' => $course->total_amount],
+                'description' => "تم إضافة $count محاضرات إضافية بمبلغ $fee",
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to log extra lectures addition: ' . $e->getMessage());
+        }
+
+        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);
+        $course->makeVisible('coursePackage');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إضافة المحاضرات الإضافية بنجاح',
+            'data' => $course,
+        ]);
+    }
+
+    /**
      * Remove the specified course.
      */
     public function destroy(Course $course)

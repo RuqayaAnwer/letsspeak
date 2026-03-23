@@ -5,8 +5,11 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { Plus, Edit2, Trash2, Package } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyFormat';
+import { useAuth } from '../../context/AuthContext';
 
 const CoursePackages = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,6 +20,8 @@ const CoursePackages = () => {
     lectures_count: '',
     description: '',
     price: '',
+    trainee_max_postponements: '0',
+    trainer_max_postponements: '3',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -91,6 +96,8 @@ const CoursePackages = () => {
         ...formData,
         lectures_count: parseInt(formData.lectures_count),
         price: priceValue,
+        trainee_max_postponements: parseInt(formData.trainee_max_postponements || 0),
+        trainer_max_postponements: parseInt(formData.trainer_max_postponements || 0),
       };
 
       console.log('Saving package data:', data);
@@ -169,10 +176,12 @@ const CoursePackages = () => {
         lectures_count: pkg.lectures_count.toString(),
         description: pkg.description || '',
         price: displayPrice,
+        trainee_max_postponements: pkg.trainee_max_postponements?.toString() || '0',
+        trainer_max_postponements: pkg.trainer_max_postponements?.toString() || '0',
       });
     } else {
       setEditingPackage(null);
-      setFormData({ name: '', lectures_count: '', description: '', price: '' });
+      setFormData({ name: '', lectures_count: '', description: '', price: '', trainee_max_postponements: '0', trainer_max_postponements: '3' });
     }
     setIsModalOpen(true);
   };
@@ -195,10 +204,12 @@ const CoursePackages = () => {
           <h1 className="page-title text-base sm:text-2xl">باقات الكورسات</h1>
           <p className="page-subtitle text-[10px] sm:text-sm">إدارة الباقات المتاحة</p>
         </div>
-        <button onClick={() => openModal()} className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-base px-3 sm:px-4 py-1.5 sm:py-2">
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-          إضافة باقة
-        </button>
+        {isAdmin && (
+          <button onClick={() => openModal()} className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-base px-3 sm:px-4 py-1.5 sm:py-2">
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            إضافة باقة
+          </button>
+        )}
       </div>
 
       {/* Packages Table */}
@@ -208,9 +219,11 @@ const CoursePackages = () => {
           description="قم بإنشاء أول باقة للبدء"
           icon={Package}
           action={
-            <button onClick={() => openModal()} className="btn-primary">
-              إضافة باقة
-            </button>
+            isAdmin && (
+              <button onClick={() => openModal()} className="btn-primary">
+                إضافة باقة
+              </button>
+            )
           }
         />
       ) : (
@@ -269,25 +282,27 @@ const CoursePackages = () => {
                     </div>
                   )}
                   
-                  <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
-                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الإجراءات</span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => openModal(pkg)}
-                        className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 hover:text-primary-600"
-                        title="تعديل"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(pkg.id)}
-                        className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600"
-                        title="حذف"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                  {isAdmin && (
+                    <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الإجراءات</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openModal(pkg)}
+                          className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 hover:text-primary-600"
+                          title="تعديل"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(pkg.id)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -302,8 +317,9 @@ const CoursePackages = () => {
                   <th className="text-[10px] sm:text-xs">اسم الباقة</th>
                   <th className="text-[10px] sm:text-xs">عدد المحاضرات</th>
                   <th className="text-[10px] sm:text-xs">السعر</th>
+                  <th className="text-[10px] sm:text-xs">التأجيلات</th>
                   <th className="text-[10px] sm:text-xs">الكورسات النشطة</th>
-                  <th className="text-[10px] sm:text-xs">الإجراءات</th>
+                  {isAdmin && <th className="text-[10px] sm:text-xs">الإجراءات</th>}
                 </tr>
               </thead>
               <tbody>
@@ -322,6 +338,12 @@ const CoursePackages = () => {
                       {formatCurrency(pkg.price)}
                     </td>
                     <td>
+                      <div className="flex flex-col gap-1">
+                        <span className="badge badge-info text-[9px] sm:text-[10px]">متدرب: {pkg.trainee_max_postponements}</span>
+                        <span className="badge badge-error text-[9px] sm:text-[10px]">مدرب: {pkg.trainer_max_postponements}</span>
+                      </div>
+                    </td>
+                    <td>
                       <span className="badge badge-gray text-[10px] sm:text-xs">
                         {getCoursesByPackage(pkg.id, pkg.lectures_count).length} كورس
                       </span>
@@ -338,24 +360,26 @@ const CoursePackages = () => {
                         </div>
                       )}
                     </td>
-                    <td>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => openModal(pkg)}
-                          className="p-1.5 sm:p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
-                          title="تعديل"
-                        >
-                          <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(pkg.id)}
-                          className="p-1.5 sm:p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[var(--color-text-muted)] hover:text-red-600"
-                          title="حذف"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin && (
+                      <td>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openModal(pkg)}
+                            className="p-1.5 sm:p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
+                            title="تعديل"
+                          >
+                            <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(pkg.id)}
+                            className="p-1.5 sm:p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[var(--color-text-muted)] hover:text-red-600"
+                            title="حذف"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -412,7 +436,34 @@ const CoursePackages = () => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="label">تأجيلات المتدرب المسموحة *</label>
+              <input
+                type="number"
+                value={formData.trainee_max_postponements}
+                onChange={(e) => setFormData({ ...formData, trainee_max_postponements: e.target.value })}
+                className="input"
+                placeholder="2"
+                min="0"
+                required
+              />
+            </div>
+            <div>
+              <label className="label">تأجيلات المدرب المسموحة *</label>
+              <input
+                type="number"
+                value={formData.trainer_max_postponements}
+                onChange={(e) => setFormData({ ...formData, trainer_max_postponements: e.target.value })}
+                className="input"
+                placeholder="3"
+                min="0"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)] mt-4">
             <button type="button" onClick={closeModal} className="btn-secondary">
               إلغاء
             </button>

@@ -97,13 +97,45 @@ class FinanceController extends Controller
          * All renewal bonus calculations now use this tiered system.
          */
 
-        // Get ALL trainers - must loop through all trainers
-        $trainers = Trainer::all();
+        // Get ALL users who are active, plus any legacy trainers
+        $users = \App\Models\User::where('status', 'active')->with('trainer')->get();
+        $legacyTrainers = Trainer::whereNull('user_id')->get();
         
-        \Log::info('Trainer Payroll Calculation', [
+        $allStaff = collect();
+        foreach($users as $user) {
+            $allStaff->push((object)[
+                'is_legacy' => false,
+                'user' => $user,
+                'trainer' => $user->trainer
+            ]);
+        }
+        foreach($legacyTrainers as $trainer) {
+            $allStaff->push((object)[
+                'is_legacy' => true,
+                'user' => null,
+                'trainer' => $trainer
+            ]);
+        }
+        
+        // Sort staff based on priority: 1) Admin/CS, 2) Dual role, 3) Trainer
+        $allStaff = $allStaff->sort(function($a, $b) {
+            $getCategory = function($staff) {
+                if ($staff->is_legacy) return 3;
+                $user = $staff->user;
+                $isTrainer = $user->role === 'trainer' || $staff->trainer !== null;
+                $isDual = $isTrainer && ($user->role !== 'trainer' || ($user->job_title && strpos($user->job_title, '/') !== false) || $user->base_salary > 0);
+                
+                if ($isDual) return 2;
+                if ($isTrainer) return 3;
+                return 1;
+            };
+            return $getCategory($a) <=> $getCategory($b);
+        })->values();
+
+        \Log::info('Payroll Calculation', [
             'month' => $month,
             'year' => $year,
-            'trainers_count' => $trainers->count(),
+            'staff_count' => $allStaff->count(),
         ]);
         
         // Calculate start and end dates for the month
@@ -161,17 +193,26 @@ class FinanceController extends Controller
         $renewalsData = []; // To track renewals for competition bonus
         $payrollsToSave = []; // Accumulate to bulk insert/update later mostly
 
-        // Loop through ALL trainers
-        foreach ($trainers as $trainer) {
+        // Loop through ALL staff
+        foreach ($allStaff as $staff) {
+            $user = $staff->user;
+            $trainer = $staff->trainer;
+            $trainerId = $trainer ? $trainer->id : null;
+            $userId = $user ? $user->id : null;
             
-            // Get completed lectures from pre-calculated array
-            $completedLectures = $completedLecturesCounts[$trainer->id] ?? 0;
+            $isTrainer = $user ? ($user->role === 'trainer' || $trainer !== null) : true;
+            $isDual = $user && $isTrainer && ($user->role !== 'trainer' || ($user->job_title && strpos($user->job_title, '/') !== false) || $user->base_salary > 0);
 
-            // Calculate base pay
-            $basePay = $completedLectures * $lectureRate;
+            // Get completed lectures from pre-calculated array
+            $completedLectures = $trainerId && isset($completedLecturesCounts[$trainerId]) ? $completedLecturesCounts[$trainerId] : 0;
+
+            // Employer Base constraints
+            $employeeBaseSalary = $user ? (float) $user->base_salary : 0;
+            $trainerBasePay = $completedLectures * $lectureRate;
+            $basePay = $employeeBaseSalary + $trainerBasePay; // Combines both for simple calculation
 
             // Get renewals count from pre-calculated optimizations
-            $renewalsCount = $renewalsCountsByTrainer[$trainer->id] ?? 0;
+            $renewalsCount = $trainerId && isset($renewalsCountsByTrainer[$trainerId]) ? $renewalsCountsByTrainer[$trainerId] : 0;
 
             // Calculate renewal bonus using tiered system
             // 5 renewals = 50,000 د.ع, 7 renewals = 100,000 د.ع
@@ -191,39 +232,56 @@ class FinanceController extends Controller
             }
 
             // Store renewals data for competition bonus calculation
-            $renewalsData[] = [
-                'trainer_id' => $trainer->id,
-                'renewals_count' => $renewalsCount,
-            ];
+            if ($trainerId && $renewalsCount > 0) {
+                $renewalsData[] = [
+                    'trainer_id' => $trainerId,
+                    'user_id' => $userId,
+                    'renewals_count' => $renewalsCount,
+                ];
+            }
 
             // Competition bonus will be calculated after we know all renewals
             $trainerCompetitionBonus = 0;
 
-            // Use pre-fetched payroll
-            $existingPayroll = $existingPayrolls->get($trainer->id);
+            // Find existing payroll
+            $existingPayroll = null;
+            if ($userId) {
+                $existingPayroll = $existingPayrolls->where('user_id', $userId)->first();
+            }
+            if (!$existingPayroll && $trainerId) {
+                $existingPayroll = $existingPayrolls->where('trainer_id', $trainerId)->first();
+            }
+
             if (!$existingPayroll) {
                 $existingPayroll = TrainerPayroll::create([
-                    'trainer_id' => $trainer->id,
+                    'user_id' => $userId,
+                    'trainer_id' => $trainerId,
                     'month' => $month,
                     'year' => $year,
                     'lecture_rate' => $lectureRate,
                     'renewal_bonus_rate' => 0,
                     'completed_lectures' => 0,
-                    'base_pay' => 0,
+                    'base_pay' => $employeeBaseSalary,
                     'renewals_count' => 0,
                     'renewal_total' => 0,
                     'volume_bonus' => 0,
                     'competition_bonus' => 0,
                     'status' => 'draft',
                 ]);
-                $existingPayrolls->put($trainer->id, $existingPayroll);
+            } else {
+                if ($userId && !$existingPayroll->user_id) {
+                    $existingPayroll->user_id = $userId;
+                    $existingPayroll->save();
+                }
             }
             
             $bonusDeduction = $existingPayroll->bonus_deduction ?? 0;
             $bonusDeductionNotes = $existingPayroll->bonus_deduction_notes ?? null;
             // استخدام طريقة التحويل من المدرب (ثابتة لكل الأشهر)
-            $paymentMethod = $trainer->payment_method ?? ($existingPayroll->payment_method ?? null);
-            $paymentAccountNumber = $trainer->payment_account_number ?? ($existingPayroll->payment_account_number ?? null);
+            $paymentMethod = $trainer ? $trainer->payment_method : null;
+            $paymentMethod = $paymentMethod ?? ($existingPayroll->payment_method ?? null);
+            $paymentAccountNumber = $trainer ? $trainer->payment_account_number : null;
+            $paymentAccountNumber = $paymentAccountNumber ?? ($existingPayroll->payment_account_number ?? null);
             $paymentPin = $existingPayroll->payment_pin ?? null;
             $status = $existingPayroll->status ?? 'draft';
             $paidAt = $existingPayroll->paid_at ? $existingPayroll->paid_at->format('Y-m-d H:i:s') : null;
@@ -287,8 +345,14 @@ class FinanceController extends Controller
             $calculatedTotalPay += $bonusDeduction;
 
             $payrolls[] = [
-                'trainer_id' => $trainer->id,
-                'trainer_name' => $trainer->name,
+                'user_id' => $userId,
+                'trainer_id' => $trainerId,
+                'trainer_name' => $user ? $user->name : ($trainer ? $trainer->name : 'Unknown'),
+                'job_title' => $user ? ($user->job_title ?: ($user->role === 'trainer' ? 'مدرب' : 'موظف')) : 'مدرب',
+                'is_trainer' => $isTrainer,
+                'is_dual' => $isDual,
+                'base_salary' => $employeeBaseSalary,
+                'trainer_revenue' => $trainerBasePay,
                 'completed_lectures' => $completedLectures,
                 'base_pay' => $basePay,
                 'renewals_count' => $renewalsCount,
@@ -317,11 +381,12 @@ class FinanceController extends Controller
         });
 
         $top3Trainers = array_slice($renewalsData, 0, 3);
-        $top3TrainerIds = array_column($top3Trainers, 'trainer_id');
+        $top3Identifiers = array_map(function($t) { return $t['trainer_id'] ?: $t['user_id']; }, $top3Trainers);
 
         // Add competition bonus to top 3 trainers and recalculate total
         foreach ($payrolls as &$payroll) {
-            if (in_array($payroll['trainer_id'], $top3TrainerIds) && $payroll['renewals_count'] > 0) {
+            $identifier = $payroll['trainer_id'] ?: $payroll['user_id'];
+            if (in_array($identifier, $top3Identifiers) && $payroll['renewals_count'] > 0) {
                 // تطبيق مكافأة المنافسة تلقائياً لأفضل 3 مدربين
                 $payroll['competition_bonus'] = $competitionBonus;
                 $payroll['include_competition_bonus'] = true;
@@ -352,10 +417,18 @@ class FinanceController extends Controller
         $competitionWinners = [];
         foreach ($top3Trainers as $index => $winner) {
             if ($winner['renewals_count'] > 0) {
-                $trainer = $trainers->find($winner['trainer_id']);
+                $staffName = 'Unknown';
+                foreach($payrolls as $p) {
+                    if (($p['trainer_id'] && $p['trainer_id'] == $winner['trainer_id']) || ($p['user_id'] && $p['user_id'] == ($winner['user_id'] ?? null))) {
+                        $staffName = $p['trainer_name'];
+                        break;
+                    }
+                }
+                
                 $competitionWinners[] = [
                     'trainer_id' => $winner['trainer_id'],
-                    'trainer_name' => $trainer ? $trainer->name : 'Unknown',
+                    'user_id' => $winner['user_id'] ?? null,
+                    'trainer_name' => $staffName,
                     'rank' => $index + 1,
                     'renewals_count' => $winner['renewals_count'],
                     'bonus' => $competitionBonus,
@@ -367,7 +440,7 @@ class FinanceController extends Controller
         foreach ($payrolls as &$payroll) {
             // Create a temporary model instance to use calculateTotalPay
             $tempPayroll = new TrainerPayroll();
-            $tempPayroll->base_pay = (float) ($payroll['base_pay'] ?? 0);
+            $tempPayroll->base_pay = (float) $payroll['base_salary'] + (float) $payroll['trainer_revenue'];
             $tempPayroll->renewal_total = (float) ($payroll['renewal_total'] ?? 0);
             $tempPayroll->competition_bonus = (float) ($payroll['competition_bonus'] ?? 0);
             $tempPayroll->selected_volume_bonus = isset($payroll['selected_volume_bonus']) && $payroll['selected_volume_bonus'] !== null ? (float) $payroll['selected_volume_bonus'] : null;

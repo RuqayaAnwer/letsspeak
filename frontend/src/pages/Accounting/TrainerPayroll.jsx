@@ -174,7 +174,7 @@ const TrainerPayroll = () => {
 
   // Helper function to safely get trainer name (handles both 'trainer_name' and 'name')
   const getTrainerName = (payroll) => {
-    return payroll?.trainer_name || payroll?.name || 'غير محدد';
+    return payroll?.staff_name || payroll?.trainer_name || payroll?.name || 'غير محدد';
   };
 
   const getVolumeBonus = (lectures) => {
@@ -359,7 +359,8 @@ const TrainerPayroll = () => {
       };
       
       // إنشاء HTML
-      const basePayFormatted = formatCurrencyForPDF(payroll.base_pay || 0);
+      const baseSalaryFormatted = formatCurrencyForPDF(payroll.base_salary || 0);
+      const trainerRevenueFormatted = formatCurrencyForPDF(payroll.trainer_revenue || 0);
       const renewalBonusFormatted = formatCurrencyForPDF(renewalBonus);
       const competitionBonusFormatted = formatCurrencyForPDF(competitionBonus);
       const volumeBonusFormatted = formatCurrencyForPDF(volumeBonus);
@@ -513,20 +514,30 @@ const TrainerPayroll = () => {
         <body>
           <div class="payroll-container">
             <div class="header">
-              <h1>كشف راتب المدرب</h1>
+              <h1>كشف راتب ${payroll.is_trainer ? (payroll.is_dual ? "موظف / مدرب" : "المدرب") : "الموظف"}</h1>
               <h2>${getTrainerName(payroll)}</h2>
+              <p style="font-size: 13px; color: #4b5563; font-weight: 600; margin-top: 4px;">${payroll.job_title || ""}</p>
               <p>شهر ${monthName} ${selectedYear}</p>
             </div>
             
             <div class="info-section">
+              ${(payroll.base_salary > 0 || !payroll.is_trainer) ? `
               <div class="info-row">
-                <span class="info-label">الراتب الأساسي:</span>
-                <span class="info-value">${basePayFormatted}</span>
+                <span class="info-label">الراتب الثابت:</span>
+                <span class="info-value">${baseSalaryFormatted}</span>
               </div>
+              ` : ''}
+              
+              ${payroll.is_trainer ? `
               <div class="info-row">
-                <span class="info-label">عدد المحاضرات المكتملة:</span>
+                <span class="info-label">عدد المحاضرات:</span>
                 <span class="info-value">${payroll.completed_lectures || 0} محاضرة</span>
               </div>
+              <div class="info-row">
+                <span class="info-label">أجور التدريب:</span>
+                <span class="info-value">${trainerRevenueFormatted}</span>
+              </div>
+              ` : ''}
             </div>
             
             <div class="bonuses-section">
@@ -746,7 +757,7 @@ const TrainerPayroll = () => {
               <Users className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)]">عدد المدربين</p>
+              <p className="text-[10px] sm:text-sm text-[var(--color-text-muted)]">عدد الموظفين والمدربين</p>
               <p className="text-sm sm:text-xl font-bold text-blue-600 dark:text-blue-400">
                 {summary.total_trainers || payrolls.length}
               </p>
@@ -914,21 +925,22 @@ const TrainerPayroll = () => {
                     </div>
                     
                     <div className="col-span-2 flex items-center gap-1">
-                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">المدرب:</span>
-                      <span className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1">{getTrainerName(payroll)}</span>
+                      {payroll.is_dual && <Star className="w-3 h-3 text-purple-500" />}
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الموظف:</span>
+                      <span className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1">{getTrainerName(payroll)} <span className="text-[10px] text-gray-500">({payroll.job_title})</span></span>
                     </div>
                     
                     <div className="flex items-center gap-1">
-                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">المحاضرات:</span>
-                      <span className="badge badge-info text-xs px-1 py-0.5">
-                        {payroll.completed_lectures}
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الراتب الثابت:</span>
+                      <span className="text-sm font-medium text-gray-800 dark:text-white truncate">
+                        {formatCurrency(payroll.base_salary)}
                       </span>
                     </div>
                     
                     <div className="flex items-center gap-1">
-                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الراتب:</span>
-                      <span className="text-sm font-medium text-gray-800 dark:text-white truncate" title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع = ${formatCurrency(payroll.base_pay)}`}>
-                        {formatCurrency(payroll.base_pay)}
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">التدريب:</span>
+                      <span className="text-sm font-medium text-gray-800 dark:text-white truncate" title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع = ${formatCurrency(payroll.trainer_revenue)}`}>
+                        {formatCurrency(payroll.trainer_revenue)} <span className="text-[10px]">({payroll.completed_lectures})</span>
                       </span>
                     </div>
                     
@@ -1151,9 +1163,11 @@ const TrainerPayroll = () => {
               <thead>
                 <tr>
                   <th className="text-xs py-2 px-2 text-center">#</th>
-                  <th className="text-xs py-2 px-2 text-center">المدرب</th>
+                  <th className="text-xs py-2 px-2 text-center">الموظف/المدرب</th>
+                  <th className="text-xs py-2 px-2 text-center">الوظيفة</th>
+                  <th className="text-xs py-2 px-2 text-center">الراتب الثابت</th>
                   <th className="text-xs py-2 px-2 text-center">المحاضرات</th>
-                  <th className="text-xs py-2 px-2 text-center">الراتب الأساسي</th>
+                  <th className="text-xs py-2 px-2 text-center">أجور التدريب</th>
                   <th className="text-xs py-2 px-2 text-center">طريقة التحويل</th>
                   <th className="text-xs py-2 px-2 text-center">التجديدات</th>
                   <th className="text-xs py-2 px-2 text-center">المكافآت</th>
@@ -1197,8 +1211,14 @@ const TrainerPayroll = () => {
                           >
                             <Receipt className="w-3.5 h-3.5" />
                           </button>
-                          <span className="font-semibold text-[var(--color-text-primary)] text-xs">
+                          <span className="font-semibold text-[var(--color-text-primary)] text-xs flex flex-col items-center">
                             {getTrainerName(payroll)}
+                            {payroll.is_dual && (
+                               <span className="inline-flex mt-1 items-center gap-0.5 px-1 py-0.5 rounded text-[8px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+                                 <Star className="w-2 h-2" />
+                                 مزدوج
+                               </span>
+                            )}
                           </span>
                           {isWinner && (
                             <span
@@ -1216,13 +1236,20 @@ const TrainerPayroll = () => {
                           )}
                         </div>
                       </td>
+                      <td className="py-2 px-2 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300">
+                        {payroll.job_title}
+                      </td>
+                      <td className="font-medium py-2 px-2 text-xs text-center text-blue-600 dark:text-blue-400">
+                        {formatCurrency(payroll.base_salary)}
+                      </td>
                       <td className="py-2 px-2 text-center">
                         <span className="badge badge-info text-[10px] px-1.5 py-0.5">
-                          {payroll.completed_lectures} محاضرة
+                          {payroll.completed_lectures}
                         </span>
                       </td>
-                      <td className="font-medium py-2 px-2 text-xs text-center" title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع = ${formatCurrency(payroll.base_pay)}`}>
-                        {formatCurrency(payroll.base_pay)}
+                      <td className="font-medium py-2 px-2 text-xs text-center" title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع `}
+                      >
+                        {formatCurrency(payroll.trainer_revenue)}
                       </td>
                       <td className="py-2 px-2 payment-method-cell text-center">
                         {payroll.payment_method ? (
@@ -1479,8 +1506,12 @@ const TrainerPayroll = () => {
                   <td colSpan="3" className="font-bold text-[var(--color-text-primary)] py-2 px-2 text-xs">
                     الإجمالي
                   </td>
+                  <td className="font-bold text-blue-600 py-2 px-2 text-xs">
+                    {formatCurrency(payrolls.reduce((sum, p) => sum + (p.base_salary || 0), 0))}
+                  </td>
+                  <td className="py-2 px-2"></td>
                   <td className="font-bold py-2 px-2 text-xs">
-                    {formatCurrency(payrolls.reduce((sum, p) => sum + (p.base_pay || 0), 0))}
+                    {formatCurrency(payrolls.reduce((sum, p) => sum + (p.trainer_revenue || 0), 0))}
                   </td>
                   <td className="py-2 px-2"></td>
                   <td className="py-2 px-2"></td>

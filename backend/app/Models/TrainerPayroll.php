@@ -13,6 +13,7 @@ class TrainerPayroll extends Model
     protected $table = 'trainer_payroll';
 
     protected $fillable = [
+        'user_id',
         'trainer_id',
         'month',
         'year',
@@ -63,6 +64,14 @@ class TrainerPayroll extends Model
     public function trainer(): BelongsTo
     {
         return $this->belongsTo(Trainer::class);
+    }
+
+    /**
+     * Get the user.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     /**

@@ -65,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/courses/{course}/renewal-alert-status', [CourseController::class, 'updateRenewalAlertStatus']);
     Route::post('/courses/{course}/confirm-evaluation', [CourseController::class, 'confirmEvaluationSent']);
     Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
+    Route::post('/courses/{course}/add-extra-lectures', [CourseController::class, 'addExtraLectures']);
     Route::put('/courses/{course}/lectures/bulk', [CourseController::class, 'bulkUpdateLectures']);
 
     // Lectures

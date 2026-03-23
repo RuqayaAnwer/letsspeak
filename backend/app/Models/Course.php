@@ -37,6 +37,8 @@ class Course extends Model
         'renewal_alert_status',
         'last_evaluation_milestone',
         'postponements_used',
+        'extra_lectures_count',
+        'extra_lectures_fee',
     ];
 
     protected $casts = [

@@ -15,13 +15,15 @@ class CoursePackage extends Model
         'lectures_count',
         'description',
         'price',
-        'max_postponements',
+        'trainee_max_postponements',
+        'trainer_max_postponements',
     ];
 
     protected $casts = [
         'lectures_count' => 'integer',
         'price' => 'decimal:2',
-        'max_postponements' => 'integer',
+        'trainee_max_postponements' => 'integer',
+        'trainer_max_postponements' => 'integer',
     ];
 
     /**

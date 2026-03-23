@@ -71,6 +71,7 @@ class Lecture extends Model
         'is_completed',
         'student_attendance',
         'trainer_payment_status',
+        'is_extra',
     ];
 
     protected $casts = [

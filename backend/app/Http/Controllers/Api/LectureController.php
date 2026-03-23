@@ -183,11 +183,10 @@ class LectureController extends Controller
 
         $lecture->load('course');
 
-        $result = $this->postponementService->checkTimeConflicts(
-            $lecture->course,
+        $result = $this->postponementService->checkAllPostponementConflicts(
+            $lecture,
             $validated['new_date'],
-            $validated['new_time'] ?? null,
-            $lecture->id
+            $validated['new_time'] ?? null
         );
 
         return response()->json([

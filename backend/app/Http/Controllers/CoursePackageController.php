@@ -12,6 +12,10 @@ class CoursePackageController extends Controller
      */
     public function index()
     {
+        if (!auth()->user() || (!auth()->user()->isAdmin() && !auth()->user()->isCustomerService())) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $packages = CoursePackage::withCount('courses')->latest()->get();
 
         return response()->json($packages);
@@ -22,15 +26,21 @@ class CoursePackageController extends Controller
      */
     public function store(Request $request)
     {
+        if (!auth()->user() || !auth()->user()->isAdmin()) {
+            abort(403, 'Only admins can perform this action.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'lectures_count' => 'required|integer|min:1',
             'description' => 'nullable|string',
             'price' => 'nullable|numeric|min:0',
+            'trainee_max_postponements' => 'nullable|integer|min:0',
+            'trainer_max_postponements' => 'nullable|integer|min:0',
         ]);
 
         $package = CoursePackage::create($request->only([
-            'name', 'lectures_count', 'description', 'price'
+            'name', 'lectures_count', 'description', 'price', 'trainee_max_postponements', 'trainer_max_postponements'
         ]));
 
         return response()->json($package, 201);
@@ -41,6 +51,10 @@ class CoursePackageController extends Controller
      */
     public function show(CoursePackage $coursePackage)
     {
+        if (!auth()->user() || (!auth()->user()->isAdmin() && !auth()->user()->isCustomerService())) {
+            abort(403, 'Unauthorized action.');
+        }
+
         return response()->json($coursePackage);
     }
 
@@ -49,17 +63,23 @@ class CoursePackageController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if (!auth()->user() || !auth()->user()->isAdmin()) {
+            abort(403, 'Only admins can perform this action.');
+        }
+
         $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'lectures_count' => 'sometimes|required|integer|min:1',
             'description' => 'nullable|string',
             'price' => 'nullable|numeric|min:0',
+            'trainee_max_postponements' => 'sometimes|nullable|integer|min:0',
+            'trainer_max_postponements' => 'sometimes|nullable|integer|min:0',
         ]);
 
         $coursePackage = CoursePackage::findOrFail($id);
         
         $updateData = $request->only([
-            'name', 'lectures_count', 'description', 'price'
+            'name', 'lectures_count', 'description', 'price', 'trainee_max_postponements', 'trainer_max_postponements'
         ]);
         
         // Log the update data for debugging
@@ -83,6 +103,10 @@ class CoursePackageController extends Controller
      */
     public function destroy($id)
     {
+        if (!auth()->user() || !auth()->user()->isAdmin()) {
+            abort(403, 'Only admins can perform this action.');
+        }
+
         $coursePackage = CoursePackage::findOrFail($id);
         $coursePackage->delete();
 

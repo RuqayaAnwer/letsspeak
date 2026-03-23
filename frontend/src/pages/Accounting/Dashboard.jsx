@@ -89,18 +89,21 @@ const AccountingDashboard = () => {
     if (!course) return 0;
     const packageName = course.course_package?.name || course.coursePackage?.name || '';
     const isDual = course.is_dual || false;
+    const extraFee = parseFloat(course.extra_lectures_fee) || 0;
 
     if (isDual) {
+      let basePrice = 0;
       if (packageName.includes('بمزاجي') || packageName === 'بمزاجي') {
-        return 90000;
+        basePrice = 90000;
       } else if (packageName.includes('توازن') || packageName.includes('التوازن') || packageName === 'التوازن') {
-        return 135000;
+        basePrice = 135000;
       } else if (packageName.includes('سرعة') || packageName.includes('السرعة') || packageName === 'السرعة') {
-        return 225000;
+        basePrice = 225000;
       }
+      return basePrice + (extraFee / 2);
     }
     const rawPrice = course.course_package?.price || course.coursePackage?.price || 0;
-    return parseFloat(rawPrice || 0);
+    return parseFloat(rawPrice || 0) + extraFee;
   };
 
   // Get payment completion status based on remaining amount
@@ -261,7 +264,14 @@ const AccountingDashboard = () => {
                           
                           <div className="flex items-center gap-1">
                             <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الكورس:</span>
-                            <span className="text-[10px] text-gray-800 dark:text-white truncate">{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</span>
+                            <div className="flex flex-col items-start max-w-full min-w-0">
+                              <span className="text-[10px] text-gray-800 dark:text-white truncate">{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</span>
+                              {payment.course?.extra_lectures_count > 0 && (
+                                <span className="mt-0.5 badge badge-purple text-[8px] px-1 py-0.5 whitespace-nowrap">
+                                  + {payment.course?.extra_lectures_count} محاضرات (+ {formatCurrency(payment.course?.extra_lectures_fee)})
+                                </span>
+                              )}
+                            </div>
                           </div>
                           
                           <div className="flex items-center gap-1">
@@ -314,7 +324,16 @@ const AccountingDashboard = () => {
                   <td className="font-semibold text-[var(--color-text-primary)] text-xs sm:text-sm">
                     {payment.student?.name}
                   </td>
-                  <td className="text-xs sm:text-sm">{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</td>
+                  <td className="text-xs sm:text-sm">
+                    <div className="flex flex-col items-start min-w-0">
+                      <span>{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</span>
+                      {payment.course?.extra_lectures_count > 0 && (
+                        <span className="mt-1 badge badge-purple text-[9px] px-1 py-0.5 whitespace-nowrap">
+                          + {payment.course?.extra_lectures_count} محاضرات إضافية (+ {formatCurrency(payment.course?.extra_lectures_fee)})
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="font-bold text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm">
                     {formatCurrency(payment.amount)}
                   </td>

@@ -38,7 +38,7 @@ import CustomerServiceDashboard from './pages/CustomerService/Dashboard';
 import Students from './pages/CustomerService/Students';
 import Trainers from './pages/CustomerService/Trainers';
 import CreateCourse from './pages/CustomerService/CreateCourse';
-import CoursePackages from './pages/CustomerService/CoursePackages';
+import CoursePackages from './pages/shared/CoursePackages';
 import FindTrainingTime from './pages/CustomerService/FindTrainingTime';
 import TrainerDashboard from './pages/Trainer/Dashboard';
 import FinanceDashboard from './pages/Accounting/Dashboard';
@@ -117,6 +117,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminUsers />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/packages"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <CoursePackages />
           </ProtectedRoute>
         }
       />

@@ -84,12 +84,11 @@ class LecturePostponementService
             );
         }
 
-        // Step 4: Check for time conflicts
-        $conflictCheck = $this->checkTimeConflicts(
-            $lecture->course,
+        // Step 4: Check for time conflicts across all shifted dates if applicable
+        $conflictCheck = $this->checkAllPostponementConflicts(
+            $lecture,
             $newDate,
-            $newTime,
-            $lecture->id
+            $newTime
         );
 
         if ($conflictCheck['has_conflict']) {
@@ -288,6 +287,83 @@ class LecturePostponementService
                 'has_conflict' => true,
                 'message' => 'يوجد تعارض في المواعيد. المدرب لديه محاضرة أخرى في نفس الوقت.',
                 'conflicts' => $conflicts,
+            ];
+        }
+
+        return [
+            'has_conflict' => false,
+            'message' => 'لا يوجد تعارض في المواعيد.',
+            'conflicts' => [],
+        ];
+    }
+
+    /**
+     * Check conflicts for the ENTIRE sequence of shifted lectures if it's a cascade postponement.
+     */
+    public function checkAllPostponementConflicts(Lecture $lecture, string $newDate, ?string $newTime): array
+    {
+        $course = $lecture->course;
+        $courseDays = $this->normalizeLectureDays($course);
+        $isCascade = $this->courseHasDay($course, $newDate) && !empty($courseDays);
+
+        if (!$isCascade) {
+            // Only check the single date for normal makeup
+            return $this->checkTimeConflicts($course, $newDate, $newTime ?? $lecture->time, $lecture->id);
+        }
+
+        $dayMap = ['sun' => 0, 'mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6];
+        $dayOrder = array_values(array_map(fn ($k) => $dayMap[$k] ?? 0, $courseDays));
+
+        $ordered = $course->lectures()
+            ->whereNotIn('attendance', [
+                Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
+                Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
+                Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
+            ])
+            ->orderBy('date')
+            ->orderBy('time')
+            ->orderBy('id')
+            ->get();
+
+        $idx = $ordered->search(fn ($l) => (int) $l->id === (int) $lecture->id);
+        if ($idx === false || $idx === null) {
+            return $this->checkTimeConflicts($course, $newDate, $newTime ?? $lecture->time, $lecture->id);
+        }
+
+        $time = $newTime ?? $lecture->time ?? $course->lecture_time ?? '09:00';
+        $currentDate = Carbon::parse($newDate)->startOfDay();
+
+        $allConflicts = [];
+        foreach ($ordered as $i => $l) {
+            if ($i < $idx) {
+                continue;
+            }
+
+            $isMakeupSlot = ($i === $idx);
+            $checkDate = $currentDate->format('Y-m-d');
+            $checkTime = $isMakeupSlot ? $time : ($l->time ?? $course->lecture_time ?? '09:00');
+
+            $singleConflictCheck = $this->checkTimeConflicts($course, $checkDate, $checkTime, $lecture->id);
+            if ($singleConflictCheck['has_conflict']) {
+                $allConflicts = array_merge($allConflicts, $singleConflictCheck['conflicts']);
+            }
+
+            // Next course day
+            $dow = $currentDate->dayOfWeek;
+            $pos = array_search($dow, $dayOrder, true);
+            $nextPos = $pos === false ? 0 : (($pos + 1) % count($dayOrder));
+            $nextDow = $dayOrder[$nextPos];
+            $currentDate->addDay();
+            while ($currentDate->dayOfWeek !== $nextDow) {
+                $currentDate->addDay();
+            }
+        }
+
+        if (!empty($allConflicts)) {
+            return [
+                'has_conflict' => true,
+                'message' => 'يوجد تعارض في المواعيد لإحدى المحاضرات بسبب سلسلة التأجيل.',
+                'conflicts' => $allConflicts,
             ];
         }
 
@@ -674,10 +750,15 @@ class LecturePostponementService
             if ($i < $idx) {
                 continue;
             }
+            
+            // For the makeup lecture (the first in the shifted array), use the new time.
+            // For all other shifted lectures, preserve their current time.
+            $isMakeupSlot = ($i === $idx);
+            
             $updates[] = [
                 'lecture' => $l,
                 'date' => $currentDate->format('Y-m-d'),
-                'time' => $time,
+                'time' => $isMakeupSlot ? $time : ($l->time ?? $course->lecture_time ?? '09:00'),
             ];
             // Next course day
             $dow = $currentDate->dayOfWeek;

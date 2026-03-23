@@ -73,6 +73,8 @@ class AdminController extends Controller
                 'role'       => $u->role,
                 'status'     => $u->status ?? 'active',
                 'avatar'     => $u->avatar,
+                'job_title'  => $u->job_title,
+                'base_salary'=> $u->base_salary,
                 'created_at' => $u->created_at?->format('Y-m-d'),
             ]);
 
@@ -91,6 +93,8 @@ class AdminController extends Controller
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
             'role'     => 'required|in:customer_service,finance,admin',
+            'job_title'=> 'nullable|string|max:255',
+            'base_salary' => 'nullable|numeric|min:0',
         ]);
 
         $user = User::create([
@@ -99,6 +103,8 @@ class AdminController extends Controller
             'password' => Hash::make($request->password),
             'role'     => $request->role,
             'status'   => 'active',
+            'job_title'=> $request->job_title,
+            'base_salary' => $request->base_salary ?? 0,
         ]);
 
         return response()->json([
@@ -110,6 +116,8 @@ class AdminController extends Controller
                 'email' => $user->email,
                 'role'  => $user->role,
                 'status'=> $user->status,
+                'job_title' => $user->job_title,
+                'base_salary' => $user->base_salary,
             ],
         ], 201);
     }
@@ -138,6 +146,8 @@ class AdminController extends Controller
             'password' => 'sometimes|string|min:6',
             'role'     => 'sometimes|in:customer_service,finance,admin,trainer',
             'status'   => 'sometimes|in:active,inactive',
+            'job_title'=> 'nullable|string|max:255',
+            'base_salary' => 'nullable|numeric|min:0',
         ]);
 
         if ($request->has('name'))     $user->name   = $request->name;
@@ -149,6 +159,8 @@ class AdminController extends Controller
             $user->role = $request->role;
         }
         if ($request->has('status')) $user->status = $request->status;
+        if ($request->has('job_title')) $user->job_title = $request->job_title;
+        if ($request->has('base_salary')) $user->base_salary = $request->base_salary;
 
         $user->save();
 
@@ -174,6 +186,8 @@ class AdminController extends Controller
                 'email'  => $user->email,
                 'role'   => $user->role,
                 'status' => $user->status,
+                'job_title' => $user->job_title,
+                'base_salary' => $user->base_salary,
             ],
         ]);
     }

@@ -20,6 +20,7 @@ import {
   MessageSquare,
   Trash2,
   PlayCircle,
+  PlusCircle,
 } from 'lucide-react';
 import PackageBadge from '../../components/PackageBadge';
 
@@ -152,6 +153,9 @@ const CourseDetails = () => {
   // تفعيل بدء الكورس الفعلي (للمدرب)
   const [startingCourse, setStartingCourse] = useState(false);
 
+  // Extra lectures modal (Customer service)
+  const [extraLecturesModal, setExtraLecturesModal] = useState({ open: false, count: 1, fee: 0, saving: false });
+
   // Packages and trainers for renewal reset modal
   const [packages, setPackages] = useState([]);
   const [trainers, setTrainers] = useState([]);
@@ -281,6 +285,34 @@ const CourseDetails = () => {
       alert(err.response?.data?.message || 'فشل تفعيل بدء الكورس');
     } finally {
       setStartingCourse(false);
+    }
+  };
+
+  /**
+   * Handle adding extra lectures
+   */
+  const handleAddExtraLectures = async () => {
+    if (extraLecturesModal.count < 1) {
+      alert('يجب أن يكون العدد 1 على الأقل');
+      return;
+    }
+    setExtraLecturesModal(prev => ({ ...prev, saving: true }));
+    try {
+      const response = await api.post(`/courses/${id}/add-extra-lectures`, {
+        count: extraLecturesModal.count,
+        fee: extraLecturesModal.fee,
+      });
+      if (response.data.success) {
+        alert('تم إضافة المحاضرات الإضافية بنجاح');
+        setExtraLecturesModal({ open: false, count: 1, fee: 0, saving: false });
+        fetchCourse();
+      } else {
+        alert(response.data.message || 'حدث خطأ');
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || 'حدث خطأ أثناء الإضافة');
+    } finally {
+      setExtraLecturesModal(prev => ({ ...prev, saving: false }));
     }
   };
 
@@ -456,6 +488,39 @@ const CourseDetails = () => {
         checking: false,
         error: 'حدث خطأ أثناء التحقق من التعارضات',
       }));
+    }
+  };
+
+  /**
+   * Quick access buttons to select common postponement dates
+   */
+  const handleQuickDateSelect = (type) => {
+    let targetDate = new Date();
+    
+    if (type === 'tomorrow') {
+      targetDate.setDate(targetDate.getDate() + 1);
+      const dateString = targetDate.toISOString().split('T')[0];
+      setPostponeModal(prev => ({ ...prev, newDate: dateString, conflicts: [] }));
+    } else if (type === 'next_lecture') {
+      if (!postponeModal.lectureId) return;
+      
+      const currentLectureIndex = sortedLectures.findIndex(l => l.id === postponeModal.lectureId);
+      if (currentLectureIndex !== -1) {
+        let nextLecture = null;
+        for (let i = currentLectureIndex + 1; i < sortedLectures.length; i++) {
+          if (!isPostponedOriginal(sortedLectures[i])) {
+            nextLecture = sortedLectures[i];
+            break;
+          }
+        }
+        
+        if (nextLecture && nextLecture.date) {
+          const dateString = nextLecture.date.split('T')[0];
+          setPostponeModal(prev => ({ ...prev, newDate: dateString, conflicts: [] }));
+        } else {
+          alert('لا توجد محاضرة تالية في تسلسل هذا الكورس يمكن التأجيل لها.');
+        }
+      }
     }
   };
 
@@ -1279,6 +1344,11 @@ const CourseDetails = () => {
               )}
             </div>
             <p className="page-subtitle">رقم الكورس: #{course.id}</p>
+            {course.extra_lectures_count > 0 && (
+              <span className="badge badge-info mt-1 inline-flex mb-2 text-[11px]">
+                 <span className="font-bold ml-1">{course.extra_lectures_count}</span> محاضرات إضافية (المبلغ: {course.extra_lectures_fee} د.ع)
+              </span>
+            )}
             {/* أيام المحاضرات + تاريخ أول دفعة + تاريخ بدء الكورس الفعلي */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-gray-600 dark:text-gray-400">
               <span>
@@ -1319,14 +1389,24 @@ const CourseDetails = () => {
             </button>
           )}
           {isCustomerService && (
-            <button
-              onClick={handleDeleteCourse}
-              className="btn-secondary flex items-center gap-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-300 dark:border-red-700"
-              title="حذف الكورس"
-            >
-              <Trash2 className="w-5 h-5" />
-              حذف الكورس
-            </button>
+            <>
+              <button
+                onClick={() => setExtraLecturesModal({ open: true, count: 1, fee: 0, saving: false })}
+                className="btn-secondary flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700 mt-2 sm:mt-0"
+                title="إضافة محاضرات إضافية"
+              >
+                <PlusCircle className="w-5 h-5" />
+                محاضرات إضافية
+              </button>
+              <button
+                onClick={handleDeleteCourse}
+                className="btn-secondary flex items-center gap-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-300 dark:border-red-700 mt-2 sm:mt-0"
+                title="حذف الكورس"
+              >
+                <Trash2 className="w-5 h-5" />
+                حذف الكورس
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -1608,6 +1688,11 @@ const CourseDetails = () => {
                       <span className={`text-xs font-bold ${isPostponedOrig ? 'text-gray-400 line-through' : 'text-gray-800 dark:text-white'}`}>
                         {lecture.lecture_number}
                       </span>
+                      {lecture.is_extra && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-bold whitespace-nowrap" title="محاضرة إضافية">
+                          إضافية
+                        </span>
+                      )}
                       {isPostponedOrig && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-bold whitespace-nowrap" title="محاضرة أصلية تم تأجيلها">
                           مؤجلة
@@ -1623,7 +1708,7 @@ const CourseDetails = () => {
                   
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">التاريخ</span>
-                    {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
+                    {isCustomerService && !isAccounting && isSelected ? (
                       <input
                         type="date"
                         value={editingLectureDateTime.date}
@@ -1631,7 +1716,7 @@ const CourseDetails = () => {
                         className="input py-1 px-2 text-xs w-full max-w-[140px] border border-[var(--color-border)] rounded"
                         dir="ltr"
                       />
-                    ) : (isCustomerService || isTrainer) && !isAccounting ? (
+                    ) : isCustomerService && !isAccounting ? (
                       <button
                         type="button"
                         onClick={() => handleLectureSelect(lecture)}
@@ -1661,7 +1746,7 @@ const CourseDetails = () => {
                   
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الوقت</span>
-                    {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
+                    {isCustomerService && !isAccounting && isSelected ? (
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <input
                           type="time"
@@ -1688,7 +1773,7 @@ const CourseDetails = () => {
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    ) : (isCustomerService || isTrainer) && !isAccounting ? (
+                    ) : isCustomerService && !isAccounting ? (
                       <button
                         type="button"
                         onClick={() => handleLectureSelect(lecture)}
@@ -2027,6 +2112,11 @@ const CourseDetails = () => {
                         <span className={isPostponedOrig ? 'text-gray-400 line-through' : ''}>
                           {lecture.lecture_number}
                         </span>
+                        {lecture.is_extra && (
+                          <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-bold whitespace-nowrap" title="محاضرة إضافية">
+                            إضافية
+                          </span>
+                        )}
                         {isPostponedOrig && (
                           <span className="text-[9px] px-1 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-bold whitespace-nowrap" title="محاضرة أصلية تم تأجيلها">
                             مؤجلة
@@ -2040,7 +2130,7 @@ const CourseDetails = () => {
                       </div>
                     </td>
                     <td className="border-l border-[var(--color-border)] px-1 py-0.5 text-center align-middle">
-                      {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
+                      {isCustomerService && !isAccounting && isSelected ? (
                         <input
                           type="date"
                           value={editingLectureDateTime.date}
@@ -2049,7 +2139,7 @@ const CourseDetails = () => {
                           className="input py-1 px-2 text-sm w-32"
                           dir="ltr"
                         />
-                      ) : (isCustomerService || isTrainer) && !isAccounting ? (
+                      ) : isCustomerService && !isAccounting ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -2081,7 +2171,7 @@ const CourseDetails = () => {
                       )}
                     </td>
                     <td className="border-l border-[var(--color-border)] px-1 py-0.5 text-center text-[10px] align-middle" dir="ltr">
-                      {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
+                      {isCustomerService && !isAccounting && isSelected ? (
                         <div className="flex items-center justify-center gap-2 flex-wrap">
                           <input
                             type="time"
@@ -2113,7 +2203,7 @@ const CourseDetails = () => {
                             <X className="w-4 h-4" />
                           </button>
                         </div>
-                      ) : (isCustomerService || isTrainer) && !isAccounting ? (
+                      ) : isCustomerService && !isAccounting ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -2378,9 +2468,26 @@ const CourseDetails = () => {
                   }}
                   onBlur={checkConflicts}
                   min={new Date().toISOString().split('T')[0]}
-                  className="input w-full"
+                  className="input w-full mb-3"
                   dir="ltr"
                 />
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDateSelect('tomorrow')}
+                    className="flex-1 py-2 px-2 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 rounded-lg text-[11px] sm:text-xs font-semibold border border-blue-200 dark:border-blue-800 transition-colors"
+                  >
+                    يوم غد
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDateSelect('next_lecture')}
+                    className="flex-1 py-2 px-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 rounded-lg text-[11px] sm:text-xs font-semibold border border-indigo-200 dark:border-indigo-800 transition-colors"
+                  >
+                    وقت المحاضرة التالية
+                  </button>
+                </div>
               </div>
 
               {/* New Time Selection */}
@@ -2916,6 +3023,70 @@ const CourseDetails = () => {
                   className="flex-1 py-2 sm:py-2.5 rounded-lg bg-primary-600 text-white font-medium text-xs sm:text-sm hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? 'جاري الحفظ...' : 'إنشاء الكورس الجديد'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Extra Lectures Modal */}
+      {extraLecturesModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => !extraLecturesModal.saving && setExtraLecturesModal({ open: false, count: 1, fee: 0, saving: false })}
+          />
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden relative z-10 animate-scale-up border border-[var(--color-border)]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50">
+              <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
+                إضافة محاضرات إضافية
+              </h3>
+              <button 
+                onClick={() => setExtraLecturesModal({ open: false, count: 1, fee: 0, saving: false })}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                disabled={extraLecturesModal.saving}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="label text-sm mb-1">العدد الإضافي</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={extraLecturesModal.count}
+                  onChange={(e) => setExtraLecturesModal(prev => ({ ...prev, count: parseInt(e.target.value) || 0 }))}
+                  className="input py-2"
+                />
+              </div>
+              <div>
+                <label className="label text-sm mb-1">المبلغ المضاف (د.ع)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={extraLecturesModal.fee}
+                  onChange={(e) => setExtraLecturesModal(prev => ({ ...prev, fee: parseFloat(e.target.value) || 0 }))}
+                  className="input py-2"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setExtraLecturesModal({ open: false, count: 1, fee: 0, saving: false })}
+                  className="btn-secondary flex-1"
+                  disabled={extraLecturesModal.saving}
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleAddExtraLectures}
+                  className="btn-primary flex-1"
+                  disabled={extraLecturesModal.saving || extraLecturesModal.count < 1}
+                >
+                  {extraLecturesModal.saving ? 'جاري الإضافة...' : 'إضافة'}
                 </button>
               </div>
             </div>
