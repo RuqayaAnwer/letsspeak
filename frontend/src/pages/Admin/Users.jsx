@@ -486,6 +486,30 @@ const AdminUsers = () => {
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">المسمى الوظيفي</label>
+              <input
+                type="text"
+                value={formData.job_title}
+                onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                className="input w-full"
+                placeholder="مثال: خدمة عملاء / مدرب"
+              />
+            </div>
+            <div>
+              <label className="label">الراتب الأساسي (د.ع)</label>
+              <input
+                type="number"
+                value={formData.base_salary}
+                onChange={(e) => setFormData({ ...formData, base_salary: e.target.value })}
+                className="input w-full"
+                placeholder="0"
+                min="0"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="label">
               {editingUser ? 'كلمة المرور الجديدة (اتركها فارغة للإبقاء على الحالية)' : 'كلمة المرور *'}
