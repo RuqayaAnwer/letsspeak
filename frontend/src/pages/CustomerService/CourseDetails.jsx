@@ -451,6 +451,9 @@ const CourseDetails = () => {
                 <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[7%]">
                   طريقة الدفع
                 </th>
+                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[8%]">
+                  التأجيلات
+                </th>
                 <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[12%]">
                   ملاحظات
                 </th>
@@ -527,6 +530,19 @@ const CourseDetails = () => {
                       course.payment_method === 'delivery' ? 'توصيل' :
                       course.payment_method
                     ) : '-'}
+                  </td>
+                  <td 
+                    className="px-0.5 py-0.5 text-center text-[5px] whitespace-nowrap"
+                    onClick={() => setSelectedRow(course.id)}
+                  >
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-1 rounded-sm" title="تأجيلات الطالب">
+                        ط: {course.student_postponement_count || 0}/{course.max_student_postponements || 0}
+                      </span>
+                      <span className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-1 rounded-sm" title="تأجيلات المدرب">
+                        م: {course.trainer_postponement_count || 0}/3
+                      </span>
+                    </div>
                   </td>
                   <td 
                     className="px-0.5 py-0.5 text-center text-[5px] text-gray-600 dark:text-gray-400 truncate cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" 
@@ -656,6 +672,22 @@ const CourseDetails = () => {
                       <span className="text-[9px] text-gray-500 dark:text-gray-400 block mb-0.5">المستوى</span>
                       <span className="text-xs font-medium text-teal-700 dark:text-teal-300">
                         {course.level}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* التأجيلات */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-2 border-r-2 border-blue-300 dark:border-blue-700">
+                      <span className="text-[9px] text-gray-500 dark:text-gray-400 block mb-0.5">تأجيلات المتدرب</span>
+                      <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                        {course.student_postponement_count || 0} / {course.max_student_postponements || 0}
+                      </span>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded p-2 border-r-2 border-purple-300 dark:border-purple-700">
+                      <span className="text-[9px] text-gray-500 dark:text-gray-400 block mb-0.5">تأجيلات المدرب</span>
+                      <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
+                        {course.trainer_postponement_count || 0} / 3
                       </span>
                     </div>
                   </div>

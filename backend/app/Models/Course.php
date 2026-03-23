@@ -52,7 +52,21 @@ class Course extends Model
         'amount_paid' => 'decimal:2',
     ];
 
-    protected $appends = ['is_custom'];
+    protected $appends = [
+        'is_custom',
+        'student_postponement_count',
+        'trainer_postponement_count',
+        'max_student_postponements'
+    ];
+
+    /**
+     * Helper attribute to get max student postponements dynamically for the frontend.
+     */
+    public function getMaxStudentPostponementsAttribute(): int
+    {
+        $postponementService = app(\App\Services\LecturePostponementService::class);
+        return $postponementService->getMaxPostponementsForCourse($this);
+    }
 
     /**
      * Get the trainer for this course.
@@ -112,11 +126,27 @@ class Course extends Model
     }
 
     /**
-     * Number of postponements used (for limit check). Stored on course so cascade postponements count too.
+     * Number of postponements used (total legacy fallback).
      */
     public function getPostponementCountAttribute(): int
     {
         return (int) ($this->attributes['postponements_used'] ?? 0);
+    }
+
+    /**
+     * Get student postponements count.
+     */
+    public function getStudentPostponementCountAttribute(): int
+    {
+        return $this->lectures()->where('attendance', Lecture::ATTENDANCE_POSTPONED_BY_STUDENT)->count();
+    }
+
+    /**
+     * Get trainer postponements count.
+     */
+    public function getTrainerPostponementCountAttribute(): int
+    {
+        return $this->lectures()->where('attendance', Lecture::ATTENDANCE_POSTPONED_BY_TRAINER)->count();
     }
 
     /**

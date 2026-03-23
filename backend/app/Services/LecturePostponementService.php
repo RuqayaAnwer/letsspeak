@@ -75,8 +75,8 @@ class LecturePostponementService
         // Step 2: Parse the new date (past dates are allowed for corrections)
         $newDateCarbon = Carbon::parse($newDate);
 
-        // Step 3: Check course postponement limits
-        $limitCheck = $this->checkPostponementLimit($lecture->course);
+        // Step 3: Check course postponement limits based on WHO is postponing
+        $limitCheck = $this->checkPostponementLimit($lecture->course, $postponedBy);
         if (!$limitCheck['allowed']) {
             return $this->errorResponse(
                 self::RESULT_ERROR_MAX_POSTPONEMENTS,
@@ -195,17 +195,34 @@ class LecturePostponementService
      * Check if the course has reached its postponement limit.
      *
      * @param Course $course
+     * @param string $postponedBy
      * @return array ['allowed' => bool, 'message' => string, 'current' => int, 'max' => int]
      */
-    public function checkPostponementLimit(Course $course): array
+    public function checkPostponementLimit(Course $course, string $postponedBy = 'student'): array
     {
-        $maxPostponements = $this->getMaxPostponementsForCourse($course);
-        $currentPostponements = $course->postponement_count;
+        // Treat customer_service and admin limits as trainer limits or student limits? 
+        // usually if CS postpones for trainer, it should be counted against trainer.
+        // If CS postpones for student, it should be counted against student.
+        // The `$postponedBy` variable typically holds 'student' or 'trainer' explicitly from the dropdown.
+
+        if ($postponedBy === 'trainer' || $postponedBy === 'admin' || $postponedBy === 'customer_service') {
+            // For now, if admin/cs is doing it via the generic postpone button, 
+            // we will evaluate based on the exact string passed. 
+            // If they explicitly chose 'postponed_by_trainer', it arrives as 'trainer'.
+            $maxPostponements = clone $course; 
+            $maxPostponements = 3; // Fixed limit for trainers
+            $currentPostponements = $course->trainer_postponement_count;
+            $typeString = 'المدرب';
+        } else {
+            $maxPostponements = $this->getMaxPostponementsForCourse($course);
+            $currentPostponements = $course->student_postponement_count;
+            $typeString = 'المتدرب';
+        }
 
         if ($currentPostponements >= $maxPostponements) {
             return [
                 'allowed' => false,
-                'message' => "تم الوصول للحد الأقصى من التأجيلات ({$maxPostponements}). لا يمكن تأجيل المزيد من المحاضرات.",
+                'message' => "تم الوصول للحد الأقصى من التأجيلات المسموحة لـ {$typeString} ({$maxPostponements}). لا يمكن تأجيل المزيد من المحاضرات.",
                 'current' => $currentPostponements,
                 'max' => $maxPostponements,
             ];
@@ -213,7 +230,7 @@ class LecturePostponementService
 
         return [
             'allowed' => true,
-            'message' => "يمكن تأجيل المحاضرة. التأجيلات الحالية: {$currentPostponements}/{$maxPostponements}",
+            'message' => "يمكن تأجيل المحاضرة. تأجيلات {$typeString} الحالية: {$currentPostponements}/{$maxPostponements}",
             'current' => $currentPostponements,
             'max' => $maxPostponements,
         ];
