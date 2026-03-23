@@ -42,7 +42,7 @@ class WipeDummyData extends Command
                     \App\Models\Payment::where('course_id', $course->id)->delete();
                     $course->delete();
                 }
-                DB::table('trainer_unavailabilities')->where('trainer_id', $trainer->id)->delete();
+                DB::table('trainer_unavailability')->where('trainer_id', $trainer->id)->delete();
                 DB::table('trainer_payroll')->where('trainer_id', $trainer->id)->delete();
                 $trainerName = $trainer->name;
                 $trainer->delete();
