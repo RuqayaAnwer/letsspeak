@@ -1287,14 +1287,102 @@ const TrainerPayroll = () => {
                       <td className="font-medium py-2 px-2 text-xs text-center text-blue-600 dark:text-blue-400">
                         {formatCurrency(payroll.base_salary)}
                       </td>
-                      <td className={`py-2 px-2 text-center ${!payroll.is_trainer ? 'opacity-30 bg-gray-100 dark:bg-gray-800/60 transition-all' : ''}`}>
-                        <span className="badge badge-info text-[10px] px-1.5 py-0.5">
-                          {payroll.completed_lectures}
+                      <td className="bonus-deduction-cell py-2 px-2 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setBonusModal({
+                                open: true,
+                                trainerId: payroll.trainer_id,
+                                trainerName: getTrainerName(payroll),
+                                bonusDeduction: payroll.bonus_deduction || '',
+                                notes: payroll.bonus_deduction_notes || '',
+                              });
+                            }}
+                            className={`px-2 py-1 rounded-md font-medium text-[10px] transition-all hover:scale-105 ${
+                              payroll.bonus_deduction && payroll.bonus_deduction !== 0
+                                ? payroll.bonus_deduction > 0
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            {payroll.bonus_deduction && payroll.bonus_deduction !== 0
+                              ? payroll.bonus_deduction > 0
+                                ? `+${formatCurrency(payroll.bonus_deduction)}`
+                                : formatCurrency(payroll.bonus_deduction)
+                              : 'إضافة'}
+                          </button>
+                          {payroll.bonus_deduction_notes && (
+                            <div className="relative group">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setBonusModal({
+                                    open: true,
+                                    trainerId: payroll.trainer_id,
+                                    trainerName: getTrainerName(payroll),
+                                    bonusDeduction: payroll.bonus_deduction || '',
+                                    notes: payroll.bonus_deduction_notes || '',
+                                  });
+                                }}
+                                className="p-1 rounded-md hover:bg-[var(--color-bg-tertiary)] text-blue-500 hover:text-blue-600 transition-colors"
+                              >
+                                <Info className="w-3 h-3" />
+                              </button>
+                              {/* Tooltip on hover */}
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+                                <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg py-2 px-3 shadow-xl max-w-xs whitespace-pre-wrap break-words">
+                                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                                  {payroll.bonus_deduction_notes}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(payroll.total_pay)}
                         </span>
                       </td>
-                      <td className={`font-medium py-2 px-2 text-xs text-center ${!payroll.is_trainer ? 'opacity-30 bg-gray-100 dark:bg-gray-800/60 transition-all' : ''}`} title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع `}
-                      >
-                        {formatCurrency(payroll.trainer_revenue)}
+                      <td className="py-2 px-2 text-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkAsPaid(payroll.trainer_id, getTrainerName(payroll), payroll.status || 'draft');
+                          }}
+                          className={`px-3 py-1.5 rounded-md font-medium text-[10px] transition-all hover:scale-105 flex items-center gap-1.5 ${
+                            (payroll.status || 'draft') === 'paid'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
+                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                          }`}
+                          title={(payroll.status || 'draft') === 'paid' ? 'تم الدفع' : 'لم يتم الدفع'}
+                        >
+                          {(payroll.status || 'draft') === 'paid' ? (
+                            <>
+                              <Check className="w-3.5 h-3.5" />
+                              <span>تم الدفع</span>
+                            </>
+                          ) : (
+                            <>
+                              <X className="w-3.5 h-3.5" />
+                              <span>لم يدفع</span>
+                            </>
+                          )}
+                        </button>
+                        {payroll.paid_at && (
+                          <p className="text-[9px] text-[var(--color-text-muted)] mt-1">
+                            {new Date(payroll.paid_at).toLocaleDateString('ar-IQ', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        )}
                       </td>
                       <td className="py-2 px-2 payment-method-cell text-center">
                         {payroll.payment_method ? (
@@ -1406,6 +1494,15 @@ const TrainerPayroll = () => {
                         )}
                       </td>
                       <td className={`py-2 px-2 text-center ${!payroll.is_trainer ? 'opacity-30 bg-gray-100 dark:bg-gray-800/60 transition-all' : ''}`}>
+                        <span className="badge badge-info text-[10px] px-1.5 py-0.5">
+                          {payroll.completed_lectures}
+                        </span>
+                      </td>
+                      <td className={`font-medium py-2 px-2 text-xs text-center ${!payroll.is_trainer ? 'opacity-30 bg-gray-100 dark:bg-gray-800/60 transition-all' : ''}`} title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع `}
+                      >
+                        {formatCurrency(payroll.trainer_revenue)}
+                      </td>
+                      <td className={`py-2 px-2 text-center ${!payroll.is_trainer ? 'opacity-30 bg-gray-100 dark:bg-gray-800/60 transition-all' : ''}`}>
                         <span className="badge badge-purple text-[10px] px-1.5 py-0.5">{payroll.renewals_count} تجديد</span>
                       </td>
                       <td className={`py-2 px-2 text-center ${!payroll.is_trainer ? 'opacity-30 bg-gray-100 dark:bg-gray-800/60 transition-all' : ''}`}>
@@ -1444,103 +1541,6 @@ const TrainerPayroll = () => {
                           }
                           return <span className="text-[var(--color-text-muted)] text-[10px]">-</span>;
                         })()}
-                      </td>
-                      <td className="bonus-deduction-cell py-2 px-2 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setBonusModal({
-                                open: true,
-                                trainerId: payroll.trainer_id,
-                                trainerName: getTrainerName(payroll),
-                                bonusDeduction: payroll.bonus_deduction || '',
-                                notes: payroll.bonus_deduction_notes || '',
-                              });
-                            }}
-                            className={`px-2 py-1 rounded-md font-medium text-[10px] transition-all hover:scale-105 ${
-                              payroll.bonus_deduction && payroll.bonus_deduction !== 0
-                                ? payroll.bonus_deduction > 0
-                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                            }`}
-                          >
-                            {payroll.bonus_deduction && payroll.bonus_deduction !== 0
-                              ? payroll.bonus_deduction > 0
-                                ? `+${formatCurrency(payroll.bonus_deduction)}`
-                                : formatCurrency(payroll.bonus_deduction)
-                              : 'إضافة'}
-                          </button>
-                          {payroll.bonus_deduction_notes && (
-                            <div className="relative group">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setBonusModal({
-                                    open: true,
-                                    trainerId: payroll.trainer_id,
-                                    trainerName: getTrainerName(payroll),
-                                    bonusDeduction: payroll.bonus_deduction || '',
-                                    notes: payroll.bonus_deduction_notes || '',
-                                  });
-                                }}
-                                className="p-1 rounded-md hover:bg-[var(--color-bg-tertiary)] text-blue-500 hover:text-blue-600 transition-colors"
-                              >
-                                <Info className="w-3 h-3" />
-                              </button>
-                              {/* Tooltip on hover */}
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
-                                <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg py-2 px-3 shadow-xl max-w-xs whitespace-pre-wrap break-words">
-                                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
-                                  {payroll.bonus_deduction_notes}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-2 px-2 text-center">
-                        <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(payroll.total_pay)}
-                        </span>
-                      </td>
-                      <td className="py-2 px-2 text-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMarkAsPaid(payroll.trainer_id, getTrainerName(payroll), payroll.status || 'draft');
-                          }}
-                          className={`px-3 py-1.5 rounded-md font-medium text-[10px] transition-all hover:scale-105 flex items-center gap-1.5 ${
-                            (payroll.status || 'draft') === 'paid'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
-                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                          }`}
-                          title={(payroll.status || 'draft') === 'paid' ? 'تم الدفع' : 'لم يتم الدفع'}
-                        >
-                          {(payroll.status || 'draft') === 'paid' ? (
-                            <>
-                              <Check className="w-3.5 h-3.5" />
-                              <span>تم الدفع</span>
-                            </>
-                          ) : (
-                            <>
-                              <X className="w-3.5 h-3.5" />
-                              <span>لم يدفع</span>
-                            </>
-                          )}
-                        </button>
-                        {payroll.paid_at && (
-                          <p className="text-[9px] text-[var(--color-text-muted)] mt-1">
-                            {new Date(payroll.paid_at).toLocaleDateString('ar-IQ', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        )}
                       </td>
                     </tr>
                   );
