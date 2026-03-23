@@ -168,14 +168,27 @@ class LecturePostponementService
         }
     }
 
+    public function getTrainerMaxPostponementsForCourse(Course $course): int
+    {
+        $course->loadMissing('coursePackage');
+        if ($course->coursePackage && isset($course->coursePackage->trainer_max_postponements)) {
+            return (int) $course->coursePackage->trainer_max_postponements;
+        }
+        return 3;
+    }
+
     /**
-     * Max postponements for a course: from package (بمزاجي/التوازن=1, السرعة=3) or 3 for custom.
-     * Never returns 0: if DB has null/0 (e.g. migration not run), fallback to 3.
+     * Max postponements for a course: from package trainee_max_postponements.
      */
     public function getMaxPostponementsForCourse(Course $course): int
     {
         $course->loadMissing('coursePackage');
         if ($course->coursePackage) {
+            // Always respect the Database setting if explicitly set by admin in UI
+            if (isset($course->coursePackage->trainee_max_postponements)) {
+                return (int) $course->coursePackage->trainee_max_postponements;
+            }
+
             $name = $course->coursePackage->name ?? '';
             if (str_contains($name, 'سرعة') || str_contains($name, 'السرعة')) {
                 return 3;
@@ -184,9 +197,7 @@ class LecturePostponementService
                 return 1;
             }
             
-            // Fallback to database value if names don't match exactly
-            $max = (int) $course->coursePackage->max_postponements;
-            return $max > 0 ? $max : 3;
+            return 3;
         }
         return 3; // كورس مخصص
     }
@@ -209,8 +220,7 @@ class LecturePostponementService
             // For now, if admin/cs is doing it via the generic postpone button, 
             // we will evaluate based on the exact string passed. 
             // If they explicitly chose 'postponed_by_trainer', it arrives as 'trainer'.
-            $maxPostponements = clone $course; 
-            $maxPostponements = 3; // Fixed limit for trainers
+            $maxPostponements = $this->getTrainerMaxPostponementsForCourse($course);
             $currentPostponements = $course->trainer_postponement_count;
             $typeString = 'المدرب';
         } else {

@@ -56,7 +56,8 @@ class Course extends Model
         'is_custom',
         'student_postponement_count',
         'trainer_postponement_count',
-        'max_student_postponements'
+        'max_student_postponements',
+        'max_trainer_postponements'
     ];
 
     /**
@@ -66,6 +67,15 @@ class Course extends Model
     {
         $postponementService = app(\App\Services\LecturePostponementService::class);
         return $postponementService->getMaxPostponementsForCourse($this);
+    }
+
+    /**
+     * Helper attribute to get max trainer postponements dynamically for the frontend.
+     */
+    public function getMaxTrainerPostponementsAttribute(): int
+    {
+        $postponementService = app(\App\Services\LecturePostponementService::class);
+        return $postponementService->getTrainerMaxPostponementsForCourse($this);
     }
 
     /**

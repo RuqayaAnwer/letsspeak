@@ -540,7 +540,7 @@ const CourseDetails = () => {
                         ط: {course.student_postponement_count || 0}/{course.max_student_postponements || 0}
                       </span>
                       <span className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-1 rounded-sm" title="تأجيلات المدرب">
-                        م: {course.trainer_postponement_count || 0}/3
+                        م: {course.trainer_postponement_count || 0}/{course.max_trainer_postponements || 3}
                       </span>
                     </div>
                   </td>
@@ -687,7 +687,7 @@ const CourseDetails = () => {
                     <div className="bg-purple-50 dark:bg-purple-900/20 rounded p-2 border-r-2 border-purple-300 dark:border-purple-700">
                       <span className="text-[9px] text-gray-500 dark:text-gray-400 block mb-0.5">تأجيلات المدرب</span>
                       <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
-                        {course.trainer_postponement_count || 0} / 3
+                        {course.trainer_postponement_count || 0} / {course.max_trainer_postponements || 3}
                       </span>
                     </div>
                   </div>
