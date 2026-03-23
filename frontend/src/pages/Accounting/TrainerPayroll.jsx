@@ -683,7 +683,7 @@ const TrainerPayroll = () => {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="page-header">
-          <h1 className="page-title text-base sm:text-2xl">رواتب المدربين</h1>
+          <h1 className="page-title text-base sm:text-2xl">رواتب الموظفين</h1>
         </div>
         <div className="card p-8 text-center">
           <p className="text-[var(--color-text-muted)]">جاري تحميل البيانات...</p>
