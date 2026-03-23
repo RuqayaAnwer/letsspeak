@@ -81,6 +81,7 @@ const Layout = ({ children }) => {
         return [
           { path: '/admin',       label: 'لوحة التحكم',    icon: '🛡️' },
           { path: '/admin/users', label: 'المستخدمون',     icon: '👥' },
+          { path: '/admin/packages', label: 'الباقات', icon: '📦' },
         ];
       case 'customer_service':
         return [

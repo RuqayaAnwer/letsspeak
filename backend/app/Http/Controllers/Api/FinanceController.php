@@ -99,8 +99,12 @@ class FinanceController extends Controller
 
         // Get ALL users who are active, plus any legacy trainers
         $users = \App\Models\User::where('status', 'active')->with('trainer')->get();
-        $legacyTrainers = Trainer::whereNull('user_id')->get();
+        $activeUserNames = $users->pluck('name')->map(function($n) { return trim(strtolower($n)); })->toArray();
         
+        $legacyTrainers = Trainer::whereNull('user_id')->get()->reject(function($trainer) use ($activeUserNames) {
+            return in_array(trim(strtolower($trainer->name)), $activeUserNames);
+        });
+
         $allStaff = collect();
         foreach($users as $user) {
             $allStaff->push((object)[
