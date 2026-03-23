@@ -47,6 +47,7 @@ const TrainerPayroll = () => {
     userId: null,
     staffName: '',
     jobTitle: '',
+    baseSalary: 0,
   });
   const [notesModal, setNotesModal] = useState({
     open: false,
@@ -238,14 +239,15 @@ const TrainerPayroll = () => {
     try {
       await api.put('/trainer-payroll/user/job-title', {
         user_id: jobTitleModal.userId,
-        job_title: jobTitleModal.jobTitle
+        job_title: jobTitleModal.jobTitle,
+        base_salary: jobTitleModal.baseSalary
       });
-      toast.success('تم تحديث المسمى الوظيفي بنجاح');
-      setJobTitleModal({ open: false, userId: null, staffName: '', jobTitle: '' });
+      toast.success('تم التحديث بنجاح');
+      setJobTitleModal({ open: false, userId: null, staffName: '', jobTitle: '', baseSalary: 0 });
       fetchPayrollData(selectedMonth, selectedYear);
     } catch (error) {
-      console.error('Error updating job title:', error);
-      toast.error('حدث خطأ أثناء تحديث المسمى الوظيفي');
+      console.error('Error updating employee info:', error);
+      toast.error('حدث خطأ أثناء حفظ التحديث');
     }
   };
 
@@ -954,7 +956,7 @@ const TrainerPayroll = () => {
                         {payroll.user_id ? (
                           <button onClick={(e) => {
                             e.stopPropagation();
-                            setJobTitleModal({ open: true, userId: payroll.user_id, staffName: getTrainerName(payroll), jobTitle: payroll.job_title || '' });
+                            setJobTitleModal({ open: true, userId: payroll.user_id, staffName: getTrainerName(payroll), jobTitle: payroll.job_title || '', baseSalary: payroll.base_salary || 0 });
                           }} className="text-[10px] text-blue-500 hover:text-blue-700 hover:underline mx-1 transition">
                             ({payroll.job_title || 'إضافة وظيفة'})
                           </button>
@@ -1274,7 +1276,7 @@ const TrainerPayroll = () => {
                         {payroll.user_id ? (
                           <button onClick={(e) => {
                             e.stopPropagation();
-                            setJobTitleModal({ open: true, userId: payroll.user_id, staffName: getTrainerName(payroll), jobTitle: payroll.job_title || '' });
+                            setJobTitleModal({ open: true, userId: payroll.user_id, staffName: getTrainerName(payroll), jobTitle: payroll.job_title || '', baseSalary: payroll.base_salary || 0 });
                           }} className="hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1.5 py-1 rounded transition w-full text-center truncate max-w-[120px]" title={payroll.job_title || 'إضافة وظيفة'}>
                             {payroll.job_title || 'إضافة وظيفة'}
                           </button>
@@ -1647,15 +1649,27 @@ const TrainerPayroll = () => {
                 الموظف: <span className="font-bold text-gray-800 dark:text-gray-200">{jobTitleModal.staffName}</span>
               </div>
               <div>
-                <label className="label">المسمى الوظيفي الجديد</label>
+                <label className="label">المسمى الوظيفي</label>
                 <input
                   type="text"
                   value={jobTitleModal.jobTitle}
                   onChange={(e) => setJobTitleModal({ ...jobTitleModal, jobTitle: e.target.value })}
                   className="input w-full"
-                  placeholder="مثال: خدمة عملاء تقني / مدرب"
+                  placeholder="مثال: خدمة عملاء / مدرب"
                   autoFocus
                 />
+              </div>
+              <div>
+                <label className="label">الراتب الثابت (د.ع)</label>
+                <input
+                  type="number"
+                  value={jobTitleModal.baseSalary}
+                  onChange={(e) => setJobTitleModal({ ...jobTitleModal, baseSalary: e.target.value })}
+                  className="input w-full"
+                  placeholder="0"
+                  min="0"
+                />
+                <p className="text-[10px] text-gray-500 mt-1">إذا كان الموظف لديه راتب ثابت زائد أجور تدريب، ستظهر له علامة مزدوج تلقائياً.</p>
               </div>
               <div className="flex gap-2 mt-6">
                 <button type="submit" className="btn btn-primary flex-1">
@@ -1663,7 +1677,7 @@ const TrainerPayroll = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setJobTitleModal({ open: false, userId: null, staffName: '', jobTitle: '' })}
+                  onClick={() => setJobTitleModal({ open: false, userId: null, staffName: '', jobTitle: '', baseSalary: 0 })}
                   className="btn btn-secondary flex-1"
                 >
                   إلغاء

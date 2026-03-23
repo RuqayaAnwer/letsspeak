@@ -797,15 +797,21 @@ class FinanceController extends Controller
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'job_title' => 'nullable|string|max:255',
+            'base_salary' => 'nullable|numeric|min:0',
         ]);
 
         $user = \App\Models\User::find($request->input('user_id'));
         if ($user) {
-            $user->job_title = $request->input('job_title');
+            if ($request->has('job_title')) {
+                $user->job_title = $request->input('job_title');
+            }
+            if ($request->has('base_salary')) {
+                $user->base_salary = $request->input('base_salary');
+            }
             $user->save();
             return response()->json([
                 'success' => true,
-                'message' => 'تم تحديث المسمى الوظيفي بنجاح'
+                'message' => 'تم التحديث بنجاح'
             ]);
         }
 
