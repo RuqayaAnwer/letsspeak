@@ -786,6 +786,33 @@ class FinanceController extends Controller
     }
 
     /**
+     * Update job title for a user
+     */
+    public function updateJobTitle(Request $request): JsonResponse
+    {
+        if (!$this->isAuthorized($request)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'job_title' => 'nullable|string|max:255',
+        ]);
+
+        $user = \App\Models\User::find($request->input('user_id'));
+        if ($user) {
+            $user->job_title = $request->input('job_title');
+            $user->save();
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تحديث المسمى الوظيفي بنجاح'
+            ]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'المستخدم غير موجود'], 404);
+    }
+
+    /**
      * Update bonus/deduction for a trainer payroll
      */
     public function updateBonusDeduction(Request $request): JsonResponse

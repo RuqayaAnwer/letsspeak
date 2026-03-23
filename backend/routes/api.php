@@ -92,6 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Trainer Payroll (Finance)
     Route::get('/trainer-payroll', [FinanceController::class, 'trainerPayroll']);
+    Route::put('/trainer-payroll/user/job-title', [FinanceController::class, 'updateJobTitle']);
     Route::put('/trainer-payroll/bonus-deduction', [FinanceController::class, 'updateBonusDeduction']);
     Route::put('/trainer-payroll/bonus-selection', [FinanceController::class, 'updateBonusSelection']);
     Route::put('/trainer-payroll/bonus-inclusion', [FinanceController::class, 'updateBonusInclusion']);

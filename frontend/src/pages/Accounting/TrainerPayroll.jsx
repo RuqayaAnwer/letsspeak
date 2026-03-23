@@ -42,6 +42,12 @@ const TrainerPayroll = () => {
     bonusDeduction: '',
     notes: '',
   });
+  const [jobTitleModal, setJobTitleModal] = useState({
+    open: false,
+    userId: null,
+    staffName: '',
+    jobTitle: '',
+  });
   const [notesModal, setNotesModal] = useState({
     open: false,
     notes: '',
@@ -224,6 +230,22 @@ const TrainerPayroll = () => {
     } catch (error) {
       console.error('Error saving payment method:', error);
       alert(error.response?.data?.message || 'حدث خطأ أثناء الحفظ');
+    }
+  };
+
+  const handleUpdateJobTitle = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put('/trainer-payroll/user/job-title', {
+        user_id: jobTitleModal.userId,
+        job_title: jobTitleModal.jobTitle
+      });
+      toast.success('تم تحديث المسمى الوظيفي بنجاح');
+      setJobTitleModal({ open: false, userId: null, staffName: '', jobTitle: '' });
+      fetchPayrollData(selectedMonth, selectedYear);
+    } catch (error) {
+      console.error('Error updating job title:', error);
+      toast.error('حدث خطأ أثناء تحديث المسمى الوظيفي');
     }
   };
 
@@ -927,7 +949,19 @@ const TrainerPayroll = () => {
                     <div className="col-span-2 flex items-center gap-1">
                       {payroll.is_dual && <Star className="w-3 h-3 text-purple-500" />}
                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الموظف:</span>
-                      <span className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1">{getTrainerName(payroll)} <span className="text-[10px] text-gray-500">({payroll.job_title})</span></span>
+                      <span className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1">
+                        {getTrainerName(payroll)} 
+                        {payroll.user_id ? (
+                          <button onClick={(e) => {
+                            e.stopPropagation();
+                            setJobTitleModal({ open: true, userId: payroll.user_id, staffName: getTrainerName(payroll), jobTitle: payroll.job_title || '' });
+                          }} className="text-[10px] text-blue-500 hover:text-blue-700 hover:underline mx-1 transition">
+                            ({payroll.job_title || 'إضافة وظيفة'})
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-gray-500 mx-1">({payroll.job_title})</span>
+                        )}
+                      </span>
                     </div>
                     
                     <div className="flex items-center gap-1">
@@ -1237,7 +1271,16 @@ const TrainerPayroll = () => {
                         </div>
                       </td>
                       <td className="py-2 px-2 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300">
-                        {payroll.job_title}
+                        {payroll.user_id ? (
+                          <button onClick={(e) => {
+                            e.stopPropagation();
+                            setJobTitleModal({ open: true, userId: payroll.user_id, staffName: getTrainerName(payroll), jobTitle: payroll.job_title || '' });
+                          }} className="hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1.5 py-1 rounded transition w-full text-center truncate max-w-[120px]" title={payroll.job_title || 'إضافة وظيفة'}>
+                            {payroll.job_title || 'إضافة وظيفة'}
+                          </button>
+                        ) : (
+                          payroll.job_title || 'مدرب'
+                        )}
                       </td>
                       <td className="font-medium py-2 px-2 text-xs text-center text-blue-600 dark:text-blue-400">
                         {formatCurrency(payroll.base_salary)}
@@ -1583,6 +1626,53 @@ const TrainerPayroll = () => {
           </div>
         </div>
       </div>
+
+      {/* Job Title Modal */}
+      {jobTitleModal.open && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
+                تعديل المسمى الوظيفي
+              </h3>
+              <button
+                onClick={() => setJobTitleModal({ open: false, userId: null, staffName: '', jobTitle: '' })}
+                className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateJobTitle} className="space-y-4">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                الموظف: <span className="font-bold text-gray-800 dark:text-gray-200">{jobTitleModal.staffName}</span>
+              </div>
+              <div>
+                <label className="label">المسمى الوظيفي الجديد</label>
+                <input
+                  type="text"
+                  value={jobTitleModal.jobTitle}
+                  onChange={(e) => setJobTitleModal({ ...jobTitleModal, jobTitle: e.target.value })}
+                  className="input w-full"
+                  placeholder="مثال: خدمة عملاء تقني / مدرب"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button type="submit" className="btn btn-primary flex-1">
+                  حفظ التعديلات
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setJobTitleModal({ open: false, userId: null, staffName: '', jobTitle: '' })}
+                  className="btn btn-secondary flex-1"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Bonus/Deduction Modal */}
       {bonusModal.open && (
