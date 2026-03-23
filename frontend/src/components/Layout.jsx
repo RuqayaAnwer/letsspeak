@@ -106,7 +106,7 @@ const Layout = ({ children }) => {
         return [
           { path: '/finance', label: 'لوحة التحكم', icon: '📊' },
           { path: '/finance/payments', label: 'المدفوعات', icon: '💳' },
-          { path: '/finance/payroll', label: 'رواتب المدربين', icon: '💰' },
+          { path: '/finance/payroll', label: 'رواتب الموظفين', icon: '💰' },
           { path: '/courses', label: 'الكورسات', icon: '📚' },
         ];
       default:

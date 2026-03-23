@@ -883,7 +883,7 @@ const TrainerPayroll = () => {
         <div className="card overflow-hidden">
           <div className="p-3 sm:p-4 border-b border-[var(--color-border)]">
             <h2 className="text-xs sm:text-lg font-bold text-[var(--color-text-primary)] text-center whitespace-nowrap">
-              تفاصيل رواتب المدربين - {months[selectedMonth - 1]?.label} {selectedYear}
+              تفاصيل رواتب الموظفين - {months[selectedMonth - 1]?.label} {selectedYear}
             </h2>
           </div>
           {/* Mobile Cards View */}
@@ -1285,12 +1285,12 @@ const TrainerPayroll = () => {
                       <td className="font-medium py-2 px-2 text-xs text-center text-blue-600 dark:text-blue-400">
                         {formatCurrency(payroll.base_salary)}
                       </td>
-                      <td className="py-2 px-2 text-center">
+                      <td className={`py-2 px-2 text-center ${!payroll.is_trainer ? 'opacity-30 bg-gray-100 dark:bg-gray-800/60 transition-all' : ''}`}>
                         <span className="badge badge-info text-[10px] px-1.5 py-0.5">
                           {payroll.completed_lectures}
                         </span>
                       </td>
-                      <td className="font-medium py-2 px-2 text-xs text-center" title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع `}
+                      <td className={`font-medium py-2 px-2 text-xs text-center ${!payroll.is_trainer ? 'opacity-30 bg-gray-100 dark:bg-gray-800/60 transition-all' : ''}`} title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع `}
                       >
                         {formatCurrency(payroll.trainer_revenue)}
                       </td>
@@ -1403,10 +1403,10 @@ const TrainerPayroll = () => {
                           </button>
                         )}
                       </td>
-                      <td className="py-2 px-2 text-center">
+                      <td className={`py-2 px-2 text-center ${!payroll.is_trainer ? 'opacity-30 bg-gray-100 dark:bg-gray-800/60 transition-all' : ''}`}>
                         <span className="badge badge-purple text-[10px] px-1.5 py-0.5">{payroll.renewals_count} تجديد</span>
                       </td>
-                      <td className="py-2 px-2 text-center">
+                      <td className={`py-2 px-2 text-center ${!payroll.is_trainer ? 'opacity-30 bg-gray-100 dark:bg-gray-800/60 transition-all' : ''}`}>
                         {(() => {
                           const bonusNames = [];
                           // مكافأة التجديد: تظهر إذا كان include_renewal_bonus true و renewals_count > 0
