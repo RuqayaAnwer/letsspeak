@@ -707,10 +707,10 @@ const TrainerPayroll = () => {
         <div>
           <h1 className="page-title flex items-center gap-1.5 sm:gap-2 text-base sm:text-2xl">
             <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-500" />
-            رواتب المدربين
+            رواتب الموظفين
           </h1>
           <p className="page-subtitle">
-            عرض رواتب المدربين والبونصات الشهرية - {months[selectedMonth - 1]?.label} {selectedYear}
+            عرض رواتب الموظفين والبونصات الشهرية - {months[selectedMonth - 1]?.label} {selectedYear}
           </p>
         </div>
 
