@@ -222,7 +222,7 @@ const CourseDetails = () => {
         return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
       case 'finished':
       case 'completed':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+        return 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300';
       case 'paused':
         return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
       default:
@@ -520,9 +520,11 @@ const CourseDetails = () => {
                   className={`transition-all duration-200 cursor-pointer ${
                     selectedRow === course.id
                       ? 'bg-blue-200 dark:bg-blue-800/50 border-2 border-blue-600 dark:border-blue-400 shadow-md ring-2 ring-blue-300 dark:ring-blue-500 ring-opacity-50'
-                      : index % 2 === 0 
-                        ? 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50' 
-                        : 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/70'
+                      : course.status === 'finished' || course.status === 'completed'
+                        ? 'bg-pink-50 dark:bg-pink-900/20 hover:bg-pink-100 dark:hover:bg-pink-900/30'
+                        : index % 2 === 0 
+                          ? 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50' 
+                          : 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/70'
                   }`}
                 >
                   <td 
@@ -668,13 +670,19 @@ const CourseDetails = () => {
               <div
                 key={course.id}
                 className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 ${
-                  index % 2 === 0 
-                    ? 'border-orange-200 dark:border-orange-800' 
-                    : 'border-orange-100 dark:border-orange-900/50'
+                  course.status === 'finished' || course.status === 'completed'
+                    ? 'border-pink-300 dark:border-pink-700 bg-pink-50/50 dark:bg-pink-900/10'
+                    : index % 2 === 0 
+                      ? 'border-orange-200 dark:border-orange-800' 
+                      : 'border-orange-100 dark:border-orange-900/50'
                 } overflow-hidden`}
               >
                 {/* Header with Status */}
-                <div className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/20 px-3 py-2 flex items-center justify-between border-b border-orange-200 dark:border-orange-800">
+                <div className={`px-3 py-2 flex items-center justify-between border-b ${
+                  course.status === 'finished' || course.status === 'completed'
+                    ? 'bg-gradient-to-r from-pink-100 to-pink-200 dark:from-pink-900/40 dark:to-pink-900/30 border-pink-300 dark:border-pink-800'
+                    : 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/20 border-orange-200 dark:border-orange-800'
+                }`}>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">#{course.id}</span>
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
