@@ -39,6 +39,8 @@ class Course extends Model
         'postponements_used',
         'extra_lectures_count',
         'extra_lectures_fee',
+        'student_max_postponements_override',
+        'trainer_max_postponements_override',
     ];
 
     protected $casts = [

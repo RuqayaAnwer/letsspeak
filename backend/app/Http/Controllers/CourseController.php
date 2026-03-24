@@ -153,6 +153,8 @@ class CourseController extends Controller
             'lecture_days' => 'required|array|min:1',
             'lecture_days.*' => 'in:sun,mon,tue,wed,thu,fri,sat',
             'is_dual' => 'sometimes|boolean',
+            'student_max_postponements_override' => 'sometimes|nullable|integer|min:0',
+            'trainer_max_postponements_override' => 'sometimes|nullable|integer|min:0',
             'renewed_with_trainer' => 'sometimes|boolean',
             'paid_amount' => 'sometimes|numeric|min:0',
             'remaining_amount' => 'sometimes|numeric|min:0',

@@ -14,6 +14,9 @@ const CoursePackages = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState(null);
+  const [packageCoursesModal, setPackageCoursesModal] = useState({ isOpen: false, package: null });
+  const [editingCourseOverrides, setEditingCourseOverrides] = useState({});
+  const [savingOverrides, setSavingOverrides] = useState({});
   const [courses, setCourses] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
@@ -165,11 +168,67 @@ const CoursePackages = () => {
     }
   };
 
+  
+  const handleOverrideChange = (courseId, field, value) => {
+    setEditingCourseOverrides(prev => ({
+      ...prev,
+      [courseId]: {
+        ...(prev[courseId] || {}),
+        [field]: value
+      }
+    }));
+  };
+
+  const saveCourseOverrides = async (course) => {
+    const overrides = editingCourseOverrides[course.id] || {};
+    try {
+      setSavingOverrides(prev => ({ ...prev, [course.id]: true }));
+      
+      const payload = {
+        student_max_postponements_override: overrides.student !== undefined ? (overrides.student === '' ? null : parseInt(overrides.student)) : course.student_max_postponements_override,
+        trainer_max_postponements_override: overrides.trainer !== undefined ? (overrides.trainer === '' ? null : parseInt(overrides.trainer)) : course.trainer_max_postponements_override,
+      };
+      
+      await api.put(`/courses/${course.id}`, payload);
+      
+      // Update local courses state
+      setCourses(prevCourses => 
+        prevCourses.map(c => 
+          c.id === course.id ? { ...c, ...payload } : c
+        )
+      );
+      
+      alert('تم تحديث تأجيلات الكورس بنجاح');
+      
+      // Clear editing state for this course
+      setEditingCourseOverrides(prev => {
+        const next = { ...prev };
+        delete next[course.id];
+        return next;
+      });
+      
+    } catch (error) {
+      console.error('Error saving overrides:', error);
+      alert('حدث خطأ أثناء حفظ التأجيلات');
+    } finally {
+      setSavingOverrides(prev => ({ ...prev, [course.id]: false }));
+    }
+  };
+
   const openModal = (pkg = null) => {
     if (pkg) {
       setEditingPackage(pkg);
-      // Always use the price as is (no conversion needed since we're storing full values)
-      const displayPrice = pkg.price?.toString() || '';
+      
+      let displayPrice = '';
+      if (pkg.price) {
+        const numPrice = parseFloat(pkg.price);
+        if (numPrice > 0 && numPrice < 1000) {
+          displayPrice = Math.floor(numPrice * 1000).toString();
+        } else {
+          displayPrice = Math.floor(numPrice).toString();
+        }
+      }
+
       console.log('Opening modal for package:', pkg.name, 'Price:', pkg.price, 'Display price:', displayPrice);
       setFormData({
         name: pkg.name,
@@ -259,7 +318,10 @@ const CoursePackages = () => {
                   
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الكورسات النشطة</span>
-                    <span className="badge badge-gray text-xs px-1.5 py-0.5">
+                    <span 
+                      className="badge badge-gray text-xs px-1.5 py-0.5 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95 transition-all"
+                      onClick={() => setPackageCoursesModal({ isOpen: true, package: pkg })}
+                    >
                       {getCoursesByPackage(pkg.id, pkg.lectures_count).length} كورس
                     </span>
                   </div>
@@ -344,7 +406,11 @@ const CoursePackages = () => {
                       </div>
                     </td>
                     <td>
-                      <span className="badge badge-gray text-[10px] sm:text-xs">
+                      <span 
+                        className="badge badge-gray text-[10px] sm:text-xs cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                        onClick={() => setPackageCoursesModal({ isOpen: true, package: pkg })}
+                        title="عرض وإدارة الكورسات"
+                      >
                         {getCoursesByPackage(pkg.id, pkg.lectures_count).length} كورس
                       </span>
                       {getCoursesByPackage(pkg.id, pkg.lectures_count).length > 0 && (
@@ -473,8 +539,80 @@ const CoursePackages = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Package Courses Modal */}
+      <Modal
+        isOpen={packageCoursesModal.isOpen}
+        onClose={() => setPackageCoursesModal({ isOpen: false, package: null })}
+        title={`كورسات الباقة: ${packageCoursesModal.package?.name || ''}`}
+      >
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+          {packageCoursesModal.package && getCoursesByPackage(packageCoursesModal.package.id, packageCoursesModal.package.lectures_count).length === 0 ? (
+            <div className="text-center py-8 text-gray-500">لا توجد كورسات مرتبطة بهذه الباقة حالياً</div>
+          ) : (
+            <div className="space-y-4">
+              {packageCoursesModal.package && getCoursesByPackage(packageCoursesModal.package.id, packageCoursesModal.package.lectures_count).map(course => {
+                const overrides = editingCourseOverrides[course.id] || {};
+                const studentVal = overrides.student !== undefined ? overrides.student : (course.student_max_postponements_override ?? '');
+                const trainerVal = overrides.trainer !== undefined ? overrides.trainer : (course.trainer_max_postponements_override ?? '');
+                const hasChanges = overrides.student !== undefined || overrides.trainer !== undefined;
+
+                return (
+                  <div key={course.id} className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">كورس #{course.id}</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          الطالب: <span className="font-medium text-gray-700 dark:text-gray-300">{getStudentName(course)}</span>
+                        </p>
+                      </div>
+                      <span className={`text-[10px] px-2 py-1 rounded-full ${course.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-800'}`}>
+                        {course.status}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-1">تأجيلات الطالب (فارغ = حسب الباقة)</label>
+                        <input 
+                          type="number" 
+                          className="w-full text-xs px-2 py-1 border rounded focus:ring-1 focus:ring-orange-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                          value={studentVal}
+                          onChange={(e) => handleOverrideChange(course.id, 'student', e.target.value)}
+                          placeholder={packageCoursesModal.package.trainee_max_postponements}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-1">تأجيلات المدرب (فارغ = حسب الباقة)</label>
+                        <input 
+                          type="number" 
+                          className="w-full text-xs px-2 py-1 border rounded focus:ring-1 focus:ring-orange-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                          value={trainerVal}
+                          onChange={(e) => handleOverrideChange(course.id, 'trainer', e.target.value)}
+                          placeholder={packageCoursesModal.package.trainer_max_postponements}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end pt-2 border-t border-gray-200 dark:border-gray-600">
+                      <button 
+                        onClick={() => saveCourseOverrides(course)}
+                        disabled={!hasChanges || savingOverrides[course.id]}
+                        className={`text-xs px-3 py-1.5 rounded transition-colors ${!hasChanges ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-primary-600 text-white hover:bg-primary-700'}`}
+                      >
+                        {savingOverrides[course.id] ? 'جاري الحفظ...' : 'حفظ تعديلات هذا الكورس'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };
 
 export default CoursePackages;
+

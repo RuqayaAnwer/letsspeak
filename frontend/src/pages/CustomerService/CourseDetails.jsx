@@ -4,8 +4,11 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { formatDateSimple } from '../../utils/dateFormat';
 import { formatCurrency } from '../../utils/currencyFormat';
+import { useAuth } from '../../context/AuthContext';
 
 const CourseDetails = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,7 +18,48 @@ const CourseDetails = () => {
   const [selectedRow, setSelectedRow] = useState(null); // Track selected row
   const [editingCell, setEditingCell] = useState(null); // Track which cell is being edited {courseId, field}
   const [editValue, setEditValue] = useState(''); // Value being edited
-  const [notesModal, setNotesModal] = useState({ open: false, courseId: null, notes: '' }); // Notes modal state
+  const [notesModal, setNotesModal] = useState({ open: false, courseId: null, notes: '' });
+  const [postponementModal, setPostponementModal] = useState({ open: false, courseId: null, student: '', trainer: '' });
+
+  const openPostponementModal = (course) => {
+    if (!isAdmin) return;
+    setPostponementModal({
+      open: true,
+      courseId: course.id,
+      student: course.student_max_postponements_override !== null && course.student_max_postponements_override !== undefined ? course.student_max_postponements_override : '',
+      trainer: course.trainer_max_postponements_override !== null && course.trainer_max_postponements_override !== undefined ? course.trainer_max_postponements_override : ''
+    });
+  };
+
+  const savePostponements = async () => {
+    try {
+      setUpdatingStatus(prev => ({ ...prev, [postponementModal.courseId]: true }));
+      const payload = {
+        student_max_postponements_override: postponementModal.student === '' ? null : parseInt(postponementModal.student),
+        trainer_max_postponements_override: postponementModal.trainer === '' ? null : parseInt(postponementModal.trainer)
+      };
+      await api.put(`/courses/${postponementModal.courseId}`, payload);
+      
+      setCourses(prevCourses =>
+        prevCourses.map(c =>
+          c.id === postponementModal.courseId ? { 
+            ...c, 
+            student_max_postponements_override: payload.student_max_postponements_override,
+            trainer_max_postponements_override: payload.trainer_max_postponements_override,
+            max_student_postponements: payload.student_max_postponements_override !== null ? payload.student_max_postponements_override : c.max_student_postponements,
+            max_trainer_postponements: payload.trainer_max_postponements_override !== null ? payload.trainer_max_postponements_override : c.max_trainer_postponements
+          } : c
+        )
+      );
+      setPostponementModal({ open: false, courseId: null, student: '', trainer: '' });
+    } catch (err) {
+      console.error('Error saving postponements:', err);
+      alert('حدث خطأ أثناء حفظ التعديلات');
+    } finally {
+      setUpdatingStatus(prev => ({ ...prev, [postponementModal.courseId]: false }));
+    }
+  };
+ // Notes modal state
 
   useEffect(() => {
     fetchCourses();
@@ -532,8 +576,13 @@ const CourseDetails = () => {
                     ) : '-'}
                   </td>
                   <td 
-                    className="px-0.5 py-0.5 text-center text-[5px] whitespace-nowrap"
-                    onClick={() => setSelectedRow(course.id)}
+                    className={`px-0.5 py-0.5 text-center text-[5px] whitespace-nowrap ${isAdmin ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''}`}
+                    title={isAdmin ? "انقر لتعديل حدود التأجيل لهذا الكورس" : ""}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedRow(course.id);
+                      if (isAdmin) openPostponementModal(course);
+                    }}
                   >
                     <div className="flex flex-col items-center gap-0.5">
                       <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-1 rounded-sm" title="تأجيلات الطالب">
@@ -772,6 +821,63 @@ const CourseDetails = () => {
               </button>
               <button
                 onClick={() => setNotesModal({ open: false, courseId: null, notes: '' })}
+                className="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Postponement Modal */}
+      {postponementModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setPostponementModal({ open: false, courseId: null, student: '', trainer: '' })}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+              تعديل حدود التأجيل الكورس
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  الحد الأقصى لتأجيلات الطالب (فارغ = حسب الباقة)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={postponementModal.student}
+                  onChange={(e) => setPostponementModal(prev => ({ ...prev, student: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500"
+                  placeholder="مثال: 3"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  الحد الأقصى لتأجيلات المدرب (فارغ = حسب الباقة)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={postponementModal.trainer}
+                  onChange={(e) => setPostponementModal(prev => ({ ...prev, trainer: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500"
+                  placeholder="مثال: 3"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={savePostponements}
+                disabled={updatingStatus[postponementModal.courseId]}
+                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {updatingStatus[postponementModal.courseId] ? 'جاري الحفظ...' : 'حفظ'}
+              </button>
+              <button
+                onClick={() => setPostponementModal({ open: false, courseId: null, student: '', trainer: '' })}
                 className="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors"
               >
                 إلغاء

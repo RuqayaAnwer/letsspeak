@@ -170,6 +170,11 @@ class LecturePostponementService
 
     public function getTrainerMaxPostponementsForCourse(Course $course): int
     {
+        // Check for course-specific override first
+        if ($course->trainer_max_postponements_override !== null) {
+            return (int) $course->trainer_max_postponements_override;
+        }
+
         $course->loadMissing('coursePackage');
         if ($course->coursePackage && isset($course->coursePackage->trainer_max_postponements)) {
             return (int) $course->coursePackage->trainer_max_postponements;
@@ -182,6 +187,11 @@ class LecturePostponementService
      */
     public function getMaxPostponementsForCourse(Course $course): int
     {
+        // Check for course-specific override first
+        if ($course->student_max_postponements_override !== null) {
+            return (int) $course->student_max_postponements_override;
+        }
+
         $course->loadMissing('coursePackage');
         if ($course->coursePackage) {
             // Always respect the Database setting if explicitly set by admin in UI
