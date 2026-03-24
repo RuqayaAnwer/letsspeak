@@ -663,8 +663,9 @@ class CourseController extends Controller
         $course->total_amount += $fee;
         $course->save();
 
-        // Find the last active/scheduled lecture date to continue from
-        $lastLecture = $course->lectures()->orderBy('date', 'desc')->orderBy('time', 'desc')->first();
+        // Find the last active/scheduled lecture date to continue from.
+        // Important: use reorder() because the Course->lectures() relationship has a default orderBy('lecture_number')
+        $lastLecture = $course->lectures()->reorder('date', 'desc')->orderBy('time', 'desc')->first();
         
         $startDate = $lastLecture && $lastLecture->date 
             ? Carbon::parse($lastLecture->date)->addDay()->startOfDay() 
