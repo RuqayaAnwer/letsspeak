@@ -522,9 +522,11 @@ const CourseDetails = () => {
                       ? 'bg-blue-200 dark:bg-blue-800/50 border-2 border-blue-600 dark:border-blue-400 shadow-md ring-2 ring-blue-300 dark:ring-blue-500 ring-opacity-50'
                       : course.status === 'finished' || course.status === 'completed'
                         ? 'bg-pink-50 dark:bg-pink-900/20 hover:bg-pink-100 dark:hover:bg-pink-900/30'
-                        : index % 2 === 0 
-                          ? 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50' 
-                          : 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/70'
+                        : course.extra_lectures_count > 0
+                          ? 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30'
+                          : index % 2 === 0 
+                            ? 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50' 
+                            : 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/70'
                   }`}
                 >
                   <td 
@@ -672,16 +674,20 @@ const CourseDetails = () => {
                 className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 ${
                   course.status === 'finished' || course.status === 'completed'
                     ? 'border-pink-300 dark:border-pink-700 bg-pink-50/50 dark:bg-pink-900/10'
-                    : index % 2 === 0 
-                      ? 'border-orange-200 dark:border-orange-800' 
-                      : 'border-orange-100 dark:border-orange-900/50'
+                    : course.extra_lectures_count > 0
+                      ? 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10'
+                      : index % 2 === 0 
+                        ? 'border-orange-200 dark:border-orange-800' 
+                        : 'border-orange-100 dark:border-orange-900/50'
                 } overflow-hidden`}
               >
                 {/* Header with Status */}
                 <div className={`px-3 py-2 flex items-center justify-between border-b ${
                   course.status === 'finished' || course.status === 'completed'
                     ? 'bg-gradient-to-r from-pink-100 to-pink-200 dark:from-pink-900/40 dark:to-pink-900/30 border-pink-300 dark:border-pink-800'
-                    : 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/20 border-orange-200 dark:border-orange-800'
+                    : course.extra_lectures_count > 0
+                      ? 'bg-gradient-to-r from-amber-100 to-amber-200 dark:from-amber-900/40 dark:to-amber-900/30 border-amber-300 dark:border-amber-800'
+                      : 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/20 border-orange-200 dark:border-orange-800'
                 }`}>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">#{course.id}</span>
