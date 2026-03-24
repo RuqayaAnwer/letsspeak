@@ -155,7 +155,9 @@ const CourseDetails = () => {
   const [startingCourse, setStartingCourse] = useState(false);
 
   // Extra lectures modal (Customer service)
-  const [extraLecturesModal, setExtraLecturesModal] = useState({ open: false, count: 1, fee: 0, saving: false });
+  const [extraLecturesModal, setExtraLecturesModal] = useState({ 
+    open: false, count: 1, fee: 0, isPaid: true, paymentMethod: 'cash', saving: false 
+  });
 
   // Packages and trainers for renewal reset modal
   const [packages, setPackages] = useState([]);
@@ -302,10 +304,12 @@ const CourseDetails = () => {
       const response = await api.post(`/courses/${id}/add-extra-lectures`, {
         count: extraLecturesModal.count,
         fee: extraLecturesModal.fee,
+        is_paid: extraLecturesModal.isPaid,
+        payment_method: extraLecturesModal.isPaid ? extraLecturesModal.paymentMethod : null,
       });
       if (response.data.success) {
         alert('تم إضافة المحاضرات الإضافية بنجاح');
-        setExtraLecturesModal({ open: false, count: 1, fee: 0, saving: false });
+        setExtraLecturesModal({ open: false, count: 1, fee: 0, isPaid: true, paymentMethod: 'cash', saving: false });
         fetchCourse();
       } else {
         alert(response.data.message || 'حدث خطأ');
@@ -1392,7 +1396,7 @@ const CourseDetails = () => {
           {isCustomerService && (
             <>
               <button
-                onClick={() => setExtraLecturesModal({ open: true, count: 1, fee: 0, saving: false })}
+                onClick={() => setExtraLecturesModal({ open: true, count: 1, fee: 0, isPaid: true, paymentMethod: course?.payment_method || 'cash', saving: false })}
                 className="btn-secondary flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700 mt-2 sm:mt-0"
                 title="إضافة محاضرات إضافية"
               >
@@ -3059,7 +3063,7 @@ const CourseDetails = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div 
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => !extraLecturesModal.saving && setExtraLecturesModal({ open: false, count: 1, fee: 0, saving: false })}
+            onClick={() => !extraLecturesModal.saving && setExtraLecturesModal({ open: false, count: 1, fee: 0, isPaid: true, paymentMethod: 'cash', saving: false })}
           />
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden relative z-10 animate-scale-up border border-[var(--color-border)]">
             <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50">
@@ -3067,7 +3071,7 @@ const CourseDetails = () => {
                 إضافة محاضرات إضافية
               </h3>
               <button 
-                onClick={() => setExtraLecturesModal({ open: false, count: 1, fee: 0, saving: false })}
+                onClick={() => setExtraLecturesModal({ open: false, count: 1, fee: 0, isPaid: true, paymentMethod: 'cash', saving: false })}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
                 disabled={extraLecturesModal.saving}
               >
@@ -3097,10 +3101,41 @@ const CourseDetails = () => {
                   className="input py-2"
                 />
               </div>
+              
+              {extraLecturesModal.fee > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800/50 space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={extraLecturesModal.isPaid}
+                      onChange={(e) => setExtraLecturesModal(prev => ({ ...prev, isPaid: e.target.checked }))}
+                      className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-bold text-blue-900 dark:text-blue-100">
+                      تم استلام المبلغ للصندوق الآن
+                    </span>
+                  </label>
+                  
+                  {extraLecturesModal.isPaid && (
+                    <div>
+                      <label className="label text-xs mb-1">طريقة الدفع للمبلغ الإضافي</label>
+                      <select
+                        value={extraLecturesModal.paymentMethod}
+                        onChange={(e) => setExtraLecturesModal(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                        className="input py-1.5 text-sm"
+                      >
+                        <option value="cash">نقدي (صندوق المركز)</option>
+                        <option value="zain_cash">زين كاش</option>
+                        <option value="qi_card">كي كارد</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-2 pt-2">
                 <button
-                  onClick={() => setExtraLecturesModal({ open: false, count: 1, fee: 0, saving: false })}
+                  onClick={() => setExtraLecturesModal({ open: false, count: 1, fee: 0, isPaid: true, paymentMethod: 'cash', saving: false })}
                   className="btn-secondary flex-1"
                   disabled={extraLecturesModal.saving}
                 >

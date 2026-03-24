@@ -277,7 +277,7 @@ class CourseController extends Controller
                                 'course_id' => $course->id,
                                 'student_id' => $studentId,
                                 'amount' => $paidAmount,
-                                'payment_method' => null,
+                                'payment_method' => $studentPayment['payment_method'] ?? $request->payment_method,
                                 'status' => 'completed',
                                 'payment_date' => $request->start_date ?? now()->toDateString(),
                                 'receipt_number' => null,
@@ -296,7 +296,7 @@ class CourseController extends Controller
                             'course_id' => $course->id,
                             'student_id' => $studentId,
                             'amount' => $paidAmount,
-                            'payment_method' => null,
+                            'payment_method' => $request->payment_method,
                             'status' => 'completed',
                             'payment_date' => $request->start_date ?? now()->toDateString(),
                             'receipt_number' => null,
@@ -316,7 +316,7 @@ class CourseController extends Controller
                         'course_id' => $course->id,
                         'student_id' => $primaryStudentId,
                         'amount' => $paidAmount,
-                        'payment_method' => null,
+                        'payment_method' => $request->payment_method,
                         'status' => 'completed',
                         'payment_date' => $request->start_date ?? now()->toDateString(),
                         'receipt_number' => null,
@@ -651,6 +651,8 @@ class CourseController extends Controller
         $request->validate([
             'count' => 'required|integer|min:1',
             'fee'   => 'required|numeric|min:0',
+            'is_paid' => 'boolean',
+            'payment_method' => 'nullable|string',
         ]);
 
         $count = (int) $request->input('count');
@@ -661,6 +663,33 @@ class CourseController extends Controller
         
         $course->lectures_count += $count;
         $course->total_amount += $fee;
+        
+        // If the user specified they received the money now, create a Payment and increase amount_paid
+        $isPaid = $request->boolean('is_paid');
+        if ($isPaid && $fee > 0) {
+            $paymentMethod = $request->input('payment_method', 'cash');
+            
+            // Assume the payment is from the primary student OR just the first student
+            $studentId = $course->students()->first()->id ?? null;
+            
+            if ($studentId) {
+                \App\Models\Payment::create([
+                    'course_id' => $course->id,
+                    'student_id' => $studentId,
+                    'amount' => $fee,
+                    'payment_method' => $paymentMethod,
+                    'status' => 'completed',
+                    'payment_date' => now()->toDateString(),
+                    'receipt_number' => null,
+                    'notes' => 'وارد من المحاضرات الإضافية',
+                    'recorded_by' => $user->id ?? null,
+                ]);
+                
+                // Also reflect this in the course amount_paid cache (optional, since the model has a mutator, but let's be safe)
+                $course->amount_paid += $fee;
+            }
+        }
+        
         $course->save();
 
         // Find the last active/scheduled lecture date to continue from.
