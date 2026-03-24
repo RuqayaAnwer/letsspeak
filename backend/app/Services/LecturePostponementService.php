@@ -649,17 +649,35 @@ class LecturePostponementService
      */
     public function getPostponementStats(Course $course): array
     {
-        $totalPostponements = $course->postponement_count;
         $makeupLectures = $course->lectures()->makeup()->count();
-        $maxAllowed = $this->getMaxPostponementsForCourse($course);
-        $remaining = max(0, $maxAllowed - $totalPostponements);
+
+        $studentUsed = $course->student_postponement_count;
+        $studentMax = $this->getMaxPostponementsForCourse($course);
+        $studentRemaining = max(0, $studentMax - $studentUsed);
+
+        $trainerUsed = $course->trainer_postponement_count;
+        $trainerMax = $this->getTrainerMaxPostponementsForCourse($course);
+        $trainerRemaining = max(0, $trainerMax - $trainerUsed);
 
         return [
-            'total_postponements' => $totalPostponements,
+            'total_postponements' => $studentUsed, // fallback to student for older clients
             'makeup_lectures_created' => $makeupLectures,
-            'max_allowed' => $maxAllowed,
-            'remaining' => $remaining,
-            'can_postpone' => $remaining > 0,
+            'max_allowed' => $studentMax,
+            'remaining' => $studentRemaining,
+            'can_postpone' => ($studentRemaining > 0 || $trainerRemaining > 0),
+            
+            'student' => [
+                'used' => $studentUsed,
+                'max' => $studentMax,
+                'remaining' => $studentRemaining,
+                'can_postpone' => $studentRemaining > 0,
+            ],
+            'trainer' => [
+                'used' => $trainerUsed,
+                'max' => $trainerMax,
+                'remaining' => $trainerRemaining,
+                'can_postpone' => $trainerRemaining > 0,
+            ]
         ];
     }
 

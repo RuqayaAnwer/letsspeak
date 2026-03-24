@@ -2434,25 +2434,49 @@ const CourseDetails = () => {
             
             <div className="space-y-5">
               {/* Postponement Stats */}
-              {postponementStats && (
-                <div className={`p-3 rounded-lg ${
-                  postponementStats.can_postpone 
-                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
-                    : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-                }`}>
-                  <div className="flex items-center gap-2">
-                    {postponementStats.can_postpone ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
+              {postponementStats && (() => {
+                const isStudent = postponeModal.selectedType === 'postponed_by_student';
+                const isTrainer = postponeModal.selectedType === 'postponed_by_trainer';
+                
+                let activeStats = postponementStats;
+                let title = 'التأجيلات';
+                
+                if (isStudent && postponementStats.student) {
+                  activeStats = postponementStats.student;
+                  title = 'تأجيلات الطالب';
+                } else if (isTrainer && postponementStats.trainer) {
+                  activeStats = postponementStats.trainer;
+                  title = 'تأجيلات المدرب';
+                }
+
+                return (
+                  <div className={`p-3 rounded-lg flex flex-col gap-2 ${
+                    activeStats.can_postpone 
+                      ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
+                      : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {activeStats.can_postpone ? (
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <AlertTriangle className="w-5 h-5 text-red-600" />
+                        )}
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                          {title}: {activeStats.used ?? activeStats.total_postponements} / {(activeStats.max > 0 || activeStats.max_allowed > 0 ? (activeStats.max ?? activeStats.max_allowed) : 3)}
+                          {!activeStats.can_postpone && ' (تم الوصول للحد الأقصى)'}
+                        </span>
+                      </div>
+                    </div>
+                    {(!isStudent && !isTrainer) && postponementStats.student && postponementStats.trainer && (
+                      <div className="text-[10px] text-gray-600 dark:text-gray-400 mt-1 flex gap-4">
+                        <span>• الطالب: {postponementStats.student.used} / {postponementStats.student.max}</span>
+                        <span>• المدرب: {postponementStats.trainer.used} / {postponementStats.trainer.max}</span>
+                      </div>
                     )}
-                    <span className="text-sm">
-                      التأجيلات: {postponementStats.total_postponements} / {(postponementStats.max_allowed > 0 ? postponementStats.max_allowed : 3)}
-                      {!postponementStats.can_postpone && ' (تم الوصول للحد الأقصى)'}
-                    </span>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* New Date Selection */}
               <div>
@@ -2647,14 +2671,14 @@ const CourseDetails = () => {
                   !postponeModal.selectedType || 
                   !postponeModal.newDate || 
                   postponeModal.checking || 
-                  (postponementStats && !postponementStats.can_postpone) ||
+                  ((postponementStats && postponeModal.selectedType === 'postponed_by_student' && postponementStats.student) ? !postponementStats.student.can_postpone : (postponementStats && postponeModal.selectedType === 'postponed_by_trainer' && postponementStats.trainer) ? !postponementStats.trainer.can_postpone : (postponementStats && !postponementStats.can_postpone)) ||
                   (postponeModal.conflicts && postponeModal.conflicts.length > 0 && !postponeModal.forceOverride)
                 }
                 className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
                   postponeModal.selectedType && 
                   postponeModal.newDate && 
                   !postponeModal.checking && 
-                  (!postponementStats || postponementStats.can_postpone) &&
+                  ((postponementStats && postponeModal.selectedType === 'postponed_by_student' && postponementStats.student) ? postponementStats.student.can_postpone : (postponementStats && postponeModal.selectedType === 'postponed_by_trainer' && postponementStats.trainer) ? postponementStats.trainer.can_postpone : (!postponementStats || postponementStats.can_postpone)) &&
                   (!postponeModal.conflicts || postponeModal.conflicts.length === 0 || postponeModal.forceOverride)
                     ? 'bg-primary-600 text-white hover:bg-primary-700'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500'
