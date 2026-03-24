@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, AlertTriangle, Info, X, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, PlusCircle, AlertTriangle, Info, X, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../api/axios';
 import { formatCurrency } from '../../utils/currencyFormat';
 import PackageBadge from '../../components/PackageBadge';
