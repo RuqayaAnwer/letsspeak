@@ -1346,7 +1346,7 @@ const CourseDetails = () => {
             <p className="page-subtitle">رقم الكورس: #{course.id}</p>
             {course.extra_lectures_count > 0 && (
               <span className="badge badge-info mt-1 inline-flex mb-2 text-[11px]">
-                 <span className="font-bold ml-1">{course.extra_lectures_count}</span> محاضرات إضافية (المبلغ: {course.extra_lectures_fee} د.ع)
+                 <span className="font-bold ml-1">{course.extra_lectures_count}</span> محاضرات إضافية (المبلغ: {formatCurrency(course.extra_lectures_fee)})
               </span>
             )}
             {/* أيام المحاضرات + تاريخ أول دفعة + تاريخ بدء الكورس الفعلي */}

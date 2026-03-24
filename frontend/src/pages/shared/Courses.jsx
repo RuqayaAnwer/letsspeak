@@ -458,7 +458,11 @@ const Courses = () => {
                   className={`p-3 rounded-lg border-2 ${
                     is75Percent 
                       ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-500' 
-                      : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50'
+                      : course.extra_lectures_count > 0
+                        ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50'
+                        : course.status === 'finished'
+                          ? 'bg-pink-50 dark:bg-pink-900/10 border-pink-200 dark:border-pink-800/40'
+                          : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50'
                   }`}
                 >
                   <div className="space-y-1.5">
@@ -499,6 +503,19 @@ const Courses = () => {
                         )}
                       </div>
                     </div>
+                    
+                    {course.extra_lectures_count > 0 && (
+                      <div className="flex items-center justify-between bg-amber-100/50 dark:bg-amber-800/20 p-1.5 rounded-lg -mx-1 px-2 border-l-2 border-amber-400 text-[10px]">
+                        <span className="font-semibold flex items-center gap-1 text-amber-800 dark:text-amber-200">
+                          <PlusCircle className="w-3.5 h-3.5" />
+                          <span>إضافية:</span>
+                          <span className="font-bold mx-0.5">{course.extra_lectures_count}</span>
+                        </span>
+                        <span className="text-amber-700 dark:text-amber-300 font-bold whitespace-nowrap">
+                          {formatCurrency(course.extra_lectures_fee)}
+                        </span>
+                      </div>
+                    )}
                     
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-500 dark:text-gray-400">المدرب</span>
@@ -592,8 +609,14 @@ const Courses = () => {
                 return (
                   <tr 
                     key={course.id} 
-                    className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
-                      is75Percent ? 'bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500' : ''
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 p-1 rounded-xl transition-all ${
+                      is75Percent 
+                        ? 'bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500' 
+                        : course.extra_lectures_count > 0
+                          ? 'bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-400'
+                          : course.status === 'finished'
+                            ? 'bg-pink-50/70 dark:bg-pink-900/10 shadow-sm opacity-90'
+                            : ''
                     }`}
                   >
                     <td className="px-2 py-2 text-center text-gray-800 dark:text-white font-bold">
@@ -626,6 +649,14 @@ const Courses = () => {
                           >
                             <HelpCircle className="w-4 h-4" />
                           </button>
+                        )}
+                        {course.extra_lectures_count > 0 && (
+                          <div className="w-full flex justify-center mt-1">
+                            <span className="flex items-center gap-1 bg-amber-100 dark:bg-amber-900/40 text-[9px] text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded">
+                              <span className="font-bold">+{course.extra_lectures_count}</span> إضافية
+                              <span className="mx-0.5 font-bold">({formatCurrency(course.extra_lectures_fee)})</span>
+                            </span>
+                          </div>
                         )}
                       </div>
                     </td>
@@ -790,6 +821,16 @@ const Courses = () => {
                   <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">
                     الطلاب: {studentPaymentsModal.course.students.map(s => s.name).join(' - ')}
                   </p>
+                )}
+                {studentPaymentsModal.course?.extra_lectures_count > 0 && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 bg-amber-100 dark:bg-amber-900/40 px-2 py-1 rounded border border-amber-200 dark:border-amber-700/50">
+                    <span className="text-amber-800 dark:text-amber-200 text-[10px] sm:text-xs font-bold">
+                      يوجد {studentPaymentsModal.course.extra_lectures_count} محاضرات إضافية
+                    </span>
+                    <span className="text-amber-600 dark:text-amber-400 text-[10px] sm:text-xs font-semibold">
+                      (إجمالي المبلغ المضاف للصندوق: {formatCurrency(studentPaymentsModal.course.extra_lectures_fee)})
+                    </span>
+                  </div>
                 )}
               </div>
               <button
