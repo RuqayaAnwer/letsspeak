@@ -1101,9 +1101,13 @@ const Payments = () => {
     
     // Calculate price based on course type (dual or single)
     const studentPrice = getStudentPriceForPackage(selectedPackage?.name, isDual);
-    const packagePrice = isDual && studentPrice > 0 
+    let packagePrice = isDual && studentPrice > 0 
       ? studentPrice 
       : (selectedPackage ? (selectedPackage.price || 0) : 0);
+      
+    // Add extra lectures fee
+    const extraFee = parseFloat(selectedCourse?.extra_lectures_fee) || 0;
+    packagePrice += isDual ? (extraFee / 2) : extraFee;
     
     const paidAmount = normalizeAmount(formData.amount) || 0;
     const remainingAmount = packagePrice - paidAmount;
@@ -1123,9 +1127,13 @@ const Payments = () => {
     
     // Calculate price based on course type (dual or single)
     const studentPrice = getStudentPriceForPackage(selectedPackage?.name, isDual);
-    const packagePrice = isDual && studentPrice > 0 
+    let packagePrice = isDual && studentPrice > 0 
       ? studentPrice 
       : (selectedPackage ? (selectedPackage.price || 0) : 0);
+      
+    // Add extra lectures fee
+    const extraFee = parseFloat(selectedCourse?.extra_lectures_fee) || 0;
+    packagePrice += isDual ? (extraFee / 2) : extraFee;
     
     const remainingAmount = packagePrice - paidAmount;
     

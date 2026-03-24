@@ -384,11 +384,14 @@ class CourseController extends Controller
             'student_max_postponements_override' => 'sometimes|nullable|integer|min:0',
             'trainer_max_postponements_override' => 'sometimes|nullable|integer|min:0',
             'notes' => 'sometimes|nullable|string',
+            'extra_lectures_count' => 'sometimes|nullable|integer|min:0',
+            'extra_lectures_fee' => 'sometimes|nullable|numeric|min:0',
         ]);
 
         $course->update($request->only([
             'status', 'lecture_time', 'lecture_days', 'trainer_payment_status', 'renewal_status',
-            'student_max_postponements_override', 'trainer_max_postponements_override', 'notes'
+            'student_max_postponements_override', 'trainer_max_postponements_override', 'notes',
+            'extra_lectures_count', 'extra_lectures_fee'
         ]));
 
         $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);
