@@ -381,9 +381,15 @@ class CourseController extends Controller
             'lecture_days.*' => 'in:sun,mon,tue,wed,thu,fri,sat',
             'trainer_payment_status' => 'sometimes|required|in:unpaid,paid',
             'renewal_status' => 'sometimes|in:alert,messaged,subscribed',
+            'student_max_postponements_override' => 'sometimes|nullable|integer|min:0',
+            'trainer_max_postponements_override' => 'sometimes|nullable|integer|min:0',
+            'notes' => 'sometimes|nullable|string',
         ]);
 
-        $course->update($request->only(['status', 'lecture_time', 'lecture_days', 'trainer_payment_status', 'renewal_status']));
+        $course->update($request->only([
+            'status', 'lecture_time', 'lecture_days', 'trainer_payment_status', 'renewal_status',
+            'student_max_postponements_override', 'trainer_max_postponements_override', 'notes'
+        ]));
 
         $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);
         
