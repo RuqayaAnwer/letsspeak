@@ -1332,7 +1332,14 @@ const Payments = () => {
                                     
                                     <div className="flex items-center gap-1">
                                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الباقة:</span>
-                                      <span className="text-sm font-medium text-gray-800 dark:text-white truncate">{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</span>
+                                      <div className="flex flex-col">
+                                        <span className="text-sm font-medium text-gray-800 dark:text-white truncate">{payment.course?.course_package?.name || payment.course?.coursePackage?.name || '-'}</span>
+                                        {payment.course?.extra_lectures_count > 0 && (
+                                          <span className="text-[9px] text-amber-600 dark:text-amber-400 font-bold">
+                                            +{payment.course.extra_lectures_count} إضافية
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                     
                                     <div className="flex items-center gap-1">
@@ -2368,6 +2375,11 @@ const Payments = () => {
                 </div>
                 <p className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400">
                   الكورس رقم: {paymentInfoModal.courseId}
+                  {paymentInfoModal.course?.extra_lectures_count > 0 && (
+                    <span className="mr-2 inline-flex items-center px-1.5 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 rounded font-bold text-[10px]" title={`يحتوي على ${paymentInfoModal.course.extra_lectures_count} محاضرات إضافية (+ ${paymentInfoModal.course.extra_lectures_fee} د.ع)`}>
+                      +{paymentInfoModal.course.extra_lectures_count} محاضرات إضافية
+                    </span>
+                  )}
                 </p>
                 {paymentInfoModal.course?.is_dual && paymentInfoModal.course?.students && paymentInfoModal.course.students.length > 1 && (
                   <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1">

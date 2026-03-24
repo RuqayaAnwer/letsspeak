@@ -537,6 +537,11 @@ const CourseDetails = () => {
                     onClick={() => setSelectedRow(course.id)}
                   >
                     {course.student_name}
+                    {course.extra_lectures_count > 0 && (
+                      <span className="inline-block mr-1 px-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 rounded font-bold" title={`يحتوي على ${course.extra_lectures_count} محاضرات إضافية`}>
+                        +{course.extra_lectures_count}
+                      </span>
+                    )}
                   </td>
                   <td 
                     className="px-0.5 py-0.5 text-center text-[5px] text-gray-600 dark:text-gray-400 truncate" 
@@ -674,6 +679,11 @@ const CourseDetails = () => {
                     <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">#{course.id}</span>
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
                       {course.student_name}
+                      {course.extra_lectures_count > 0 && (
+                        <span className="inline-block mr-1 px-1.5 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 rounded font-bold text-[10px]" title={`يحتوي على ${course.extra_lectures_count} محاضرات إضافية`}>
+                          +{course.extra_lectures_count} إضافية
+                        </span>
+                      )}
                     </span>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-medium ${getStatusBadge(course.status)}`}>
