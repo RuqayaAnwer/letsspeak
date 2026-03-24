@@ -57,10 +57,25 @@ const CoursePackages = () => {
 
   const fetchCourses = async () => {
     try {
-      const response = await api.get('/courses');
-      const coursesData = response.data?.data || response.data || [];
-      // Handle paginated response
-      const allCourses = Array.isArray(coursesData) ? coursesData : (coursesData.data || []);
+      let allCourses = [];
+      let currentPage = 1;
+      let hasMorePages = true;
+
+      while (hasMorePages) {
+        const response = await api.get(`/courses?page=${currentPage}&per_page=100`);
+        const data = response.data;
+        
+        if (data.data && Array.isArray(data.data)) {
+          allCourses = [...allCourses, ...data.data];
+          hasMorePages = data.current_page < data.last_page;
+          currentPage++;
+        } else if (Array.isArray(data)) {
+          allCourses = [...allCourses, ...data];
+          hasMorePages = false;
+        } else {
+          hasMorePages = false;
+        }
+      }
       setCourses(allCourses);
     } catch (error) {
       console.error('Error fetching courses:', error);
@@ -71,7 +86,7 @@ const CoursePackages = () => {
     return courses.filter(course => {
       const coursePackageId = course.course_package_id || course.coursePackage?.id || course.course_package?.id;
       const courseLecturesCount = course.lectures_count || course.course_package?.lectures_count || course.coursePackage?.lectures_count;
-      return coursePackageId === packageId && courseLecturesCount === lecturesCount;
+      return Number(coursePackageId) === Number(packageId) && Number(courseLecturesCount) === Number(lecturesCount);
     });
   };
 
