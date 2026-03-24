@@ -85,8 +85,8 @@ const CoursePackages = () => {
   const getCoursesByPackage = (packageId, lecturesCount) => {
     return courses.filter(course => {
       const coursePackageId = course.course_package_id || course.coursePackage?.id || course.course_package?.id;
-      const courseLecturesCount = course.lectures_count || course.course_package?.lectures_count || course.coursePackage?.lectures_count;
-      return Number(coursePackageId) === Number(packageId) && Number(courseLecturesCount) === Number(lecturesCount);
+      if (!coursePackageId) return false;
+      return Number(coursePackageId) === Number(packageId);
     });
   };
 
