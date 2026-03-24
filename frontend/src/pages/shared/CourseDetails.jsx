@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { formatDateShort } from '../../utils/dateFormat';
+import { formatCurrency } from '../../utils/currencyFormat';
 import {
   ArrowRight,
   User,
