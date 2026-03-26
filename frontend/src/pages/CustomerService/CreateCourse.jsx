@@ -6,6 +6,7 @@ import { formatTime12Hour } from '../../utils/timeFormat';
 import { formatDate } from '../../utils/dateFormat';
 import { formatCurrencyAmount } from '../../utils/currencyFormat';
 import { ArrowRight, BookOpen, Calendar, Users, User, UserPlus, CreditCard } from 'lucide-react';
+import Select from 'react-select';
 
 const CreateCourse = () => {
   const navigate = useNavigate();
@@ -432,6 +433,58 @@ const CreateCourse = () => {
     return <LoadingSpinner size="lg" />;
   }
 
+  // Prepare options for react-select
+  const studentOptions = students.map(student => ({
+    value: student.id,
+    label: `${student.name} - ${student.phone}`
+  }));
+
+  const trainerOptions = trainers.map(trainer => ({
+    value: trainer.id,
+    label: `${trainer.name || trainer.user?.name} ${trainer.specialty ? `- ${trainer.specialty}` : ''}`
+  }));
+
+  // Custom styles for react-select to match our UI
+  const selectStyles = {
+    control: (base, state) => ({
+      ...base,
+      borderColor: state.isFocused ? 'var(--color-primary-500)' : 'var(--color-border)',
+      boxShadow: state.isFocused ? '0 0 0 1px var(--color-primary-500)' : 'none',
+      '&:hover': {
+        borderColor: 'var(--color-primary-400)'
+      },
+      padding: '0.125rem',
+      borderRadius: '0.5rem',
+      backgroundColor: 'transparent'
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isSelected 
+        ? 'var(--color-primary-500)' 
+        : state.isFocused 
+          ? 'var(--color-primary-50)' 
+          : 'transparent',
+      color: state.isSelected ? 'white' : 'inherit',
+      cursor: 'pointer'
+    }),
+    menu: (base) => ({
+      ...base,
+      zIndex: 50,
+      backgroundColor: 'var(--color-bg-primary)',
+      border: '1px solid var(--color-border)',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      borderRadius: '0.5rem'
+    }),
+    input: (base) => ({
+      ...base,
+      color: 'var(--color-text-primary)'
+    }),
+    singleValue: (base) => ({
+      ...base,
+      color: 'var(--color-text-primary)'
+    })
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
       {/* Header */}
@@ -500,49 +553,41 @@ const CreateCourse = () => {
             <div className={`grid gap-3 sm:gap-4 ${isDual ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
               <div>
                 <label className="label">{isDual ? 'الطالب الأول *' : 'الطالب *'}</label>
-                <select
-                  value={formData.student_ids[0]}
-                  onChange={(e) => {
+                <Select
+                  options={studentOptions.filter(o => o.value.toString() !== formData.student_ids[1])}
+                  value={studentOptions.find(o => o.value.toString() === formData.student_ids[0]) || null}
+                  onChange={(selected) => {
                     const newIds = [...formData.student_ids];
-                    newIds[0] = e.target.value;
+                    newIds[0] = selected ? selected.value.toString() : '';
                     setFormData({ ...formData, student_ids: newIds });
                   }}
-                  className="select"
-                  required
-                >
-                  <option value="">اختر الطالب</option>
-                  {students
-                    .filter(s => s.id.toString() !== formData.student_ids[1])
-                    .map((student) => (
-                      <option key={student.id} value={student.id}>
-                        {student.name} - {student.phone}
-                      </option>
-                    ))}
-                </select>
+                  isClearable
+                  isSearchable
+                  placeholder="ابحث واختر الطالب الأول..."
+                  noOptionsMessage={() => "لا يوجد طلاب مطابقين للبحث"}
+                  styles={selectStyles}
+                  className="text-sm"
+                />
               </div>
 
               {isDual && (
                 <div>
                   <label className="label">الطالب الثاني *</label>
-                  <select
-                    value={formData.student_ids[1]}
-                    onChange={(e) => {
+                  <Select
+                    options={studentOptions.filter(o => o.value.toString() !== formData.student_ids[0])}
+                    value={studentOptions.find(o => o.value.toString() === formData.student_ids[1]) || null}
+                    onChange={(selected) => {
                       const newIds = [...formData.student_ids];
-                      newIds[1] = e.target.value;
+                      newIds[1] = selected ? selected.value.toString() : '';
                       setFormData({ ...formData, student_ids: newIds });
                     }}
-                    className="select"
-                    required={isDual}
-                  >
-                    <option value="">اختر الطالب الثاني</option>
-                    {students
-                      .filter(s => s.id.toString() !== formData.student_ids[0])
-                      .map((student) => (
-                        <option key={student.id} value={student.id}>
-                          {student.name} - {student.phone}
-                        </option>
-                      ))}
-                  </select>
+                    isClearable
+                    isSearchable
+                    placeholder="ابحث واختر الطالب الثاني..."
+                    noOptionsMessage={() => "لا يوجد طلاب مطابقين للبحث"}
+                    styles={selectStyles}
+                    className="text-sm"
+                  />
                 </div>
               )}
             </div>
@@ -550,19 +595,17 @@ const CreateCourse = () => {
             {/* Trainer */}
             <div>
               <label className="label">المدرب *</label>
-              <select
-                value={formData.trainer_id}
-                onChange={(e) => setFormData({ ...formData, trainer_id: e.target.value })}
-                className="select"
-                required
-              >
-                <option value="">اختر المدرب</option>
-                {trainers.map((trainer) => (
-                  <option key={trainer.id} value={trainer.id}>
-                    {trainer.name || trainer.user?.name} {trainer.specialty ? `- ${trainer.specialty}` : ''}
-                  </option>
-                ))}
-              </select>
+              <Select
+                options={trainerOptions}
+                value={trainerOptions.find(o => o.value.toString() === formData.trainer_id) || null}
+                onChange={(selected) => setFormData({ ...formData, trainer_id: selected ? selected.value.toString() : '' })}
+                isClearable
+                isSearchable
+                placeholder="ابحث واختر المدرب..."
+                noOptionsMessage={() => "لا يوجد مدربين مطابقين للبحث"}
+                styles={selectStyles}
+                className="text-sm"
+              />
             </div>
 
           </div>
