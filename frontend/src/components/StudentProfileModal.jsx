@@ -6,6 +6,7 @@ import {
   AlertCircle, CreditCard, ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react';
 import LoadingSpinner from './LoadingSpinner';
+import { formatCurrency, formatCurrencyAmount } from '../utils/currencyFormat';
 
 const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
   const [loading, setLoading] = useState(true);
@@ -197,7 +198,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">إجمالي المدفوعات</p>
                     <p className="text-xl font-bold text-gray-800 dark:text-gray-200">
-                      {(profileData.financials.total_paid).toLocaleString()} <span className="text-xs font-normal">د.ع</span>
+                      {formatCurrency(profileData.financials.total_paid)}
                     </p>
                   </div>
                 </div>
@@ -209,7 +210,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">إجمالي الديون (المتبقي)</p>
                     <p className="text-xl font-bold text-rose-600 dark:text-rose-400">
-                      {(profileData.financials.total_remaining).toLocaleString()} <span className="text-xs font-normal text-rose-500">د.ع</span>
+                      {formatCurrency(profileData.financials.total_remaining)}
                     </p>
                   </div>
                 </div>
@@ -271,11 +272,11 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                               </div>
                               <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
                                 <span className="text-xs text-gray-500 block mb-1">المدفوع لهذا الكورس</span>
-                                <span className="font-bold text-emerald-600">{(course.paid_amount || 0).toLocaleString('en-US')}</span>
+                                <span className="font-bold text-emerald-600">{formatCurrencyAmount(course.paid_amount || 0)}</span>
                               </div>
                               <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
                                 <span className="text-xs text-gray-500 block mb-1">المتبقي (ديون)</span>
-                                <span className="font-bold text-rose-600">{(course.remaining_amount || 0).toLocaleString('en-US')}</span>
+                                <span className="font-bold text-rose-600">{formatCurrencyAmount(course.remaining_amount || 0)}</span>
                               </div>
                             </div>
                             
@@ -295,7 +296,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                                         {p.date}
                                       </span>
                                       <span className="font-bold text-emerald-600">
-                                        {(p.amount || 0).toLocaleString('en-US')} <span className="font-normal text-[10px] text-gray-500">د.ع</span>
+                                        {formatCurrency(p.amount || 0)}
                                       </span>
                                     </div>
                                   ))}
