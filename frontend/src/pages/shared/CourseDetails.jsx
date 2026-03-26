@@ -813,9 +813,11 @@ const CourseDetails = () => {
   /**
    * Save non-postponement lecture changes (attendance, notes, etc.)
    */
-  const saveLectures = async () => {
+  const saveLectures = async (showSuccessAlert = true) => {
     if (Object.keys(editedLectures).length === 0) return;
+    const keysSent = Object.keys(editedLectures);
 
+    // Capture the keys we are about to save
     setSaving(true);
     try {
       // Prepare lectures data - ensure each lecture has an id
@@ -854,7 +856,12 @@ const CourseDetails = () => {
       console.log('Save response:', response.data);
       
       if (response.data.success) {
-        setEditedLectures({});
+        // Only clear the keys we actually sent, preserving edits made during the API call
+        setEditedLectures(prev => {
+          const next = { ...prev };
+          keysSent.forEach(k => delete next[k]);
+          return next;
+        });
         // Fetch course to get updated data
         const courseResponse = await api.get(`/courses/${id}`);
         if (courseResponse.data) {
@@ -869,6 +876,9 @@ const CourseDetails = () => {
           fetchCourse();
         }
         console.log('Lectures saved successfully');
+        if (showSuccessAlert) {
+          alert('تم حفظ التغييرات بنجاح');
+        }
       } else {
         alert(response.data.message || 'حدث خطأ أثناء الحفظ');
       }
@@ -883,6 +893,17 @@ const CourseDetails = () => {
       setSaving(false);
     }
   };
+
+  // Auto-save edited lectures after 1.5 seconds of inactivity
+  useEffect(() => {
+    const saveTimer = setTimeout(() => {
+      if (Object.keys(editedLectures).length > 0 && !saving) {
+        saveLectures(false); // auto-save without alert
+      }
+    }, 1500);
+    return () => clearTimeout(saveTimer);
+  }, [editedLectures, saving]);
+
 
   const getAttendanceLabel = (attendance) => {
     const labels = { 
@@ -1383,16 +1404,20 @@ const CourseDetails = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {Object.keys(editedLectures).length > 0 && (
-            <button
-              onClick={saveLectures}
-              disabled={saving}
-              className="btn-primary flex items-center gap-2"
-            >
-              <Save className="w-5 h-5" />
-              {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-            </button>
-          )}
+          <div className="flex items-center gap-2 mr-2">
+            {saving && (
+              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 font-medium transition-all bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                <span className="animate-spin inline-block w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full"></span>
+                جاري الحفظ...
+              </span>
+            )}
+            {!saving && Object.keys(editedLectures).length === 0 && (
+              <span className="text-xs text-green-600 dark:text-green-500 flex items-center gap-1 opacity-70 font-medium">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                مزامنة
+              </span>
+            )}
+          </div>
           {isCustomerService && (
             <>
               <button
