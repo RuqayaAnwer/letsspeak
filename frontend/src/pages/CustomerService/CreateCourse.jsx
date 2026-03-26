@@ -17,6 +17,27 @@ const CreateCourse = () => {
   const [packages, setPackages] = useState([]);
   const [isDual, setIsDual] = useState(false);
 
+  // Add Student Modal State
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [addingStudent, setAddingStudent] = useState(false);
+  const [addStudentTarget, setAddStudentTarget] = useState(0); // 0 for Student 1, 1 for Student 2
+  const [newStudentData, setNewStudentData] = useState({
+    name: '',
+    phone: '',
+    level: '',
+    gender: 'male',
+  });
+
+  const levels = [
+    { value: 'A1', label: 'مبتدئ (A1)' },
+    { value: 'A2', label: 'أساسي (A2)' },
+    { value: 'B1', label: 'متوسط (B1)' },
+    { value: 'B2', label: 'فوق المتوسط (B2)' },
+    { value: 'C1', label: 'متقدم (C1)' },
+    { value: 'C2', label: 'متقن (C2)' },
+    { value: 'kids', label: 'أطفال' },
+  ];
+
   const [formData, setFormData] = useState({
     student_ids: ['', ''],
     trainer_id: '',
@@ -429,6 +450,39 @@ const CreateCourse = () => {
     }
   };
 
+  const handleAddStudentSubmit = async (e) => {
+    e.preventDefault();
+    setAddingStudent(true);
+    
+    try {
+      const response = await api.post('/students', newStudentData);
+      
+      if (response.data.success || response.data.data) {
+        const createdStudent = response.data.data || response.data;
+        alert('تم إضافة الطالب بنجاح');
+        
+        // Refresh students list
+        const studentsRes = await api.get('/students');
+        const studentsList = studentsRes.data?.data || studentsRes.data || [];
+        setStudents(Array.isArray(studentsList) ? studentsList : []);
+        
+        // Auto select the new student
+        const newIds = [...formData.student_ids];
+        newIds[addStudentTarget] = createdStudent.id.toString();
+        setFormData({ ...formData, student_ids: newIds });
+        
+        // Close modal and reset
+        setIsAddStudentModalOpen(false);
+        setNewStudentData({ name: '', phone: '', level: '', gender: 'male' });
+      }
+    } catch (error) {
+      console.error('Error adding student:', error);
+      alert(error.response?.data?.message || 'حدث خطأ أثناء إضافة الطالب');
+    } finally {
+      setAddingStudent(false);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner size="lg" />;
   }
@@ -552,7 +606,16 @@ const CreateCourse = () => {
             {/* Students */}
             <div className={`grid gap-3 sm:gap-4 ${isDual ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
               <div>
-                <label className="label">{isDual ? 'الطالب الأول *' : 'الطالب *'}</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="label mb-0">{isDual ? 'الطالب الأول *' : 'الطالب *'}</label>
+                  <button 
+                    type="button" 
+                    onClick={() => { setAddStudentTarget(0); setIsAddStudentModalOpen(true); }}
+                    className="text-xs text-primary-600 hover:text-primary-800 font-bold flex items-center gap-1"
+                  >
+                    + إضافة طالب جديد
+                  </button>
+                </div>
                 <Select
                   options={studentOptions.filter(o => o.value.toString() !== formData.student_ids[1])}
                   value={studentOptions.find(o => o.value.toString() === formData.student_ids[0]) || null}
@@ -572,7 +635,16 @@ const CreateCourse = () => {
 
               {isDual && (
                 <div>
-                  <label className="label">الطالب الثاني *</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="label mb-0">الطالب الثاني *</label>
+                    <button 
+                      type="button" 
+                      onClick={() => { setAddStudentTarget(1); setIsAddStudentModalOpen(true); }}
+                      className="text-xs text-primary-600 hover:text-primary-800 font-bold flex items-center gap-1"
+                    >
+                      + إضافة طالب جديد
+                    </button>
+                  </div>
                   <Select
                     options={studentOptions.filter(o => o.value.toString() !== formData.student_ids[0])}
                     value={studentOptions.find(o => o.value.toString() === formData.student_ids[1]) || null}
@@ -902,6 +974,103 @@ const CreateCourse = () => {
           </button>
         </div>
       </form>
+
+      {/* Add Student Modal */}
+      {isAddStudentModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => !addingStudent && setIsAddStudentModalOpen(false)}
+          />
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden relative z-[101] animate-scale-up border border-[var(--color-border)]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50">
+              <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
+                إضافة طالب جديد
+              </h3>
+              <button 
+                onClick={() => setIsAddStudentModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                disabled={addingStudent}
+              >
+                <div className="text-2xl leading-none">&times;</div>
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddStudentSubmit} className="p-4 space-y-4">
+              <div>
+                <label className="label text-sm mb-1">اسم الطالب رباعي *</label>
+                <input
+                  type="text"
+                  value={newStudentData.name}
+                  onChange={(e) => setNewStudentData({ ...newStudentData, name: e.target.value })}
+                  className="input py-2"
+                  placeholder="مثال: علي محمد حسن عباس"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="label text-sm mb-1">رقم الهاتف *</label>
+                <input
+                  type="tel"
+                  value={newStudentData.phone}
+                  onChange={(e) => setNewStudentData({ ...newStudentData, phone: e.target.value })}
+                  className="input py-2"
+                  placeholder="07XX XXX XXXX"
+                  dir="ltr"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label text-sm mb-1">الجنس</label>
+                  <select
+                    value={newStudentData.gender}
+                    onChange={(e) => setNewStudentData({ ...newStudentData, gender: e.target.value })}
+                    className="select py-2"
+                  >
+                    <option value="male">ذكر</option>
+                    <option value="female">أنثى</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="label text-sm mb-1">المستوى</label>
+                  <select
+                    value={newStudentData.level}
+                    onChange={(e) => setNewStudentData({ ...newStudentData, level: e.target.value })}
+                    className="select py-2"
+                  >
+                    <option value="">غير محدد</option>
+                    {levels.map(l => (
+                      <option key={l.value} value={l.value}>{l.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStudentModalOpen(false)}
+                  className="btn-secondary flex-1"
+                  disabled={addingStudent}
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary flex-1"
+                  disabled={addingStudent}
+                >
+                  {addingStudent ? 'جاري الإضافة...' : 'حفظ وإضافة'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
