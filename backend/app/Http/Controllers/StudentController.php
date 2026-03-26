@@ -130,7 +130,8 @@ class StudentController extends Controller
             }
 
             // Student specific payments for this course
-            $studentPaidCourse = $payments->where('course_id', $course->id)->where('status', 'completed')->sum('amount');
+            $coursePayments = $payments->where('course_id', $course->id);
+            $studentPaidCourse = $coursePayments->whereIn('status', ['paid', 'completed', 'partial'])->sum('amount');
             $studentRemainingCourse = max(0, $coursePrice - $studentPaidCourse);
             
             $totalDebt += $studentRemainingCourse;
@@ -146,6 +147,13 @@ class StudentController extends Controller
                 'status' => $course->status,
                 'lectures_count' => $course->lectures_count,
                 'completed_lectures' => 0,
+                'payments' => $coursePayments->filter(function($p) { return in_array($p->status, ['paid', 'completed', 'partial']); })->map(function ($payment) {
+                    return [
+                        'amount' => (float)$payment->amount,
+                        'date' => $payment->payment_date ? \Carbon\Carbon::parse($payment->payment_date)->format('Y-m-d') : ($payment->created_at ? $payment->created_at->format('Y-m-d') : date('Y-m-d')),
+                        'status' => $payment->status,
+                    ];
+                })->values()->toArray(),
                 'paid_amount' => $studentPaidCourse,
                 'remaining_amount' => $studentRemainingCourse,
             ];

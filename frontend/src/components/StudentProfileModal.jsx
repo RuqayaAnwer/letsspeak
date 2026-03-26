@@ -258,7 +258,6 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                           </div>
                         </div>
 
-                        {/* Expandable Details */}
                         {expandedCourse === course.id && (
                           <div className="px-4 pb-4 pt-2 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 animate-fade-in text-sm">
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
@@ -272,13 +271,37 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                               </div>
                               <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
                                 <span className="text-xs text-gray-500 block mb-1">المدفوع لهذا الكورس</span>
-                                <span className="font-bold text-emerald-600">{(course.paid_amount).toLocaleString()}</span>
+                                <span className="font-bold text-emerald-600">{(course.paid_amount || 0).toLocaleString('en-US')}</span>
                               </div>
                               <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
                                 <span className="text-xs text-gray-500 block mb-1">المتبقي (ديون)</span>
-                                <span className="font-bold text-rose-600">{(course.remaining_amount).toLocaleString()}</span>
+                                <span className="font-bold text-rose-600">{(course.remaining_amount || 0).toLocaleString('en-US')}</span>
                               </div>
                             </div>
+                            
+                            {/* Payments List */}
+                            {course.payments && course.payments.length > 0 && (
+                              <div className="mt-3">
+                                <h5 className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">الدفعات المؤكدة:</h5>
+                                <div className="space-y-1.5">
+                                  {course.payments.map((p, idx) => (
+                                    <div key={idx} className="flex items-center justify-between text-xs bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                                      <span className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+                                        <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
+                                        دفعة رقم {idx + 1}
+                                      </span>
+                                      <span className="text-gray-500 flex items-center gap-1">
+                                        <Calendar className="w-3.5 h-3.5" />
+                                        {p.date}
+                                      </span>
+                                      <span className="font-bold text-emerald-600">
+                                        {(p.amount || 0).toLocaleString('en-US')} <span className="font-normal text-[10px] text-gray-500">د.ع</span>
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

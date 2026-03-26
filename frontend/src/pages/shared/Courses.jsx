@@ -1319,6 +1319,13 @@ const Courses = () => {
           </div>
         </div>
       )}
+
+      {/* Student Profile Modal */}
+      <StudentProfileModal 
+        isOpen={!!profileModalStudentId} 
+        onClose={() => setProfileModalStudentId(null)} 
+        studentId={profileModalStudentId} 
+      />
     </div>
   );
 };
