@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, HelpCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertTriangle, HelpCircle, X, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
 import api from '../../api/axios';
 import { formatCurrency } from '../../utils/currencyFormat';
 import PackageBadge from '../../components/PackageBadge';
+import StudentProfileModal from '../../components/StudentProfileModal';
 
 const CourseAlerts = () => {
   // Helper function to get package name (handles custom packages)
@@ -23,6 +24,9 @@ const CourseAlerts = () => {
     loading: false,
   });
   const [alertsPage, setAlertsPage] = useState(1); // Pagination for mobile cards
+  
+  // Profile Modal State
+  const [profileModalStudentId, setProfileModalStudentId] = useState(null);
 
   useEffect(() => {
     fetchCourses();
@@ -254,17 +258,26 @@ const CourseAlerts = () => {
                               {course.is_dual && course.students && course.students.length > 1 ? (
                                 <div className="flex flex-col items-center gap-0.5 text-center">
                                   {course.students.map(student => (
-                                    <span key={student.id} className="text-[10px] font-bold text-gray-800 dark:text-white">{student.name}</span>
+                                    <button 
+                                      key={student.id} 
+                                      onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(student.id); }}
+                                      className="text-[10px] font-bold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline focus:outline-none"
+                                    >
+                                      {student.name}
+                                    </button>
                                   ))}
                                 </div>
                               ) : (
                                 <div className="flex items-center justify-center gap-1">
-                                  <span className="text-[10px] font-bold text-gray-800 dark:text-white text-center">
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(getStudentId(course)); }}
+                                    className="text-[10px] font-bold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline focus:outline-none text-center"
+                                  >
                                     {course.student_name || 
                                      (course.students && course.students.length > 0 
                                        ? course.students.map(s => s.name).join(', ') 
                                        : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
-                                  </span>
+                                  </button>
                                   {getStudentId(course) && (
                                     <button
                                       onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id)}
@@ -399,12 +412,22 @@ const CourseAlerts = () => {
                       <td className="px-2 py-2 text-center text-gray-800 dark:text-white text-[10px] font-medium">{course.id}</td>
                       <td className="px-2 py-2 text-center text-gray-800 dark:text-white text-[10px]">
                         <div className="flex items-center justify-center gap-1">
-                          <span className="font-bold">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(getStudentId(course)); }}
+                            className="font-bold flex items-center justify-center gap-1 hover:text-primary-600 dark:hover:text-primary-400 hover:underline focus:outline-none"
+                            title="عرض ملف الطالب"
+                          >
                             {course.student_name || 
                              (course.students && course.students.length > 0 
-                               ? course.students.map(s => s.name).join(', ') 
+                               ? course.students.map((s, idx) => (
+                                   <React.Fragment key={s.id}>
+                                     {idx > 0 && <span className="font-normal mx-0.5 text-gray-400">و</span>}
+                                     <span onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(s.id); }}>{s.name}</span>
+                                   </React.Fragment>
+                                 ))
                                : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
-                          </span>
+                            <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
+                          </button>
                           {getStudentId(course) && (
                             <button
                               onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id)}
@@ -673,6 +696,13 @@ const CourseAlerts = () => {
           </div>
         </div>
       )}
+
+      {/* Student Profile Modal */}
+      <StudentProfileModal 
+        isOpen={!!profileModalStudentId} 
+        onClose={() => setProfileModalStudentId(null)} 
+        studentId={profileModalStudentId} 
+      />
     </div>
   );
 };
