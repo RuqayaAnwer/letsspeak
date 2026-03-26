@@ -196,9 +196,9 @@ class StudentController extends Controller
                 }
 
                 // Process Homework
-                if (in_array($homework, ['completed', 'incomplete', 'not_completed'])) {
+                if (in_array($homework, ['yes', 'partial', 'no'])) {
                     $homeworkAssigned++;
-                    if (in_array($homework, ['completed', 'partially_completed'])) {
+                    if (in_array($homework, ['yes', 'partial'])) {
                         $homeworkCompleted++;
                     }
                 }

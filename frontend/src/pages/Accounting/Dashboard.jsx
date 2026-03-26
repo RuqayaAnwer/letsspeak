@@ -3,15 +3,17 @@ import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import StatCard from '../../components/StatCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { DollarSign, CreditCard, Users, CheckCircle, BookOpen, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DollarSign, CreditCard, Users, CheckCircle, BookOpen, TrendingUp, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
 import { formatDateSimple } from '../../utils/dateFormat';
 import { formatCurrency } from '../../utils/currencyFormat';
+import StudentProfileModal from '../../components/StudentProfileModal';
 
 const AccountingDashboard = () => {
   const [stats, setStats] = useState(null);
   const [paymentStats, setPaymentStats] = useState(null);
   const [recentPayments, setRecentPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [profileModalStudentId, setProfileModalStudentId] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -252,7 +254,13 @@ const AccountingDashboard = () => {
                           
                           <div className="col-span-2 flex items-center gap-1">
                             <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الطالب:</span>
-                            <span className="text-[10px] font-semibold text-gray-800 dark:text-white truncate flex-1">{payment.student?.name || '-'}</span>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(payment.student_id); }}
+                              className="text-[10px] font-semibold text-gray-800 dark:text-white truncate flex-1 text-right hover:text-primary-600 dark:hover:text-primary-400 hover:underline flex items-center gap-1"
+                            >
+                              {payment.student?.name || '-'}
+                              <UserCircle className="w-3 h-3 opacity-60 inline-flex flex-shrink-0" />
+                            </button>
                           </div>
                           
                           <div className="flex items-center gap-1">
@@ -322,7 +330,14 @@ const AccountingDashboard = () => {
                     {formatDateSimple(payment.payment_date || payment.date)}
                   </td>
                   <td className="font-semibold text-[var(--color-text-primary)] text-xs sm:text-sm">
-                    {payment.student?.name}
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(payment.student_id); }}
+                      className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline flex items-center gap-1"
+                      title="عرض ملف الطالب"
+                    >
+                      {payment.student?.name || '-'}
+                      <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
+                    </button>
                   </td>
                   <td className="text-xs sm:text-sm">
                     <div className="flex flex-col items-start min-w-0">
@@ -365,6 +380,13 @@ const AccountingDashboard = () => {
           </table>
         </div>
       </div>
+
+      {/* Student Profile Modal */}
+      <StudentProfileModal 
+        isOpen={!!profileModalStudentId} 
+        onClose={() => setProfileModalStudentId(null)} 
+        studentId={profileModalStudentId} 
+      />
     </div>
   );
 };

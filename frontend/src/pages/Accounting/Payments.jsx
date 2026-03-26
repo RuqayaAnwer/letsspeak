@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react';
-import api from '../../api/axios';
 import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import EmptyState from '../../components/EmptyState';
-import { Plus, Search, CreditCard, X, Edit2, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDateSimple } from '../../utils/dateFormat';
+
+import {
+  CreditCard, Search, Edit2, Trash2, Plus,
+  X, AlertTriangle, ChevronLeft, ChevronRight, Info, BookOpen, Clock, Activity, Send, CheckCircle, GraduationCap,
+  UserCircle
+} from 'lucide-react';
+import api from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
 import { formatCurrency } from '../../utils/currencyFormat';
+import EmptyState from '../../components/EmptyState';
+import StudentProfileModal from '../../components/StudentProfileModal';
 
 
 // Helper to normalize amounts (so 150 becomes 150000)
@@ -51,15 +58,19 @@ const Payments = () => {
     notes: '',
   });
   const [submitting, setSubmitting] = useState(false);
-  const [paymentInfoModal, setPaymentInfoModal] = useState({
+  // State for the Student Info Modal
+  const [studentInfoModal, setStudentInfoModal] = useState({
     open: false,
     studentId: null,
     courseId: null,
     studentName: '',
-    course: null, // Store course object for dual courses
-    payments: [],
-    loading: false,
+    payment: null, // Full payment object to extract initial partial payment dates
+    financialData: null,
+    loading: false
   });
+
+  // Profile Modal State
+  const [profileModalStudentId, setProfileModalStudentId] = useState(null);
   const [paymentCompletionModal, setPaymentCompletionModal] = useState({
     open: false,
     studentName: '',
@@ -134,10 +145,10 @@ const Payments = () => {
       let hasMorePages = true;
 
       while (hasMorePages) {
-        const response = await api.get('/payments', { 
-          params: { ...params, page: currentPage } 
+        const response = await api.get('/payments', {
+          params: { ...params, page: currentPage }
         });
-        
+
         const responseData = response.data;
         // تشخيص: شكل الاستجابة (للمساعدة إذا اختفت البيانات)
         if (currentPage === 1) {
@@ -153,7 +164,7 @@ const Payments = () => {
           : Array.isArray(responseData)
             ? responseData
             : [];
-        
+
         if (paymentsData.length > 0) {
           allPayments = [...allPayments, ...paymentsData];
           hasMorePages = responseData?.current_page < responseData?.last_page;
@@ -172,16 +183,16 @@ const Payments = () => {
         const nameB = (b.student?.name || '').toLowerCase();
         const courseA = (a.course?.course_package?.name || a.course?.coursePackage?.name || '').toLowerCase();
         const courseB = (b.course?.course_package?.name || b.course?.coursePackage?.name || '').toLowerCase();
-        
+
         // First sort by student name
         const nameCompare = nameA.localeCompare(nameB, 'ar');
         if (nameCompare !== 0) return nameCompare;
-        
+
         // If same student name, sort by course name
         // This ensures each course appears as a separate entry
         return courseA.localeCompare(courseB, 'ar');
       });
-      
+
       setPayments(sortedPayments);
       console.log('Payments fetched:', sortedPayments.length);
     } catch (err) {
@@ -247,7 +258,7 @@ const Payments = () => {
         const response = await api.get('/courses', { params: { page: currentPage } });
         const responseData = response.data;
         const coursesData = responseData?.data || responseData || [];
-        
+
         if (Array.isArray(coursesData) && coursesData.length > 0) {
           allCourses = [...allCourses, ...coursesData];
           hasMorePages = responseData?.current_page < responseData?.last_page;
@@ -259,7 +270,7 @@ const Payments = () => {
 
       // Filter dual courses and ensure they have students loaded
       const dualCourses = allCourses.filter(c => c.is_dual && c.students && c.students.length > 1);
-      
+
       // For each dual course, fetch full details to ensure students are loaded
       const dualCoursesWithStudents = await Promise.all(
         dualCourses.map(async (course) => {
@@ -299,7 +310,7 @@ const Payments = () => {
         notes: formData.notes || '',
       };
       await api.post('/payments', data);
-      
+
       // Check if payment is completed (remaining amount is 0)
       if (parseFloat(formData.remaining_amount) === 0 && formData.student_id) {
         // Wait a bit to ensure the payment is saved, then fetch all payments for this student
@@ -335,9 +346,9 @@ const Payments = () => {
       });
 
       const allPayments = response.data?.data || response.data || [];
-      
+
       // Filter completed/paid payments
-      const completedPayments = allPayments.filter(p => 
+      const completedPayments = allPayments.filter(p =>
         p.status === 'completed' || p.status === 'paid'
       );
 
@@ -353,10 +364,10 @@ const Payments = () => {
             payments: [],
           };
         }
-        
+
         // Get payment date - prioritize payment_date, then date, then created_at
         const paymentDate = payment.payment_date || payment.date || payment.created_at;
-        
+
         // Add payment with unique ID to avoid duplicates
         coursesPaymentsMap[courseId].payments.push({
           id: payment.id, // Use payment ID to ensure uniqueness
@@ -376,11 +387,11 @@ const Payments = () => {
           // This preserves the original order of when payments were created
           const createdA = new Date(a.created_at || a.date || 0);
           const createdB = new Date(b.created_at || b.date || 0);
-          
+
           if (createdA.getTime() !== createdB.getTime()) {
             return createdA - createdB;
           }
-          
+
           // Second priority: If creation dates are the same, sort by ID (oldest first)
           // This ensures consistent ordering
           return (a.id || 0) - (b.id || 0);
@@ -388,7 +399,7 @@ const Payments = () => {
       });
 
       // Convert to array and sort by course name
-      const coursesPayments = Object.values(coursesPaymentsMap).sort((a, b) => 
+      const coursesPayments = Object.values(coursesPaymentsMap).sort((a, b) =>
         a.courseName.localeCompare(b.courseName, 'ar')
       );
 
@@ -431,14 +442,14 @@ const Payments = () => {
       const packageId = course?.course_package_id || course?.coursePackage?.id || '';
       const rawPrice = course?.course_package?.price || course?.coursePackage?.price || 0;
       const packagePrice = getPackagePrice(rawPrice);
-      
+
       // Calculate total paid for this course and student
       const totalPaid = payments
         .filter(p => p.course_id === payment.course_id && p.student_id === payment.student_id && p.status === 'completed')
         .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
-      
+
       const remainingAmount = packagePrice - totalPaid;
-      
+
       setFormData({
         student_id: payment.student_id.toString(),
         course_id: payment.course_id.toString(),
@@ -523,15 +534,14 @@ const Payments = () => {
     return price < 1000 ? price * 1000 : price;
   };
 
-  // Calculate remaining amount for a course (total paid vs package price)
   // Calculate price per student for dual courses
   const getStudentPrice = (course) => {
     if (!course) return 0;
-    
+
     const packageName = course.course_package?.name || course.coursePackage?.name || '';
     const isDual = course.is_dual || false;
     const extraFee = parseFloat(course.extra_lectures_fee) || 0;
-    
+
     // For dual courses, each student pays a fixed amount based on package
     if (isDual) {
       let basePrice = 0;
@@ -544,7 +554,7 @@ const Payments = () => {
       }
       return basePrice + (extraFee / 2);
     }
-    
+
     // For single courses, use the full package price (with conversion if needed)
     const rawPrice = course.course_package?.price || course.coursePackage?.price || 0;
     return getPackagePrice(rawPrice) + extraFee;
@@ -554,26 +564,26 @@ const Payments = () => {
   const calculateRemainingAmount = (payment) => {
     const course = payment.course;
     if (!course) return 0;
-    
+
     // Get the price for this specific student (handles dual courses)
     const studentPrice = getStudentPrice(course);
     if (studentPrice === 0) return 0; // No price set, consider as completed
-    
+
     // Calculate total paid for THIS SPECIFIC COURSE AND STUDENT ONLY
     // IMPORTANT: Filter by BOTH course_id AND student_id
     // This handles:
     // 1. Same student in different courses (each course separate)
     // 2. Different students in same course (each student separate)
     const totalPaid = payments
-      .filter(p => 
-        p.course_id === payment.course_id && 
-        p.student_id === payment.student_id && 
+      .filter(p =>
+        p.course_id === payment.course_id &&
+        p.student_id === payment.student_id &&
         p.status === 'completed'
       )
       .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
-    
+
     const remaining = studentPrice - totalPaid;
-    
+
     return remaining > 0 ? remaining : 0;
   };
 
@@ -589,11 +599,11 @@ const Payments = () => {
   // Get first payment date for a student in a specific course
   const getFirstPaymentDate = (studentId, courseId) => {
     if (!studentId || !courseId) return null;
-    
+
     const coursePayments = payments
-      .filter(p => 
-        p.student_id === studentId && 
-        p.course_id === courseId && 
+      .filter(p =>
+        p.student_id === studentId &&
+        p.course_id === courseId &&
         (p.status === 'completed' || p.status === 'paid')
       )
       .sort((a, b) => {
@@ -604,9 +614,9 @@ const Payments = () => {
         }
         return (a.id || 0) - (b.id || 0);
       });
-    
+
     if (coursePayments.length === 0) return null;
-    
+
     const firstPayment = coursePayments[0];
     return firstPayment.payment_date || firstPayment.date || firstPayment.created_at;
   };
@@ -617,17 +627,17 @@ const Payments = () => {
     const packageId = course?.course_package_id || course?.coursePackage?.id || '';
     const rawPrice = course?.course_package?.price || course?.coursePackage?.price || 0;
     const packagePrice = getPackagePrice(rawPrice);
-    
+
     // Calculate total paid for this course
     const totalPaid = payments
       .filter(p => p.course_id === payment.course_id && p.student_id === payment.student_id && p.status === 'completed')
       .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
-    
+
     const remainingAmount = packagePrice - totalPaid;
-    
+
     // Get payment date and format it to YYYY-MM-DD for date input
     let paymentDate = null;
-    
+
     // Try different date fields in order of priority
     if (payment.payment_date) {
       paymentDate = payment.payment_date;
@@ -636,16 +646,16 @@ const Payments = () => {
     } else if (payment.created_at) {
       paymentDate = payment.created_at;
     }
-    
+
     // Format date to YYYY-MM-DD for HTML date input
     if (paymentDate) {
       // Convert to string if not already
       const dateStr = String(paymentDate);
-      
+
       // Handle ISO 8601 format (e.g., "2025-12-25T00:00:00.000000Z")
       if (dateStr.includes('T')) {
         paymentDate = dateStr.split('T')[0];
-      } 
+      }
       // Handle space-separated format (e.g., "2025-12-25 00:00:00")
       else if (dateStr.includes(' ')) {
         paymentDate = dateStr.split(' ')[0];
@@ -667,29 +677,29 @@ const Payments = () => {
       // Fallback to today's date if no date found
       paymentDate = new Date().toISOString().split('T')[0];
     }
-    
+
     // Final validation: ensure it's in YYYY-MM-DD format
     if (!paymentDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
       console.warn('Invalid date format, using today:', paymentDate);
       paymentDate = new Date().toISOString().split('T')[0];
     }
-    
+
     // Ensure paymentDate is a valid YYYY-MM-DD string
     const todayDate = new Date().toISOString().split('T')[0];
-    
+
     console.log('Payment date loaded:', paymentDate, 'from payment:', {
       payment_date: payment.payment_date,
       date: payment.date,
       created_at: payment.created_at,
       formatted_date: paymentDate
     });
-    
+
     // Double-check the date format before setting
     if (!paymentDate || !paymentDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
       console.warn('Invalid date format detected, using today:', paymentDate);
       paymentDate = todayDate;
     }
-    
+
     setEditingPayment(payment);
     setEditFormData({
       student_id: payment.student_id?.toString() || '',
@@ -705,14 +715,14 @@ const Payments = () => {
       date: todayDate, // Always set to today's date for remaining payment
       notes: '',
     });
-    
+
     // Force a re-render by logging the state
     console.log('Edit form data set:', {
       date: paymentDate,
       amount: payment.amount?.toString() || '',
       remaining_amount: remainingAmount > 0 ? remainingAmount.toString() : '0'
     });
-    
+
     setIsEditModalOpen(true);
   };
 
@@ -744,10 +754,10 @@ const Payments = () => {
     try {
       // Validate first payment date
       let paymentDate = editFormData.date;
-      
+
       console.log('handleEditSubmit - editFormData:', editFormData);
       console.log('handleEditSubmit - paymentDate before processing:', paymentDate);
-      
+
       if (!paymentDate || paymentDate === '' || paymentDate === null || paymentDate === undefined) {
         alert('يرجى اختيار تاريخ الدفعة الأولى');
         setSubmitting(false);
@@ -756,7 +766,7 @@ const Payments = () => {
 
       // Ensure paymentDate is a string
       paymentDate = String(paymentDate).trim();
-      
+
       if (paymentDate === '' || paymentDate === 'null' || paymentDate === 'undefined') {
         alert('يرجى اختيار تاريخ الدفعة الأولى');
         setSubmitting(false);
@@ -769,7 +779,7 @@ const Payments = () => {
       } else if (paymentDate.includes(' ')) {
         paymentDate = paymentDate.split(' ')[0];
       }
-      
+
       // Validate date format (YYYY-MM-DD)
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(paymentDate)) {
@@ -799,20 +809,20 @@ const Payments = () => {
         payment_date: paymentDate,
         notes: editFormData.notes || '',
       };
-      
+
       // Final validation before sending
       if (isNaN(data.amount) || data.amount <= 0) {
         alert('المبلغ غير صالح');
         setSubmitting(false);
         return;
       }
-      
+
       if (!data.payment_date || !data.payment_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
         alert('تاريخ الدفع غير صالح');
         setSubmitting(false);
         return;
       }
-      
+
       console.log('Sending data to API:', data);
       console.log('Payment ID:', editingPayment.id);
       console.log('Data type check:', {
@@ -822,21 +832,21 @@ const Payments = () => {
         paymentDateValue: paymentDate,
         notes: typeof (editFormData.notes || ''),
       });
-      
+
       // Ensure amount is a number, not NaN
       if (isNaN(amount) || amount <= 0) {
         alert('المبلغ غير صالح');
         setSubmitting(false);
         return;
       }
-      
+
       // Ensure payment_date is a valid date string
       if (!paymentDate || !paymentDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
         alert('تاريخ الدفع غير صالح');
         setSubmitting(false);
         return;
       }
-      
+
       try {
         await api.put(`/payments/${editingPayment.id}`, data);
       } catch (error) {
@@ -846,7 +856,7 @@ const Payments = () => {
         console.error('Error validation:', error.response?.data?.errors);
         throw error; // Re-throw to be caught by outer catch
       }
-      
+
       // If remaining payment amount is provided, create new payment
       if (remainingPayment.amount && normalizeAmount(remainingPayment.amount) > 0) {
         // Validate remaining payment date
@@ -879,12 +889,12 @@ const Payments = () => {
           status: 'completed',
           notes: remainingPayment.notes || 'دفعة المتبقي',
         };
-        
+
         console.log('Creating remaining payment:', newPaymentData);
-        
+
         await api.post('/payments', newPaymentData);
       }
-      
+
       fetchPayments();
       closeEditModal();
       setSubmitting(false);
@@ -896,7 +906,7 @@ const Payments = () => {
         status: error.response?.status,
         validation: error.response?.data?.errors
       });
-      
+
       // Show detailed error message
       let errorMessage = 'حدث خطأ أثناء التعديل';
       if (error.response?.data?.message) {
@@ -908,7 +918,7 @@ const Payments = () => {
         }).join('\n');
         errorMessage = `خطأ في التحقق من البيانات:\n${errorList}`;
       }
-      
+
       alert(errorMessage);
       setSubmitting(false);
     }
@@ -933,8 +943,8 @@ const Payments = () => {
         // Fallback to payment course if no courseId
         course = payment?.course || null;
       }
-      
-      setPaymentInfoModal({
+
+      setStudentInfoModal({
         open: true,
         studentId,
         courseId,
@@ -947,7 +957,7 @@ const Payments = () => {
       // For dual courses, fetch payments for both students
       if (course?.is_dual && course?.students && course.students.length > 1) {
         const allStudentsPayments = [];
-        
+
         // Fetch payments for each student (even if they have no payments, show them)
         for (const student of course.students) {
           let studentPayments = [];
@@ -966,7 +976,7 @@ const Payments = () => {
 
               const responseData = response.data;
               const paymentsData = responseData?.data || responseData || [];
-              
+
               if (Array.isArray(paymentsData) && paymentsData.length > 0) {
                 studentPayments = [...studentPayments, ...paymentsData];
                 hasMorePages = responseData?.current_page < responseData?.last_page;
@@ -998,13 +1008,13 @@ const Payments = () => {
             studentName: student.name,
             payments: completedPayments,
           });
-          
+
           console.log(`Student ${student.name} (ID: ${student.id}) - Payments: ${completedPayments.length}`);
         }
-        
+
         console.log('All students payments:', allStudentsPayments.map(s => ({ name: s.studentName, paymentsCount: s.payments.length })));
 
-        setPaymentInfoModal(prev => ({
+        setStudentInfoModal(prev => ({
           ...prev,
           payments: allStudentsPayments, // Array of {studentId, studentName, payments}
           loading: false,
@@ -1026,7 +1036,7 @@ const Payments = () => {
 
           const responseData = response.data;
           const paymentsData = responseData?.data || responseData || [];
-          
+
           if (Array.isArray(paymentsData) && paymentsData.length > 0) {
             allPayments = [...allPayments, ...paymentsData];
             hasMorePages = responseData?.current_page < responseData?.last_page;
@@ -1047,7 +1057,7 @@ const Payments = () => {
             return (a.id || 0) - (b.id || 0);
           });
 
-        setPaymentInfoModal(prev => ({
+        setStudentInfoModal(prev => ({
           ...prev,
           payments: coursePayments, // Array of payment objects
           loading: false,
@@ -1055,7 +1065,7 @@ const Payments = () => {
       }
     } catch (error) {
       console.error('Error fetching payment info:', error);
-      setPaymentInfoModal(prev => ({
+      setStudentInfoModal(prev => ({
         ...prev,
         loading: false,
       }));
@@ -1064,7 +1074,7 @@ const Payments = () => {
 
   // Close payment info modal
   const closePaymentInfoModal = () => {
-    setPaymentInfoModal({
+    setStudentInfoModal({
       open: false,
       studentId: null,
       courseId: null,
@@ -1081,7 +1091,7 @@ const Payments = () => {
     if (!isDual) {
       return 0; // Will use package price for single courses
     }
-    
+
     // For dual courses, each student pays a fixed amount based on package
     if (packageName?.includes('بمزاجي') || packageName === 'بمزاجي') {
       return 90000;
@@ -1090,7 +1100,7 @@ const Payments = () => {
     } else if (packageName?.includes('سرعة') || packageName?.includes('السرعة')) {
       return 225000;
     }
-    
+
     return 0;
   };
 
@@ -1098,20 +1108,20 @@ const Payments = () => {
     const selectedPackage = packages.find((p) => p.id.toString() === packageId);
     const selectedCourse = courses.find(c => c.id === parseInt(formData.course_id));
     const isDual = selectedCourse?.is_dual || false;
-    
+
     // Calculate price based on course type (dual or single)
     const studentPrice = getStudentPriceForPackage(selectedPackage?.name, isDual);
-    let packagePrice = isDual && studentPrice > 0 
-      ? studentPrice 
+    let packagePrice = isDual && studentPrice > 0
+      ? studentPrice
       : (selectedPackage ? (selectedPackage.price || 0) : 0);
-      
+
     // Add extra lectures fee
     const extraFee = parseFloat(selectedCourse?.extra_lectures_fee) || 0;
     packagePrice += isDual ? (extraFee / 2) : extraFee;
-    
+
     const paidAmount = normalizeAmount(formData.amount) || 0;
     const remainingAmount = packagePrice - paidAmount;
-    
+
     setFormData({
       ...formData,
       course_package_id: packageId,
@@ -1124,19 +1134,19 @@ const Payments = () => {
     const selectedPackage = packages.find((p) => p.id.toString() === formData.course_package_id);
     const selectedCourse = courses.find(c => c.id === parseInt(formData.course_id));
     const isDual = selectedCourse?.is_dual || false;
-    
+
     // Calculate price based on course type (dual or single)
     const studentPrice = getStudentPriceForPackage(selectedPackage?.name, isDual);
-    let packagePrice = isDual && studentPrice > 0 
-      ? studentPrice 
+    let packagePrice = isDual && studentPrice > 0
+      ? studentPrice
       : (selectedPackage ? (selectedPackage.price || 0) : 0);
-      
+
     // Add extra lectures fee
     const extraFee = parseFloat(selectedCourse?.extra_lectures_fee) || 0;
     packagePrice += isDual ? (extraFee / 2) : extraFee;
-    
+
     const remainingAmount = packagePrice - paidAmount;
-    
+
     setFormData({
       ...formData,
       amount: value,
@@ -1147,10 +1157,10 @@ const Payments = () => {
   const getStudentCourses = () => {
     if (!formData.student_id) return [];
     const studentId = formData.student_id.toString();
-    
+
     // Combine courses from both sources (regular courses and dual courses data)
     const allCourses = [...courses];
-    
+
     // Add dual courses from dualCoursesData if they're not already in courses
     dualCoursesData.forEach(dualCourse => {
       const exists = allCourses.some(c => c.id === dualCourse.id);
@@ -1158,13 +1168,13 @@ const Payments = () => {
         allCourses.push(dualCourse);
       }
     });
-    
+
     return allCourses.filter((c) => {
       // For single courses: check student_id directly
       if (c.student_id?.toString() === studentId) {
         return true;
       }
-      
+
       // For dual courses: check if student is in students array
       if (c.students && Array.isArray(c.students)) {
         return c.students.some(s => {
@@ -1172,12 +1182,12 @@ const Payments = () => {
           return studentIdFromArray === studentId;
         });
       }
-      
+
       // Also check if course has student object (for backward compatibility)
       if (c.student && typeof c.student === 'object' && c.student.id?.toString() === studentId) {
         return true;
       }
-      
+
       return false;
     });
   };
@@ -1194,7 +1204,7 @@ const Payments = () => {
         <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
           <p className="font-semibold">خطأ</p>
           <p>{error}</p>
-          <button 
+          <button
             onClick={() => {
               setError(null);
               fetchPayments();
@@ -1275,18 +1285,18 @@ const Payments = () => {
                 <div className="md:hidden">
                   {(() => {
                     const itemsPerPage = 5;
-                    
+
                     // If not showing all, only show first 5
                     const paymentsToShow = showAllSinglePayments ? singleCoursePayments : singleCoursePayments.slice(0, itemsPerPage);
-                    
+
                     // Calculate pagination only when showing all
                     const totalPages = showAllSinglePayments ? Math.ceil(singleCoursePayments.length / itemsPerPage) : 1;
                     const startIndex = showAllSinglePayments ? (singlePaymentsPage - 1) * itemsPerPage : 0;
                     const endIndex = showAllSinglePayments ? startIndex + itemsPerPage : itemsPerPage;
-                    const currentPayments = showAllSinglePayments 
+                    const currentPayments = showAllSinglePayments
                       ? singleCoursePayments.slice(startIndex, endIndex)
                       : paymentsToShow;
-                    
+
                     return (
                       <>
                         <div className="space-y-2 p-2">
@@ -1305,7 +1315,7 @@ const Payments = () => {
                                     <div className="flex items-center gap-1">
                                       <span className="text-[10px] font-bold text-gray-800 dark:text-white">{displayIndex}</span>
                                     </div>
-                                    
+
                                     <div className="flex items-center justify-end gap-1">
                                       <button
                                         onClick={() => openPaymentInfoModal(
@@ -1327,17 +1337,23 @@ const Payments = () => {
                                         <Edit2 className="w-3 h-3" />
                                       </button>
                                     </div>
-                                    
+
                                     <div className="col-span-2 flex items-center gap-1">
                                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الطالب:</span>
-                                      <span className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1">{payment.student?.name || '-'}</span>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(payment.student_id); }}
+                                        className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1 text-right hover:text-primary-600 dark:hover:text-primary-400 hover:underline flex items-center gap-1"
+                                      >
+                                        {payment.student?.name || '-'}
+                                        <UserCircle className="w-3 h-3 opacity-60 inline-flex flex-shrink-0" />
+                                      </button>
                                     </div>
-                                    
+
                                     <div className="col-span-2 flex items-center gap-1">
                                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الهاتف:</span>
                                       <span className="text-sm text-gray-800 dark:text-white">{payment.student?.phone || '-'}</span>
                                     </div>
-                                    
+
                                     <div className="flex items-center gap-1">
                                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الباقة:</span>
                                       <div className="flex flex-col">
@@ -1349,21 +1365,21 @@ const Payments = () => {
                                         )}
                                       </div>
                                     </div>
-                                    
+
                                     <div className="flex items-center gap-1">
                                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">التاريخ:</span>
                                       <span className="text-sm text-gray-800 dark:text-white">
                                         {firstDate ? formatDateSimple(firstDate) : '—'}
                                       </span>
                                     </div>
-                                    
+
                                     <div className="flex items-center gap-1">
                                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">المدفوع:</span>
                                       <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                                         {formatCurrency(payment.amount)}
                                       </span>
                                     </div>
-                                    
+
                                     <div className="flex items-center justify-between gap-1">
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">المتبقي:</span>
@@ -1393,7 +1409,7 @@ const Payments = () => {
                             })
                           )}
                         </div>
-                        
+
                         {/* Show "عرض الكل" button if not showing all and there are more than 5 payments */}
                         {!showAllSinglePayments && singleCoursePayments.length > itemsPerPage && (
                           <div className="flex items-center justify-center p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
@@ -1409,7 +1425,7 @@ const Payments = () => {
                             </button>
                           </div>
                         )}
-                        
+
                         {/* Pagination Controls - Only show when showing all */}
                         {showAllSinglePayments && totalPages > 1 && (
                           <div className="flex items-center justify-between p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
@@ -1485,7 +1501,14 @@ const Payments = () => {
                                   <Info className="w-4 h-4" />
                                 </button>
                                 <div className="flex flex-col items-center">
-                                  <span className="font-semibold text-xs">{payment.student?.name || '-'}</span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(payment.student_id); }}
+                                    className="font-semibold text-xs hover:text-primary-600 dark:hover:text-primary-400 hover:underline flex items-center gap-1"
+                                    title="عرض ملف الطالب"
+                                  >
+                                    {payment.student?.name || '-'}
+                                    <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
+                                  </button>
                                   <span className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5">
                                     ({payment.course?.course_package?.name || payment.course?.coursePackage?.name || 'كورس'})
                                   </span>
@@ -1577,10 +1600,10 @@ const Payments = () => {
                   const studentPayments = paymentsByCourse[course.id]?.filter(
                     p => p.student_id === student.id
                   ) || [];
-                  
+
                   // Get the first payment (if any) for display
                   const firstPayment = studentPayments.length > 0 ? studentPayments[0] : null;
-                  
+
                   // Create a row for this student
                   dualCoursesRows.push({
                     courseId: course.id,
@@ -1610,18 +1633,18 @@ const Payments = () => {
                 <div className="md:hidden">
                   {(() => {
                     const itemsPerPage = 5;
-                    
+
                     // If not showing all, only show first 5
                     const rowsToShow = showAllDualPayments ? dualCoursesRows : dualCoursesRows.slice(0, itemsPerPage);
-                    
+
                     // Calculate pagination only when showing all
                     const totalPages = showAllDualPayments ? Math.ceil(dualCoursesRows.length / itemsPerPage) : 1;
                     const startIndex = showAllDualPayments ? (dualPaymentsPage - 1) * itemsPerPage : 0;
                     const endIndex = showAllDualPayments ? startIndex + itemsPerPage : itemsPerPage;
-                    const currentRows = showAllDualPayments 
+                    const currentRows = showAllDualPayments
                       ? dualCoursesRows.slice(startIndex, endIndex)
                       : rowsToShow;
-                    
+
                     return (
                       <>
                         <div className="space-y-2 p-2">
@@ -1635,11 +1658,11 @@ const Payments = () => {
                               const totalPaid = row.allPayments
                                 .filter(p => p.status === 'completed' || p.status === 'paid')
                                 .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
-                              
+
                               const studentPrice = getStudentPrice(row.course);
                               const remaining = studentPrice > 0 ? Math.max(0, studentPrice - totalPaid) : 0;
-                              
-                              const paymentStatus = remaining > 0 
+
+                              const paymentStatus = remaining > 0
                                 ? { label: '', badge: 'badge-warning', amount: remaining }
                                 : { label: 'مكتمل', badge: 'badge-success', amount: 0 };
 
@@ -1651,9 +1674,9 @@ const Payments = () => {
                                   const dateB = new Date(b.created_at || b.payment_date || 0);
                                   return dateA - dateB;
                                 })[0];
-                              
-                              const firstDate = firstPayment 
-                                ? (firstPayment.payment_date || firstPayment.created_at) 
+
+                              const firstDate = firstPayment
+                                ? (firstPayment.payment_date || firstPayment.created_at)
                                 : null;
 
                               const displayIndex = showAllDualPayments ? startIndex + index + 1 : index + 1;
@@ -1689,7 +1712,13 @@ const Payments = () => {
                                     
                                     <div className="col-span-2 flex items-center gap-1">
                                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الطالب:</span>
-                                      <span className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1">{row.studentName}</span>
+                                      <button 
+                                        onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(row.studentId); }}
+                                        className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1 text-right border-none bg-transparent hover:text-primary-600 dark:hover:text-primary-400 hover:underline flex items-center gap-1 focus:outline-none"
+                                      >
+                                        {row.studentName}
+                                        <UserCircle className="w-3 h-3 opacity-60 flex-shrink-0" />
+                                      </button>
                                     </div>
                                     
                                     <div className="col-span-2 flex items-center gap-1">
@@ -2641,6 +2670,12 @@ const Payments = () => {
         </div>
       )}
 
+      {/* Student Profile Modal */}
+      <StudentProfileModal 
+        isOpen={!!profileModalStudentId} 
+        onClose={() => setProfileModalStudentId(null)} 
+        studentId={profileModalStudentId} 
+      />
     </div>
   );
 };
