@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, PlusCircle, AlertTriangle, Info, X, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, PlusCircle, AlertTriangle, Info, X, HelpCircle, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
 import api from '../../api/axios';
 import { formatCurrency } from '../../utils/currencyFormat';
 import PackageBadge from '../../components/PackageBadge';
+import StudentProfileModal from '../../components/StudentProfileModal';
 
 // Updated: 2025-12-21 - Courses separated by status with smaller fonts
 const Courses = () => {
@@ -32,6 +33,8 @@ const Courses = () => {
     payments: [],
     loading: false,
   });
+  // Profile Modal State
+  const [profileModalStudentId, setProfileModalStudentId] = useState(null);
   // Pagination state for each course status section
   const [coursesPages, setCoursesPages] = useState({});
 
@@ -473,8 +476,19 @@ const Courses = () => {
                         <div className="flex items-center gap-1 flex-wrap justify-end">
                           <span className="text-sm font-bold text-gray-800 dark:text-white">
                             {course.is_dual && course.students?.length > 0
-                              ? course.students.map(s => s.name).join(' و ')
-                              : (course.student_name || course.student?.name || course.students?.[0]?.name || '-')}
+                              ? course.students.map((s, idx) => (
+                                  <React.Fragment key={s.id}>
+                                    {idx > 0 && <span className="font-normal mx-1 text-gray-400">و</span>}
+                                    <button onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(s.id); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
+                                      {s.name}
+                                    </button>
+                                  </React.Fragment>
+                                ))
+                              : (
+                                <button onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(course.students?.[0]?.id || course.student_id); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
+                                  {(course.student_name || course.student?.name || course.students?.[0]?.name || '-')}
+                                </button>
+                              )}
                           </span>
                           {isDualCourse(course) && (
                             <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
@@ -622,10 +636,30 @@ const Courses = () => {
                     <td className="px-2 py-2 text-center text-gray-800 dark:text-white font-bold">
                       <div className="flex flex-col items-center gap-0.5">
                         <div className="flex items-center gap-1">
-                          <span>
+                          <span className="flex items-center flex-wrap justify-center gap-1">
                             {course.is_dual && course.students?.length > 0
-                              ? course.students.map(s => s.name).join(' و ')
-                              : (course.student_name || course.student?.name || course.students?.[0]?.name || '-')}
+                              ? course.students.map((s, idx) => (
+                                  <React.Fragment key={s.id}>
+                                    {idx > 0 && <span className="font-normal text-gray-400 dark:text-gray-500 mx-0.5">و</span>}
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(s.id); }} 
+                                      className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5"
+                                      title="عرض ملف الطالب"
+                                    >
+                                      {s.name} <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
+                                    </button>
+                                  </React.Fragment>
+                                ))
+                              : (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(course.students?.[0]?.id || course.student_id); }} 
+                                  className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5"
+                                  title="عرض ملف الطالب"
+                                >
+                                  {course.student_name || course.student?.name || course.students?.[0]?.name || '-'}
+                                  <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
+                                </button>
+                              )}
                           </span>
                           {isDualCourse(course) && (
                             <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold font-normal">

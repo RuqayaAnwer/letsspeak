@@ -3,7 +3,8 @@ import api from '../../api/axios';
 import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
-import { Plus, Search, Edit2, Trash2, Users, Phone, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Users, Phone, GraduationCap, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
+import StudentProfileModal from '../../components/StudentProfileModal';
 
 const Students = () => {
   const [students, setStudents] = useState([]);
@@ -36,6 +37,8 @@ const Students = () => {
   const [submitting, setSubmitting] = useState(false);
   const [studentsPage, setStudentsPage] = useState(1); // Pagination for mobile cards
   const [mobileActionsOpen, setMobileActionsOpen] = useState(null); // Track which card's actions are open
+  // Profile Modal State
+  const [profileModalStudentId, setProfileModalStudentId] = useState(null);
 
   useEffect(() => {
     fetchStudents();
@@ -294,9 +297,12 @@ const Students = () => {
                               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">اسم الطالب</span>
                               <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
-                                <span className="text-sm font-semibold text-gray-800 dark:text-white">
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(student.id); }}
+                                  className="text-sm font-semibold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1"
+                                >
                                   {student.name}
-                                </span>
+                                </button>
                               </div>
                             </div>
                             
@@ -488,9 +494,13 @@ const Students = () => {
                                 {student.name.charAt(0).toUpperCase()}
                               </span>
                             </div>
-                            <span className="font-semibold text-[var(--color-text-primary)]">
-                              {student.name}
-                            </span>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(student.id); }}
+                              className="font-semibold text-[var(--color-text-primary)] hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1"
+                              title="عرض ملف الطالب"
+                            >
+                              {student.name} <UserCircle className="w-4 h-4 opacity-70" />
+                            </button>
                           </div>
                         </td>
                         <td>
@@ -549,6 +559,13 @@ const Students = () => {
               </div>
         </div>
       )}
+
+      {/* Student Profile Modal */}
+      <StudentProfileModal 
+        isOpen={!!profileModalStudentId} 
+        onClose={() => setProfileModalStudentId(null)} 
+        studentId={profileModalStudentId} 
+      />
 
       {/* Add/Edit Modal */}
       <Modal

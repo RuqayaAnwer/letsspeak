@@ -22,8 +22,10 @@ import {
   Trash2,
   PlayCircle,
   PlusCircle,
+  Check, CreditCard, Activity, Flag, FileText, Upload, Eye, EyeOff, UserCircle
 } from 'lucide-react';
 import PackageBadge from '../../components/PackageBadge';
+import StudentProfileModal from '../../components/StudentProfileModal';
 
 /**
  * CourseDetails Component
@@ -150,6 +152,9 @@ const CourseDetails = () => {
     remaining_amount: '',
     student_ids: [],
   });
+
+  // Profile Modal State
+  const [profileModalStudentId, setProfileModalStudentId] = useState(null);
 
   // تفعيل بدء الكورس الفعلي (للمدرب)
   const [startingCourse, setStartingCourse] = useState(false);
@@ -1337,10 +1342,30 @@ const CourseDetails = () => {
           </button>
           <div>
             <div className="flex flex-wrap items-center gap-3 mb-1">
-              <h1 className="page-title flex items-center gap-2 font-bold">
+              <h1 className="page-title flex items-center gap-2 font-bold flex-wrap">
                 {course.is_dual && course.students && course.students.length > 0
-                  ? course.students.map((s) => s.name).join(' و ')
-                  : (course.student_name || course.student?.name || course.students?.[0]?.name || '-')}
+                  ? course.students.map((s, idx) => (
+                      <React.Fragment key={s.id}>
+                        {idx > 0 && <span className="text-[var(--color-text-muted)] mx-1">و</span>}
+                        <button 
+                          onClick={() => setProfileModalStudentId(s.id)} 
+                          className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1 focus:outline-none"
+                          title="عرض ملف الطالب"
+                        >
+                          {s.name} <UserCircle className="w-5 h-5 xl:w-6 xl:h-6 opacity-60 hover:opacity-100" />
+                        </button>
+                      </React.Fragment>
+                    ))
+                  : (
+                    <button 
+                      onClick={() => setProfileModalStudentId(course.students?.[0]?.id || course.student_id)} 
+                      className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1 focus:outline-none"
+                      title="عرض ملف الطالب"
+                    >
+                      {course.student_name || course.student?.name || course.students?.[0]?.name || '-'}
+                      <UserCircle className="w-5 h-5 xl:w-6 xl:h-6 opacity-60 hover:opacity-100" />
+                    </button>
+                  )}
               </h1>
               {isCustomerService ? (
                 <select
@@ -3083,6 +3108,12 @@ const CourseDetails = () => {
           </div>
         </div>
       )}
+      {/* Student Profile Modal */}
+      <StudentProfileModal 
+        isOpen={!!profileModalStudentId} 
+        onClose={() => setProfileModalStudentId(null)} 
+        studentId={profileModalStudentId} 
+      />
       {/* Extra Lectures Modal */}
       {extraLecturesModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
