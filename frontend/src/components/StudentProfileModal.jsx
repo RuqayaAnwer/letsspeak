@@ -6,6 +6,7 @@ import {
   AlertCircle, CreditCard, ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react';
 import LoadingSpinner from './LoadingSpinner';
+import Modal from './Modal';
 import { formatCurrency, formatCurrencyAmount } from '../utils/currencyFormat';
 
 const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
@@ -13,6 +14,16 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
   const [profileData, setProfileData] = useState(null);
   const [error, setError] = useState(null);
   const [expandedCourse, setExpandedCourse] = useState(null);
+
+  // Payment Modal State
+  const [paymentModal, setPaymentModal] = useState({
+    open: false,
+    courseId: null,
+    amount: '',
+    maxAmount: 0,
+    date: new Date().toISOString().split('T')[0],
+  });
+  const [submittingPayment, setSubmittingPayment] = useState(false);
 
   useEffect(() => {
     if (isOpen && studentId) {
@@ -31,6 +42,30 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
       setError('حدث خطأ أثناء تحميل بيانات الطالب');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+    if (!paymentModal.amount || paymentModal.amount <= 0) return;
+    
+    setSubmittingPayment(true);
+    try {
+      await api.post('/payments', {
+        student_id: studentId,
+        course_id: paymentModal.courseId,
+        amount: paymentModal.amount,
+        status: 'completed',
+        payment_date: paymentModal.date
+      });
+      // Refresh profile data
+      await fetchProfileData();
+      setPaymentModal({ ...paymentModal, open: false });
+    } catch (err) {
+      console.error('Error submitting payment:', err);
+      // alert('حدث خطأ أثناء تسجيل الدفعة');
+    } finally {
+      setSubmittingPayment(false);
     }
   };
 
@@ -274,9 +309,28 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                                 <span className="text-xs text-gray-500 block mb-1">المدفوع لهذا الكورس</span>
                                 <span className="font-bold text-emerald-600">{formatCurrencyAmount(course.paid_amount || 0)}</span>
                               </div>
-                              <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <span className="text-xs text-gray-500 block mb-1">المتبقي (ديون)</span>
-                                <span className="font-bold text-rose-600">{formatCurrencyAmount(course.remaining_amount || 0)}</span>
+                              <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col justify-between">
+                                <div>
+                                  <span className="text-xs text-gray-500 block mb-1">المتبقي (ديون)</span>
+                                  <span className="font-bold text-rose-600">{formatCurrencyAmount(course.remaining_amount || 0)}</span>
+                                </div>
+                                {course.remaining_amount > 0 && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setPaymentModal({
+                                        open: true,
+                                        courseId: course.id,
+                                        amount: course.remaining_amount,
+                                        maxAmount: course.remaining_amount,
+                                        date: new Date().toISOString().split('T')[0]
+                                      });
+                                    }}
+                                    className="mt-2 text-[10px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 px-2 py-1 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors w-full flex items-center justify-center gap-1"
+                                  >
+                                    <CreditCard className="w-3 h-3" /> تسديد
+                                  </button>
+                                )}
                               </div>
                             </div>
                             
@@ -322,6 +376,66 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
           </button>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      <Modal
+        isOpen={paymentModal.open}
+        onClose={() => !submittingPayment && setPaymentModal({ ...paymentModal, open: false })}
+        title="تسديد دفعة متبقية"
+        size="sm"
+      >
+        <form onSubmit={handlePaymentSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              المبلغ المدفوع
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                value={paymentModal.amount}
+                onChange={(e) => setPaymentModal({ ...paymentModal, amount: e.target.value })}
+                className="input-field pr-12"
+                min="0"
+                max={paymentModal.maxAmount}
+                step="any"
+                required
+              />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">د.ع</span>
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              تاريخ الدفع
+            </label>
+            <input
+              type="date"
+              value={paymentModal.date}
+              onChange={(e) => setPaymentModal({ ...paymentModal, date: e.target.value })}
+              className="input-field"
+              required
+            />
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button
+              type="submit"
+              disabled={submittingPayment}
+              className="btn-primary flex-1 flex justify-center items-center"
+            >
+              {submittingPayment ? <LoadingSpinner size="sm" /> : 'تأكيد ودفع'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentModal({ ...paymentModal, open: false })}
+              disabled={submittingPayment}
+              className="btn-secondary flex-1"
+            >
+              إلغاء
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
