@@ -22,6 +22,7 @@ const Students = () => {
     course_package_id: '',
     paid_amount: '',
     remaining_amount: '',
+    payment_method: 'zain_cash',
   });
 
   const levels = [
@@ -182,6 +183,7 @@ const Students = () => {
         course_package_id: '',
         paid_amount: '',
         remaining_amount: '',
+        payment_method: 'zain_cash',
       });
     } else {
       setEditingStudent(null);
@@ -193,6 +195,7 @@ const Students = () => {
         course_package_id: '',
         paid_amount: '',
         remaining_amount: '',
+        payment_method: 'zain_cash',
       });
     }
     setIsModalOpen(true);
@@ -209,6 +212,7 @@ const Students = () => {
       course_package_id: '',
       paid_amount: '',
       remaining_amount: '',
+      payment_method: 'zain_cash',
     });
   };
 
@@ -614,6 +618,65 @@ const Students = () => {
               ))}
             </select>
           </div>
+
+          {!editingStudent && (
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-4 bg-gray-50 dark:bg-gray-800/50 mt-4">
+              <h4 className="font-bold text-gray-800 dark:text-gray-200">تسجيل كورس للطالب (اختياري)</h4>
+              
+              <div>
+                <label className="label">باقة الكورس</label>
+                <select
+                  value={formData.course_package_id}
+                  onChange={(e) => handlePackageChange(e.target.value)}
+                  className="select"
+                >
+                  <option value="">اختر الباقة...</option>
+                  {packages.map((pkg) => (
+                    <option key={pkg.id} value={pkg.id}>
+                      {pkg.name} - {pkg.price} د.ع
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {formData.course_package_id && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">المبلغ المدفوع (د.ع)</label>
+                    <input
+                      type="number"
+                      value={formData.paid_amount}
+                      onChange={(e) => handlePaidAmountChange(e.target.value)}
+                      className="input"
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">طريقة الدفع</label>
+                    <select
+                      value={formData.payment_method}
+                      onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                      className="select"
+                    >
+                      <option value="zain_cash">زين كاش</option>
+                      <option value="qi_card">بطاقة كي</option>
+                      <option value="delivery">توصيل</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="label">المبلغ المتبقي (د.ع)</label>
+                    <input
+                      type="number"
+                      value={formData.remaining_amount}
+                      className="input bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
+                      disabled
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="label">ملاحظات</label>

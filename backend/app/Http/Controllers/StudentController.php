@@ -156,10 +156,12 @@ class StudentController extends Controller
                         'amount' => (float)$payment->amount,
                         'date' => $payment->payment_date ? \Carbon\Carbon::parse($payment->payment_date)->format('Y-m-d') : ($payment->created_at ? $payment->created_at->format('Y-m-d') : date('Y-m-d')),
                         'status' => $payment->status,
+                        'payment_method' => $payment->payment_method,
                     ];
                 })->values()->toArray(),
                 'paid_amount' => $studentPaidCourse,
                 'remaining_amount' => $studentRemainingCourse,
+                'payment_method' => $course->payment_method,
             ];
 
             // Attendance limits

@@ -22,6 +22,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
     amount: '',
     maxAmount: 0,
     date: new Date().toISOString().split('T')[0],
+    payment_method: 'zain_cash',
   });
   const [submittingPayment, setSubmittingPayment] = useState(false);
 
@@ -56,7 +57,8 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
         course_id: paymentModal.courseId,
         amount: paymentModal.amount,
         status: 'completed',
-        payment_date: paymentModal.date
+        payment_date: paymentModal.date,
+        payment_method: paymentModal.payment_method
       });
       // Refresh profile data
       await fetchProfileData();
@@ -112,6 +114,18 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 text-center">{label}</span>
       </div>
     );
+  };
+
+  const getPaymentMethodBadge = (method) => {
+    if (!method) return null;
+    switch (method.toLowerCase()) {
+      case 'zain_cash': return <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">زين كاش</span>;
+      case 'qi_card':
+      case 'q_card': return <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">بطاقة كي</span>;
+      case 'delivery': return <span className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">توصيل</span>;
+      case 'cash': return <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">نقدي</span>;
+      default: return <span className="bg-gray-100 text-gray-700 text-[10px] px-2 py-0.5 rounded ml-2 inline-block font-semibold">{method}</span>;
+    }
   };
 
   return (
@@ -276,8 +290,8 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                           <div className="flex items-center gap-3">
                             <div className={`w-2 h-10 rounded-full ${course.status === 'active' ? 'bg-green-500' : course.status === 'finished' ? 'bg-blue-500' : 'bg-gray-400'}`}></div>
                             <div>
-                              <h4 className="font-bold text-gray-800 dark:text-gray-100 text-sm sm:text-base">
-                                {course.title}
+                              <h4 className="font-bold text-gray-800 dark:text-gray-100 text-sm sm:text-base flex items-center">
+                                {course.title} {getPaymentMethodBadge(course.payment_method)}
                               </h4>
                               <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 <span className="flex items-center gap-1"><User className="w-3 h-3"/> المدرب: {course.trainer}</span>
@@ -323,7 +337,8 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                                         courseId: course.id,
                                         amount: course.remaining_amount,
                                         maxAmount: course.remaining_amount,
-                                        date: new Date().toISOString().split('T')[0]
+                                        date: new Date().toISOString().split('T')[0],
+                                        payment_method: course.payment_method || 'zain_cash'
                                       });
                                     }}
                                     className="mt-2 text-[10px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 px-2 py-1 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors w-full flex items-center justify-center gap-1"
@@ -349,8 +364,9 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                                         <Calendar className="w-3.5 h-3.5" />
                                         {p.date}
                                       </span>
-                                      <span className="font-bold text-emerald-600">
+                                      <span className="font-bold text-emerald-600 flex items-center">
                                         {formatCurrency(p.amount || 0)}
+                                        {getPaymentMethodBadge(p.payment_method)}
                                       </span>
                                     </div>
                                   ))}
@@ -415,6 +431,22 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
               className="input-field"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              طريقة الدفع
+            </label>
+            <select
+              value={paymentModal.payment_method}
+              onChange={(e) => setPaymentModal({ ...paymentModal, payment_method: e.target.value })}
+              className="input-field"
+              required
+            >
+              <option value="zain_cash">زين كاش</option>
+              <option value="qi_card">بطاقة كي</option>
+              <option value="delivery">توصيل</option>
+            </select>
           </div>
 
           <div className="flex gap-3 mt-6">
