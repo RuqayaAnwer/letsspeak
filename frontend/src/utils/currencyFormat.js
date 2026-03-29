@@ -25,8 +25,8 @@ export const formatCurrency = (amount) => {
     amountInThousands = Math.floor(num);
   }
   
-  // Format with dots as thousands separator
-  const formatted = amountInThousands.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  // Format with commas as thousands separator
+  const formatted = amountInThousands.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   
   return `${formatted} د.ع`;
 };
@@ -51,8 +51,8 @@ export const formatCurrencyAmount = (amount) => {
     amountInThousands = Math.floor(num);
   }
   
-  // Format with dots as thousands separator
-  const formatted = amountInThousands.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  // Format with commas as thousands separator
+  const formatted = amountInThousands.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   
   return formatted;
 };

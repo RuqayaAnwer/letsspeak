@@ -114,7 +114,11 @@ class StudentController extends Controller
             $courseLectures = $course->lectures;
             
             // Financials for this course
-            $coursePrice = $course->total_amount;
+            $coursePrice = 0;
+            if ($course->coursePackage) {
+                $coursePrice = (float)$course->coursePackage->price;
+            }
+            $coursePrice += (float)$course->extra_lectures_fee;
             if ($isDual) {
                 // If dual, standard price per student is derived from package
                 $pkgName = $course->coursePackage ? $course->coursePackage->name : '';
