@@ -925,7 +925,7 @@ const Payments = () => {
   };
 
   // Open payment info modal
-  const openPaymentInfoModal = async (studentId, courseId, studentName, payment = null) => {
+  const openStudentInfoModal = async (studentId, courseId, studentName, payment = null) => {
     try {
       // Always fetch course details from API to ensure we have students array
       let course = null;
@@ -1073,7 +1073,7 @@ const Payments = () => {
   };
 
   // Close payment info modal
-  const closePaymentInfoModal = () => {
+  const closeStudentInfoModal = () => {
     setStudentInfoModal({
       open: false,
       studentId: null,
@@ -1318,7 +1318,7 @@ const Payments = () => {
 
                                     <div className="flex items-center justify-end gap-1">
                                       <button
-                                        onClick={() => openPaymentInfoModal(
+                                        onClick={() => openStudentInfoModal(
                                           payment.student_id,
                                           payment.course_id,
                                           payment.student?.name || '-',
@@ -1489,7 +1489,7 @@ const Payments = () => {
                             <td className="text-center text-xs py-2 px-2">
                               <div className="flex items-center justify-center gap-1.5">
                                 <button
-                                  onClick={() => openPaymentInfoModal(
+                                  onClick={() => openStudentInfoModal(
                                     payment.student_id,
                                     payment.course_id,
                                     payment.student?.name || '-',
@@ -1690,7 +1690,7 @@ const Payments = () => {
                                     
                                     <div className="flex items-center justify-end gap-1">
                                       <button
-                                        onClick={() => openPaymentInfoModal(
+                                        onClick={() => openStudentInfoModal(
                                           row.studentId,
                                           row.courseId,
                                           row.studentName,
@@ -1882,7 +1882,7 @@ const Payments = () => {
                             <td className="text-center text-xs py-2 px-2">
                               <div className="flex items-center justify-center gap-1.5">
                                 <button
-                                  onClick={() => openPaymentInfoModal(
+                                  onClick={() => openStudentInfoModal(
                                     row.studentId,
                                     row.courseId,
                                     row.studentName,
@@ -2381,7 +2381,7 @@ const Payments = () => {
       </Modal>
 
       {/* Payment Info Modal */}
-      {paymentInfoModal.open && (
+      {studentInfoModal.open && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
@@ -2389,15 +2389,15 @@ const Payments = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2 flex-wrap">
                   <h2 className="text-xs sm:text-lg font-bold text-gray-800 dark:text-white truncate">
-                    معلومات الدفعات: {paymentInfoModal.studentName}
+                    معلومات الدفعات: {studentInfoModal.studentName}
                   </h2>
                   {(() => {
-                    const isDual = paymentInfoModal.course?.is_dual || 
-                                  (paymentInfoModal.course?.students && paymentInfoModal.course.students.length > 1) ||
-                                  (Array.isArray(paymentInfoModal.payments) && 
-                                   paymentInfoModal.payments.length > 0 && 
-                                   typeof paymentInfoModal.payments[0] === 'object' && 
-                                   paymentInfoModal.payments[0].studentId);
+                    const isDual = studentInfoModal.course?.is_dual || 
+                                  (studentInfoModal.course?.students && studentInfoModal.course.students.length > 1) ||
+                                  (Array.isArray(studentInfoModal.payments) && 
+                                   studentInfoModal.payments.length > 0 && 
+                                   typeof studentInfoModal.payments[0] === 'object' && 
+                                   studentInfoModal.payments[0].studentId);
                     
                     return isDual ? (
                       <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] sm:text-xs font-semibold">
@@ -2411,21 +2411,21 @@ const Payments = () => {
                   })()}
                 </div>
                 <p className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400">
-                  الكورس رقم: {paymentInfoModal.courseId}
-                  {paymentInfoModal.course?.extra_lectures_count > 0 && (
-                    <span className="mr-2 inline-flex items-center px-1.5 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 rounded font-bold text-[10px]" title={`يحتوي على ${paymentInfoModal.course.extra_lectures_count} محاضرات إضافية (+ ${paymentInfoModal.course.extra_lectures_fee} د.ع)`}>
-                      +{paymentInfoModal.course.extra_lectures_count} محاضرات إضافية
+                  الكورس رقم: {studentInfoModal.courseId}
+                  {studentInfoModal.course?.extra_lectures_count > 0 && (
+                    <span className="mr-2 inline-flex items-center px-1.5 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 rounded font-bold text-[10px]" title={`يحتوي على ${studentInfoModal.course.extra_lectures_count} محاضرات إضافية (+ ${studentInfoModal.course.extra_lectures_fee} د.ع)`}>
+                      +{studentInfoModal.course.extra_lectures_count} محاضرات إضافية
                     </span>
                   )}
                 </p>
-                {paymentInfoModal.course?.is_dual && paymentInfoModal.course?.students && paymentInfoModal.course.students.length > 1 && (
+                {studentInfoModal.course?.is_dual && studentInfoModal.course?.students && studentInfoModal.course.students.length > 1 && (
                   <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    الطلاب: {paymentInfoModal.course.students.map(s => s.name).join(' - ')}
+                    الطلاب: {studentInfoModal.course.students.map(s => s.name).join(' - ')}
                   </p>
                 )}
               </div>
               <button
-                onClick={closePaymentInfoModal}
+                onClick={closeStudentInfoModal}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors flex-shrink-0 ml-2"
               >
                 <X className="w-4 h-4 sm:w-6 sm:h-6" />
@@ -2434,21 +2434,21 @@ const Payments = () => {
 
             {/* Modal Body */}
             <div className="flex-1 overflow-y-auto p-2 sm:p-4">
-              {paymentInfoModal.loading ? (
+              {studentInfoModal.loading ? (
                 <div className="flex items-center justify-center py-6 sm:py-8">
                   <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-500"></div>
                 </div>
               ) : (
                 <>
                   {/* Check if this is a dual course with multiple students */}
-                  {paymentInfoModal.course?.is_dual && 
-                   Array.isArray(paymentInfoModal.payments) && 
-                   paymentInfoModal.payments.length > 0 && 
-                   typeof paymentInfoModal.payments[0] === 'object' && 
-                   paymentInfoModal.payments[0].studentId ? (
+                  {studentInfoModal.course?.is_dual && 
+                   Array.isArray(studentInfoModal.payments) && 
+                   studentInfoModal.payments.length > 0 && 
+                   typeof studentInfoModal.payments[0] === 'object' && 
+                   studentInfoModal.payments[0].studentId ? (
                     // Dual course: Show payments for each student separately
                     <div className="space-y-3 sm:space-y-6">
-                      {paymentInfoModal.payments.map((studentData, studentIndex) => (
+                      {studentInfoModal.payments.map((studentData, studentIndex) => (
                         <div key={studentData.studentId} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2.5 sm:p-4 border border-blue-200 dark:border-blue-800">
                           {/* Student Header */}
                           <div className="mb-2 sm:mb-4 pb-2 sm:pb-3 border-b border-blue-300 dark:border-blue-700">
@@ -2481,7 +2481,7 @@ const Payments = () => {
                                     <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المتبقي</p>
                                     <p className="text-sm sm:text-lg font-bold text-amber-600 dark:text-amber-400">
                                       {(() => {
-                                        const course = paymentInfoModal.course;
+                                        const course = studentInfoModal.course;
                                         const studentPrice = getStudentPrice(course);
                                         const totalPaid = studentData.payments
                                           .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
@@ -2494,7 +2494,7 @@ const Payments = () => {
                                     <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1">طريقة الدفع</p>
                                     <div>
                                       {getPaymentMethodBadge(
-                                        paymentInfoModal.course?.payment_method || 
+                                        studentInfoModal.course?.payment_method || 
                                         studentData.payments[0]?.payment_method || 
                                         studentData.payments[0]?.course?.payment_method
                                       )}
@@ -2557,7 +2557,7 @@ const Payments = () => {
                     </div>
                   ) : (
                     // Single course: Show payments for one student
-                    paymentInfoModal.payments.length === 0 ? (
+                    studentInfoModal.payments.length === 0 ? (
                       <div className="text-center py-6 sm:py-8 text-gray-500 dark:text-gray-400 text-xs sm:text-base">
                         لا توجد دفعات مسجلة
                       </div>
@@ -2570,13 +2570,13 @@ const Payments = () => {
                             <div>
                               <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">إجمالي الدفعات</p>
                               <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white">
-                                {paymentInfoModal.payments.length}
+                                {studentInfoModal.payments.length}
                               </p>
                             </div>
                             <div>
                               <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المبلغ المدفوع</p>
                               <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-400">
-                                {formatCurrency(paymentInfoModal.payments
+                                {formatCurrency(studentInfoModal.payments
                                   .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0)
                                   )}
                               </p>
@@ -2585,9 +2585,9 @@ const Payments = () => {
                               <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">المتبقي</p>
                               <p className="text-sm sm:text-lg font-bold text-amber-600 dark:text-amber-400">
                                 {(() => {
-                                  const course = paymentInfoModal.course;
+                                  const course = studentInfoModal.course;
                                   const studentPrice = getStudentPrice(course);
-                                  const totalPaid = paymentInfoModal.payments
+                                  const totalPaid = studentInfoModal.payments
                                     .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0);
                                   const remaining = studentPrice - totalPaid;
                                   return remaining > 0 ? remaining.toLocaleString('en-US') + ' د.ع' : '0 د.ع';
@@ -2598,9 +2598,9 @@ const Payments = () => {
                               <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1">طريقة الدفع</p>
                               <div>
                                 {getPaymentMethodBadge(
-                                  paymentInfoModal.course?.payment_method || 
-                                  paymentInfoModal.payments[0]?.payment_method || 
-                                  paymentInfoModal.payments[0]?.course?.payment_method
+                                  studentInfoModal.course?.payment_method || 
+                                  studentInfoModal.payments[0]?.payment_method || 
+                                  studentInfoModal.payments[0]?.course?.payment_method
                                 )}
                               </div>
                             </div>
@@ -2611,7 +2611,7 @@ const Payments = () => {
                         <div>
                           <h4 className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">قائمة الدفعات</h4>
                           <div className="space-y-2 sm:space-y-3">
-                            {paymentInfoModal.payments.map((payment, index) => {
+                            {studentInfoModal.payments.map((payment, index) => {
                               const paymentDate = payment.payment_date || payment.date || payment.created_at;
                               const formattedDate = paymentDate 
                                 ? formatDateSimple(paymentDate)
@@ -2660,7 +2660,7 @@ const Payments = () => {
             {/* Modal Footer */}
             <div className="flex items-center justify-end gap-2 p-2.5 sm:p-4 border-t border-gray-200 dark:border-gray-700">
               <button
-                onClick={closePaymentInfoModal}
+                onClick={closeStudentInfoModal}
                 className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-[10px] sm:text-sm"
               >
                 إغلاق
