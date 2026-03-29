@@ -147,7 +147,7 @@ const Layout = ({ children }) => {
         <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
             <img 
-              src="/Letspeak logo.png" 
+              src="/logo.png" 
               alt="LetSpeak Logo" 
               className="w-8 h-8 sm:w-10 sm:h-10"
             />
@@ -264,7 +264,7 @@ const Layout = ({ children }) => {
           {/* Logo Section */}
           <div className="flex items-center gap-2 sm:gap-3">
             <img 
-              src="/Letspeak logo.png" 
+              src="/logo.png" 
               alt="LetSpeak Logo" 
               className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-sm"
             />

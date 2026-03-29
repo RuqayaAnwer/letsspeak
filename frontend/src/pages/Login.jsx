@@ -114,7 +114,7 @@ const Login = () => {
                 <div className="text-center mb-8">
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-4">
                         <img 
-                            src="/Letspeak logo.png" 
+                            src="/logo.png" 
                             alt="LetSpeak Logo" 
                             className="w-12 h-12 sm:w-16 sm:h-16"
                         />
