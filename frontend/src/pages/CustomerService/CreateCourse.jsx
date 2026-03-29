@@ -29,13 +29,14 @@ const CreateCourse = () => {
   });
 
   const levels = [
-    { value: 'A1', label: 'مبتدئ (A1)' },
-    { value: 'A2', label: 'أساسي (A2)' },
-    { value: 'B1', label: 'متوسط (B1)' },
-    { value: 'B2', label: 'فوق المتوسط (B2)' },
-    { value: 'C1', label: 'متقدم (C1)' },
-    { value: 'C2', label: 'متقن (C2)' },
-    { value: 'kids', label: 'أطفال' },
+    { value: 'L1', label: 'المستوى 1' },
+    { value: 'L2', label: 'المستوى 2' },
+    { value: 'L3', label: 'المستوى 3' },
+    { value: 'L4', label: 'المستوى 4' },
+    { value: 'L5', label: 'المستوى 5' },
+    { value: 'L6', label: 'المستوى 6' },
+    { value: 'L7', label: 'المستوى 7' },
+    { value: 'L8', label: 'المستوى 8' },
   ];
 
   const [formData, setFormData] = useState({
