@@ -397,25 +397,20 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
         onClose={() => !submittingPayment && setPaymentModal({ ...paymentModal, open: false })}
         title="تسديد دفعة متبقية"
         size="sm"
+        zIndex="z-[200]"
       >
         <form onSubmit={handlePaymentSubmit} className="space-y-4">
-          <div>
+          <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              المبلغ المدفوع
+              المبلغ (د.ع)
             </label>
-            <div className="relative">
-              <input
-                type="number"
-                value={paymentModal.amount}
-                onChange={(e) => setPaymentModal({ ...paymentModal, amount: e.target.value })}
-                className="input-field pr-12"
-                min="0"
-                max={paymentModal.maxAmount}
-                step="any"
-                required
-              />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">د.ع</span>
-            </div>
+            <input
+              type="number"
+              value={paymentModal.amount}
+              onChange={(e) => setPaymentModal({ ...paymentModal, amount: e.target.value })}
+              className="w-full relative z-[100] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans text-left dark:bg-gray-700 dark:text-white"
+              dir="ltr"
+            />
           </div>
           
           <div>
