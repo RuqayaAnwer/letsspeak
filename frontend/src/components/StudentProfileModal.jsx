@@ -52,10 +52,15 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
     
     setSubmittingPayment(true);
     try {
+      // Normalize amount to ensure it is handled correctly
+      const amountValue = typeof paymentModal.amount === 'string' 
+        ? parseFloat(paymentModal.amount.replace(/,/g, '')) 
+        : parseFloat(paymentModal.amount);
+
       await api.post('/payments', {
         student_id: studentId,
         course_id: paymentModal.courseId,
-        amount: paymentModal.amount,
+        amount: amountValue,
         status: 'completed',
         payment_date: paymentModal.date,
         payment_method: paymentModal.payment_method
@@ -63,9 +68,17 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
       // Refresh profile data
       await fetchProfileData();
       setPaymentModal({ ...paymentModal, open: false });
+      alert('تم تسجيل الدفعة بنجاح!');
     } catch (err) {
       console.error('Error submitting payment:', err);
-      // alert('حدث خطأ أثناء تسجيل الدفعة');
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || 'حدث خطأ غير معروف';
+      
+      let validationErrors = '';
+      if (err.response?.data?.errors) {
+         validationErrors = '\\n' + Object.values(err.response.data.errors).flat().join('\\n');
+      }
+      
+      alert('فشل تسجيل الدفعة:\\n' + errorMsg + validationErrors);
     } finally {
       setSubmittingPayment(false);
     }

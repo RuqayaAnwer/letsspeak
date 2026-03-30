@@ -13,6 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatCurrency } from '../../utils/currencyFormat';
 import EmptyState from '../../components/EmptyState';
 import StudentProfileModal from '../../components/StudentProfileModal';
+import Select from 'react-select';
 
 
 // Helper to normalize amounts (so 150 becomes 150000)
@@ -1965,24 +1966,32 @@ const Payments = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label" htmlFor="payment-student">الطالب *</label>
-              <select
+              <Select
                 id="payment-student"
-                name="payment-student"
-                value={formData.student_id}
-                onChange={(e) => {
-                  const studentId = e.target.value;
+                options={students.map(s => ({ value: s.id.toString(), label: s.name }))}
+                value={formData.student_id ? { value: formData.student_id, label: students.find(s => s.id.toString() === formData.student_id)?.name } : null}
+                onChange={(selected) => {
+                  const studentId = selected ? selected.value : '';
                   setFormData({ ...formData, student_id: studentId, course_id: '', course_package_id: '', amount: '', remaining_amount: '' });
                 }}
-                className="select"
-                required
-              >
-                <option value="">اختر الطالب</option>
-                {students.map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="ابحث واختر الطالب..."
+                isClearable
+                isSearchable
+                className="react-select-container"
+                classNamePrefix="react-select"
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    minHeight: '42px',
+                    borderColor: '#e5e7eb',
+                    borderRadius: '0.5rem',
+                    boxShadow: 'none',
+                    '&:hover': {
+                      borderColor: '#3b82f6'
+                    }
+                  })
+                }}
+              />
             </div>
 
             <div>
