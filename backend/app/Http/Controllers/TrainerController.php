@@ -107,6 +107,7 @@ public function store(Request $request)
         // 1. التحقق من البيانات
         $request->validate([
             'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255|unique:users,email',
             'phone' => 'nullable|string|max:20',
             'job_title' => 'nullable|string|max:255',
             'base_salary' => 'nullable|numeric|min:0',
@@ -182,7 +183,7 @@ public function store(Request $request)
     {
         $request->validate([
             'name'      => 'sometimes|required|string|max:255',
-            'email'     => 'nullable|email|max:255',
+            'email'     => 'nullable|email|max:255|unique:users,email,' . $trainer->user_id,
             'phone'     => 'nullable|string|max:20',
             'min_level' => 'nullable|string|max:10',
             'max_level' => 'nullable|string|max:10',
