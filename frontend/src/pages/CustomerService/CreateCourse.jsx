@@ -121,10 +121,8 @@ const CreateCourse = () => {
   // Helper function to parse amount input (handles 100.000 format)
   const parseAmountInput = (value) => {
     if (!value) return '';
-    // Remove all dots and convert to number
-    const cleaned = value.toString().replace(/\./g, '');
-    const num = parseFloat(cleaned);
-    return isNaN(num) ? '' : num.toString();
+    // Strip everything except numbers (because in IQD, dots like 100.000 mean 100,000)
+    return value.replace(/[^\d]/g, '');
   };
 
   // Helper function to format amount for display in input (100000 -> 100.000)

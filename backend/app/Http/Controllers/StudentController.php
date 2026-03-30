@@ -123,8 +123,19 @@ class StudentController extends Controller
                 $pkgPrice = is_string($pkgPrice) ? str_replace(',', '', $pkgPrice) : $pkgPrice;
                 $coursePrice = (float)$pkgPrice;
             }
+
+            // Retroactive fix for Iraqi Dinar dot truncation bug in older records
+            if ($coursePrice > 0 && $coursePrice < 5000) {
+                $coursePrice *= 1000;
+            }
+
             $extraFee = is_string($course->extra_lectures_fee) ? str_replace(',', '', $course->extra_lectures_fee) : $course->extra_lectures_fee;
-            $coursePrice += (float)$extraFee;
+            $extraFeeFloat = (float)$extraFee;
+            if ($extraFeeFloat > 0 && $extraFeeFloat < 5000) {
+                $extraFeeFloat *= 1000;
+            }
+            
+            $coursePrice += $extraFeeFloat;
             
             if ($isDual) {
                 // If dual, standard price per student is derived from package
@@ -142,7 +153,13 @@ class StudentController extends Controller
 
             // Student specific payments for this course
             $coursePayments = $payments->where('course_id', $course->id);
-            $studentPaidCourse = $coursePayments->whereIn('status', ['paid', 'completed', 'partial'])->sum('amount');
+            $studentPaidCourse = (float)$coursePayments->whereIn('status', ['paid', 'completed', 'partial'])->sum('amount');
+            
+            // Retroactive fix for payments saved with dots (e.g. 50.00 instead of 50000)
+            if ($studentPaidCourse > 0 && $studentPaidCourse < 5000) {
+                $studentPaidCourse *= 1000;
+            }
+            
             $studentRemainingCourse = max(0, $coursePrice - $studentPaidCourse);
             
             $totalDebt += $studentRemainingCourse;
