@@ -5,6 +5,7 @@ import { ThemeContext } from '../context/ThemeContext';
 import { Menu, X, Lock, Settings } from 'lucide-react';
 import UserSettingsModal from './UserSettingsModal';
 import api from '../api/axios';
+import logoImage from '../assets/logo.png';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -145,11 +146,11 @@ const Layout = ({ children }) => {
       >
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+          <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700 mt-2">
             <img 
-              src="/logo.png" 
+              src={logoImage} 
               alt="LetSpeak Logo" 
-              className="w-8 h-8 sm:w-10 sm:h-10"
+              className="h-12 w-auto object-contain cursor-pointer"
             />
             <h1 className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">LetSpeak</h1>
           </div>

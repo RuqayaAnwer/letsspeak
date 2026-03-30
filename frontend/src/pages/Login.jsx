@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import logoImage from '../assets/logo.png';
 
 const Login = () => {
     const [mode, setMode] = useState('manual'); // 'manual' = تسجيل دخول بالإيميل (للمدربين والموظفين)
@@ -112,11 +113,11 @@ const Login = () => {
             <div className="w-full max-w-4xl">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-4">
+                    <div className="flex flex-col items-center justify-center">
                         <img 
-                            src="/logo.png" 
+                            src={logoImage} 
                             alt="LetSpeak Logo" 
-                            className="w-12 h-12 sm:w-16 sm:h-16"
+                            className="w-20 h-20 sm:w-24 sm:h-24 mb-4 object-contain"
                         />
                         <h1 className="text-2xl sm:text-4xl font-bold text-gray-800 dark:text-white">
                             LetSpeak
