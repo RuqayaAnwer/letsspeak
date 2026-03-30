@@ -56,6 +56,7 @@ class Course extends Model
 
     protected $appends = [
         'is_custom',
+        'student_price',
         'student_postponement_count',
         'trainer_postponement_count',
         'max_student_postponements',
@@ -281,5 +282,68 @@ class Course extends Model
     public function getIsCustomAttribute(): bool
     {
         return $this->course_package_id === null;
+    }
+
+    /**
+     * Get the exact price required from a single student for this course.
+     * Replicates and replaces frontend JS logic for dual packages.
+     */
+    public function getStudentPriceAttribute(): float
+    {
+        $isDual = $this->is_dual;
+        $pkgName = $this->coursePackage ? $this->coursePackage->name : '';
+        
+        $extraFee = $this->extra_lectures_fee ?? 0;
+        if (is_string($extraFee)) {
+            $extraFee = (float)str_replace(',', '', $extraFee);
+        } else {
+            $extraFee = (float)$extraFee;
+        }
+
+        // Retroactive Iraqi Dinar dot truncation fix
+        if ($extraFee > 0 && $extraFee < 5000) {
+            $extraFee *= 1000;
+        }
+
+        if ($isDual) {
+            $basePrice = 0;
+            if (mb_strpos($pkgName, 'بمزاجي') !== false || $pkgName === 'بمزاجي') {
+                $basePrice = 90000;
+            } elseif (mb_strpos($pkgName, 'توازن') !== false || mb_strpos($pkgName, 'التوازن') !== false || $pkgName === 'التوازن') {
+                $basePrice = 135000;
+            } elseif (mb_strpos($pkgName, 'سرعة') !== false || mb_strpos($pkgName, 'السرعة') !== false || $pkgName === 'السرعة') {
+                $basePrice = 225000;
+            }
+
+            if ($basePrice > 0) {
+                return $basePrice + ($extraFee / 2);
+            }
+            // Fallback for unknown dual packages
+            $pkgPrice = $this->coursePackage ? $this->coursePackage->price : 0;
+            if (is_string($pkgPrice)) $pkgPrice = (float)str_replace(',', '', $pkgPrice);
+            if ($pkgPrice > 0 && $pkgPrice < 5000) $pkgPrice *= 1000;
+            return ($pkgPrice > 0 ? $pkgPrice / 2 : 0) + ($extraFee / 2);
+        }
+
+        // Single Course
+        $packagePrice = 0;
+        if ($this->is_custom && isset($this->total_amount)) {
+            $packagePrice = $this->total_amount;
+        } elseif ($this->coursePackage) {
+            $packagePrice = $this->coursePackage->price;
+        }
+
+        if (is_string($packagePrice)) {
+            $packagePrice = (float)str_replace(',', '', $packagePrice);
+        } else {
+            $packagePrice = (float)$packagePrice;
+        }
+
+        // Retroactive fix for single package dot notation errors
+        if ($packagePrice > 0 && $packagePrice < 5000) {
+            $packagePrice *= 1000;
+        }
+
+        return $packagePrice + $extraFee;
     }
 }

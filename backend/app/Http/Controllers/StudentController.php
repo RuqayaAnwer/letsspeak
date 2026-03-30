@@ -114,42 +114,8 @@ class StudentController extends Controller
             $courseLectures = $course->lectures;
             
             // Financials for this course
-            $coursePrice = 0;
-            if (isset($course->total_amount) && (float)str_replace(',', '', $course->total_amount) > 0) {
-                $amt = is_string($course->total_amount) ? str_replace(',', '', $course->total_amount) : $course->total_amount;
-                $coursePrice = (float)$amt;
-            } elseif ($course->coursePackage) {
-                $pkgPrice = $course->coursePackage->price;
-                $pkgPrice = is_string($pkgPrice) ? str_replace(',', '', $pkgPrice) : $pkgPrice;
-                $coursePrice = (float)$pkgPrice;
-            }
-
-            // Retroactive fix for Iraqi Dinar dot truncation bug in older records
-            if ($coursePrice > 0 && $coursePrice < 5000) {
-                $coursePrice *= 1000;
-            }
-
-            $extraFee = is_string($course->extra_lectures_fee) ? str_replace(',', '', $course->extra_lectures_fee) : $course->extra_lectures_fee;
-            $extraFeeFloat = (float)$extraFee;
-            if ($extraFeeFloat > 0 && $extraFeeFloat < 5000) {
-                $extraFeeFloat *= 1000;
-            }
-            
-            $coursePrice += $extraFeeFloat;
-            
-            if ($isDual) {
-                // If dual, standard price per student is derived from package
-                $pkgName = $course->coursePackage ? $course->coursePackage->name : '';
-                if (str_contains($pkgName, 'بمزاجي') || $pkgName === 'بمزاجي') {
-                    $coursePrice = 90000 + ((float)$extraFee / 2);
-                } elseif (str_contains($pkgName, 'توازن') || str_contains($pkgName, 'التوازن')) {
-                    $coursePrice = 135000 + ((float)$extraFee / 2);
-                } elseif (str_contains($pkgName, 'سرعة') || str_contains($pkgName, 'السرعة')) {
-                    $coursePrice = 225000 + ((float)$extraFee / 2);
-                } else {
-                    $coursePrice = $coursePrice ? ($coursePrice / 2) : 0;
-                }
-            }
+            // Financials for this course
+            $coursePrice = $course->student_price;
 
             // Student specific payments for this course
             $coursePayments = $payments->where('course_id', $course->id);

@@ -537,6 +537,11 @@ const Payments = () => {
   // Calculate price per student for dual courses
   const getStudentPrice = (course) => {
     if (!course) return 0;
+    
+    // Use backend's single source of truth if provided
+    if (course.student_price !== undefined) {
+      return parseFloat(course.student_price);
+    }
 
     const packageName = course.course_package?.name || course.coursePackage?.name || '';
     const isDual = course.is_dual || false;
