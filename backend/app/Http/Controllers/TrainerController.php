@@ -112,10 +112,11 @@ public function store(Request $request)
             'base_salary' => 'nullable|numeric|min:0',
         ]);
 
-        return DB::transaction(function () use ($request) {
-            
-            // 2. تجهيز بيانات الدخول
-            $generatedEmail = 'trainer_' . time() . '@letspeak.online';
+        try {
+            return DB::transaction(function () use ($request) {
+                
+                // 2. تجهيز بيانات الدخول
+                $generatedEmail = 'trainer_' . time() . '@letspeak.online';
             $email = $request->email ?? $generatedEmail;
             
             // ✅ تصحيح سطر كلمة السر (إعطاء قيمة افتراضية 123456 في حال عدم وجودها)
@@ -150,12 +151,19 @@ public function store(Request $request)
 
             $plainPassword = $request->password ?: '123456';
 
+                return response()->json([
+                    'trainer'        => $trainer,
+                    'login_email'    => $email,
+                    'login_password' => $plainPassword,
+                ], 201);
+            });
+        } catch (\Exception $e) {
             return response()->json([
-                'trainer'        => $trainer,
-                'login_email'    => $email,
-                'login_password' => $plainPassword,
-            ], 201);
-        });
+                'success' => false,
+                'message' => 'تفاصيل الخطأ: ' . $e->getMessage() . ' في ملف ' . basename($e->getFile()) . ' سطر ' . $e->getLine(),
+                'error_detail' => $e->getMessage()
+            ], 500);
+        }
     }
     /**
      * Display the specified trainer.
