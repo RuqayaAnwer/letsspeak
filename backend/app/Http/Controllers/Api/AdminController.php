@@ -160,7 +160,7 @@ class AdminController extends Controller
         }
         if ($request->has('status')) $user->status = $request->status;
         if ($request->has('job_title')) $user->job_title = $request->job_title;
-        if ($request->has('base_salary')) $user->base_salary = $request->base_salary;
+        if ($request->has('base_salary')) $user->base_salary = $request->base_salary ?? 0;
 
         $user->save();
 
