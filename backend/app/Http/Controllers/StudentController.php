@@ -115,19 +115,26 @@ class StudentController extends Controller
             
             // Financials for this course
             $coursePrice = 0;
-            if ($course->coursePackage) {
-                $coursePrice = (float)$course->coursePackage->price;
+            if ($course->is_custom && isset($course->custom_total_amount)) {
+                $customAmt = is_string($course->custom_total_amount) ? str_replace(',', '', $course->custom_total_amount) : $course->custom_total_amount;
+                $coursePrice = (float)$customAmt;
+            } elseif ($course->coursePackage) {
+                $pkgPrice = $course->coursePackage->price;
+                $pkgPrice = is_string($pkgPrice) ? str_replace(',', '', $pkgPrice) : $pkgPrice;
+                $coursePrice = (float)$pkgPrice;
             }
-            $coursePrice += (float)$course->extra_lectures_fee;
+            $extraFee = is_string($course->extra_lectures_fee) ? str_replace(',', '', $course->extra_lectures_fee) : $course->extra_lectures_fee;
+            $coursePrice += (float)$extraFee;
+            
             if ($isDual) {
                 // If dual, standard price per student is derived from package
                 $pkgName = $course->coursePackage ? $course->coursePackage->name : '';
                 if (str_contains($pkgName, 'بمزاجي') || $pkgName === 'بمزاجي') {
-                    $coursePrice = 90000;
+                    $coursePrice = 90000 + ((float)$extraFee / 2);
                 } elseif (str_contains($pkgName, 'توازن') || str_contains($pkgName, 'التوازن')) {
-                    $coursePrice = 135000;
+                    $coursePrice = 135000 + ((float)$extraFee / 2);
                 } elseif (str_contains($pkgName, 'سرعة') || str_contains($pkgName, 'السرعة')) {
-                    $coursePrice = 225000;
+                    $coursePrice = 225000 + ((float)$extraFee / 2);
                 } else {
                     $coursePrice = $coursePrice ? ($coursePrice / 2) : 0;
                 }
