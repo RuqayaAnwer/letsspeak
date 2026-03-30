@@ -328,24 +328,22 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                                   <span className="text-xs text-gray-500 block mb-1">المتبقي (ديون)</span>
                                   <span className="font-bold text-rose-600">{formatCurrencyAmount(course.remaining_amount || 0)}</span>
                                 </div>
-                                {course.remaining_amount > 0 && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setPaymentModal({
-                                        open: true,
-                                        courseId: course.id,
-                                        amount: course.remaining_amount,
-                                        maxAmount: course.remaining_amount,
-                                        date: new Date().toISOString().split('T')[0],
-                                        payment_method: course.payment_method || 'zain_cash'
-                                      });
-                                    }}
-                                    className="mt-2 text-[10px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 px-2 py-1 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors w-full flex items-center justify-center gap-1"
-                                  >
-                                    <CreditCard className="w-3 h-3" /> تسديد
-                                  </button>
-                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPaymentModal({
+                                      open: true,
+                                      courseId: course.id,
+                                      amount: course.remaining_amount,
+                                      maxAmount: course.remaining_amount,
+                                      date: new Date().toISOString().split('T')[0],
+                                      payment_method: course.payment_method || 'zain_cash'
+                                    });
+                                  }}
+                                  className="mt-2 text-[10px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 px-2 py-1 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors w-full flex items-center justify-center gap-1"
+                                >
+                                  <CreditCard className="w-3 h-3" /> تسديد
+                                </button>
                               </div>
                             </div>
                             

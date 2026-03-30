@@ -115,9 +115,9 @@ class StudentController extends Controller
             
             // Financials for this course
             $coursePrice = 0;
-            if ($course->is_custom && isset($course->total_amount)) {
-                $customAmt = is_string($course->total_amount) ? str_replace(',', '', $course->total_amount) : $course->total_amount;
-                $coursePrice = (float)$customAmt;
+            if (isset($course->total_amount) && (float)str_replace(',', '', $course->total_amount) > 0) {
+                $amt = is_string($course->total_amount) ? str_replace(',', '', $course->total_amount) : $course->total_amount;
+                $coursePrice = (float)$amt;
             } elseif ($course->coursePackage) {
                 $pkgPrice = $course->coursePackage->price;
                 $pkgPrice = is_string($pkgPrice) ? str_replace(',', '', $pkgPrice) : $pkgPrice;

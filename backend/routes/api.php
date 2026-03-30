@@ -59,6 +59,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Courses
     Route::get('/courses', [CourseController::class, 'index']);
     Route::post('/courses', [CourseController::class, 'store']);
+    // Courses Nearing Completion
+    Route::get('/courses/nearing-completion', [CourseController::class, 'nearingCompletion']);
+    
     Route::get('/courses/{course}', [CourseController::class, 'show']);
     Route::put('/courses/{course}', [CourseController::class, 'update']);
     Route::put('/courses/{course}/actual-start', [CourseController::class, 'startCourse']);
