@@ -535,10 +535,12 @@ const AdminUsers = () => {
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               className="select w-full"
               required
+              disabled={editingUser && editingUser.role === 'trainer'}
             >
               <option value="customer_service">خدمة العملاء</option>
               <option value="finance">المالية</option>
               <option value="admin">مدير النظام</option>
+              <option value="trainer">مدرب</option>
               <option value="employee">موظف (رواتب فقط - بدون وصول للنظام)</option>
             </select>
           </div>
