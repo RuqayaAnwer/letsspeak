@@ -129,7 +129,7 @@ public function store(Request $request)
                 'role'     => 'trainer',
                 'status'   => 'active',
                 'job_title'=> $request->job_title,
-                'base_salary'=> $request->base_salary,
+                'base_salary'=> $request->base_salary ?? 0,
             ]);
 
             // 4. إنشاء المدرب في جدول trainers (المخزن الثاني: يحوي username ويطلب البيانات مكررة)
@@ -202,7 +202,7 @@ public function store(Request $request)
                 
                 // Allow clearing job_title and base_salary by handling them unconditionally from the request if present
                 if ($request->has('job_title'))   $userData['job_title']   = $request->job_title;
-                if ($request->has('base_salary')) $userData['base_salary'] = $request->base_salary;
+                if ($request->has('base_salary')) $userData['base_salary'] = $request->base_salary ?? 0;
                 
                 if (!empty($userData)) {
                     $trainer->user->update($userData);
