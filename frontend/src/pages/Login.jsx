@@ -2,7 +2,8 @@ import React, { useState, useContext } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import logoImage from '../assets/logo.png';
+// Use backend URL to avoid 422 WAF errors on the frontend server
+const logoImage = 'https://api.letspeak.online/logo.png';
 
 const Login = () => {
     const [mode, setMode] = useState('manual'); // 'manual' = تسجيل دخول بالإيميل (للمدربين والموظفين)

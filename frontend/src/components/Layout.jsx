@@ -5,7 +5,8 @@ import { ThemeContext } from '../context/ThemeContext';
 import { Menu, X, Lock, Settings } from 'lucide-react';
 import UserSettingsModal from './UserSettingsModal';
 import api from '../api/axios';
-import logoImage from '../assets/logo.png';
+// Use backend URL to avoid 422 WAF errors on the frontend server
+const logoImage = 'https://api.letspeak.online/logo.png';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
