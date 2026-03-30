@@ -225,13 +225,43 @@ const Payments = () => {
   const fetchStudentsAndCourses = async () => {
     try {
       console.log('[Payments] جاري طلب GET /students, /courses, /course-packages ...');
-      const [studentsRes, coursesRes, packagesRes] = await Promise.all([
-        api.get('/students'),
-        api.get('/courses'),
+      
+      // Helper to fetch all pages
+      const fetchAllPages = async (endpoint) => {
+        let allData = [];
+        let currentPage = 1;
+        let hasMore = true;
+        
+        while (hasMore) {
+          const response = await api.get(endpoint, { params: { page: currentPage } });
+          const responseData = response.data;
+          const data = responseData?.data || responseData || [];
+          
+          if (Array.isArray(data)) {
+            allData = [...allData, ...data];
+          } else {
+            console.warn(`[Payments] Unexpected data format from ${endpoint}`);
+            hasMore = false;
+            break;
+          }
+          
+          if (responseData?.current_page < responseData?.last_page) {
+            currentPage++;
+          } else {
+            hasMore = false;
+          }
+        }
+        return allData;
+      };
+
+      const [allStudents, allCourses, packagesRes] = await Promise.all([
+        fetchAllPages('/students'),
+        fetchAllPages('/courses'),
         api.get('/course-packages'),
       ]);
-      setStudents(studentsRes.data.data || studentsRes.data || []);
-      setCourses(coursesRes.data.data || coursesRes.data || []);
+      
+      setStudents(allStudents);
+      setCourses(allCourses);
       setPackages(packagesRes.data.data || packagesRes.data || []);
       console.log('[Payments] نجاح: طلاب، كورسات، باقات تم جلبها');
     } catch (error) {
@@ -441,8 +471,7 @@ const Payments = () => {
       // Open modal with pre-filled data for adding remaining payment
       const course = payment.course;
       const packageId = course?.course_package_id || course?.coursePackage?.id || '';
-      const rawPrice = course?.course_package?.price || course?.coursePackage?.price || 0;
-      const packagePrice = getPackagePrice(rawPrice);
+      const packagePrice = course?.student_price || getPackagePrice(course?.course_package?.price || course?.coursePackage?.price || 0);
 
       // Calculate total paid for this course and student
       const totalPaid = payments
@@ -631,8 +660,7 @@ const Payments = () => {
   const openEditModal = (payment) => {
     const course = payment.course;
     const packageId = course?.course_package_id || course?.coursePackage?.id || '';
-    const rawPrice = course?.course_package?.price || course?.coursePackage?.price || 0;
-    const packagePrice = getPackagePrice(rawPrice);
+    const packagePrice = course?.student_price || getPackagePrice(course?.course_package?.price || course?.coursePackage?.price || 0);
 
     // Calculate total paid for this course
     const totalPaid = payments
@@ -2004,8 +2032,7 @@ const Payments = () => {
                   const courseId = e.target.value;
                   const selectedCourse = courses.find(c => c.id.toString() === courseId);
                   const packageId = selectedCourse?.course_package_id || selectedCourse?.coursePackage?.id || '';
-                  const rawPrice = selectedCourse?.course_package?.price || selectedCourse?.coursePackage?.price || 0;
-                  const packagePrice = getPackagePrice(rawPrice);
+                  const packagePrice = selectedCourse?.student_price || getPackagePrice(selectedCourse?.course_package?.price || selectedCourse?.coursePackage?.price || 0);
                   
                   // Calculate total paid for this course and student
                   const totalPaid = payments
@@ -2259,8 +2286,7 @@ const Payments = () => {
                     setEditFormData({ ...editFormData, amount: value });
                     // Recalculate remaining amount
                     const course = editingPayment?.course;
-                    const rawPrice = course?.course_package?.price || course?.coursePackage?.price || 0;
-    const packagePrice = getPackagePrice(rawPrice);
+                    const packagePrice = course?.student_price || getPackagePrice(course?.course_package?.price || course?.coursePackage?.price || 0);
                     const totalPaid = payments
                       .filter(p => p.course_id === editingPayment?.course_id && p.student_id === editingPayment?.student_id && p.status === 'completed' && p.id !== editingPayment?.id)
                       .reduce((sum, p) => sum + (normalizeAmount(p.amount) || 0), 0) + (normalizeAmount(value) || 0);
