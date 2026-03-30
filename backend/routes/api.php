@@ -109,9 +109,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Activity Logs
     Route::get('/activity-logs', [ActivityLogController::class, 'index']);
-    
-    // Courses Nearing Completion
-    Route::get('/courses/nearing-completion', [CourseController::class, 'nearingCompletion']);
 });
 
 // Trainer Dashboard & Unavailability
