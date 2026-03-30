@@ -1,6 +1,6 @@
 // Updated: 2025-12-21 - Added trainer payment column in lectures table
 // Status change confirmation modal with logging
-import { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';

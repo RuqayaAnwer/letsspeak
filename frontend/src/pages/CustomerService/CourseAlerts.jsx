@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, HelpCircle, X, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
 import api from '../../api/axios';
