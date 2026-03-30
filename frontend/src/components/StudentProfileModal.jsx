@@ -8,8 +8,10 @@ import {
 import LoadingSpinner from './LoadingSpinner';
 import Modal from './Modal';
 import { formatCurrency, formatCurrencyAmount } from '../utils/currencyFormat';
+import { useAuth } from '../context/AuthContext';
 
 const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState(null);
   const [error, setError] = useState(null);
@@ -242,7 +244,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
               </div>
 
               {/* Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className={`grid gap-4 ${user?.role !== 'trainer' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1'}`}>
                 <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
                     <BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -253,29 +255,33 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-                    <CreditCard className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">إجمالي المدفوعات</p>
-                    <p className="text-xl font-bold text-gray-800 dark:text-gray-200">
-                      {formatCurrency(profileData.financials.total_paid)}
-                    </p>
-                  </div>
-                </div>
+                {user?.role !== 'trainer' && (
+                  <>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                        <CreditCard className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">إجمالي المدفوعات</p>
+                        <p className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                          {formatCurrency(profileData.financials.total_paid)}
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center shrink-0">
-                    <AlertCircle className="w-6 h-6 text-rose-600 dark:text-rose-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">إجمالي الديون (المتبقي)</p>
-                    <p className="text-xl font-bold text-rose-600 dark:text-rose-400">
-                      {formatCurrency(profileData.financials.total_remaining)}
-                    </p>
-                  </div>
-                </div>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center shrink-0">
+                        <AlertCircle className="w-6 h-6 text-rose-600 dark:text-rose-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">إجمالي الديون (المتبقي)</p>
+                        <p className="text-xl font-bold text-rose-600 dark:text-rose-400">
+                          {formatCurrency(profileData.financials.total_remaining)}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Course History Timeline */}
@@ -323,7 +329,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
 
                         {expandedCourse === course.id && (
                           <div className="px-4 pb-4 pt-2 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 animate-fade-in text-sm">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
+                            <div className={`grid gap-4 mt-2 ${user?.role !== 'trainer' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
                               <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
                                 <span className="text-xs text-gray-500 block mb-1">التقدم في المحاضرات</span>
                                 <span className="font-bold text-gray-700 dark:text-gray-300">{course.completed_lectures} / {course.total_lectures}</span>
@@ -332,36 +338,40 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                                 <span className="text-xs text-gray-500 block mb-1">نسبة الحضور</span>
                                 <span className="font-bold text-primary-600">{course.attendance_rate}%</span>
                               </div>
-                              <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <span className="text-xs text-gray-500 block mb-1">المدفوع لهذا الكورس</span>
-                                <span className="font-bold text-emerald-600">{formatCurrencyAmount(course.paid_amount || 0)}</span>
-                              </div>
-                              <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col justify-between">
-                                <div>
-                                  <span className="text-xs text-gray-500 block mb-1">المتبقي (ديون)</span>
-                                  <span className="font-bold text-rose-600">{formatCurrencyAmount(course.remaining_amount || 0)}</span>
-                                </div>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setPaymentModal({
-                                      open: true,
-                                      courseId: course.id,
-                                      amount: course.remaining_amount,
-                                      maxAmount: course.remaining_amount,
-                                      date: new Date().toISOString().split('T')[0],
-                                      payment_method: course.payment_method || 'zain_cash'
-                                    });
-                                  }}
-                                  className="mt-2 text-[10px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 px-2 py-1 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors w-full flex items-center justify-center gap-1"
-                                >
-                                  <CreditCard className="w-3 h-3" /> تسديد
-                                </button>
-                              </div>
+                              {user?.role !== 'trainer' && (
+                                <>
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <span className="text-xs text-gray-500 block mb-1">المدفوع لهذا الكورس</span>
+                                    <span className="font-bold text-emerald-600">{formatCurrencyAmount(course.paid_amount || 0)}</span>
+                                  </div>
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col justify-between">
+                                    <div>
+                                      <span className="text-xs text-gray-500 block mb-1">المتبقي (ديون)</span>
+                                      <span className="font-bold text-rose-600">{formatCurrencyAmount(course.remaining_amount || 0)}</span>
+                                    </div>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPaymentModal({
+                                          open: true,
+                                          courseId: course.id,
+                                          amount: course.remaining_amount,
+                                          maxAmount: course.remaining_amount,
+                                          date: new Date().toISOString().split('T')[0],
+                                          payment_method: course.payment_method || 'zain_cash'
+                                        });
+                                      }}
+                                      className="mt-2 text-[10px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 px-2 py-1 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors w-full flex items-center justify-center gap-1"
+                                    >
+                                      <CreditCard className="w-3 h-3" /> تسديد
+                                    </button>
+                                  </div>
+                                </>
+                              )}
                             </div>
                             
                             {/* Payments List */}
-                            {course.payments && course.payments.length > 0 && (
+                            {user?.role !== 'trainer' && course.payments && course.payments.length > 0 && (
                               <div className="mt-3">
                                 <h5 className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">الدفعات المؤكدة:</h5>
                                 <div className="space-y-1.5">

@@ -211,7 +211,9 @@ const Layout = ({ children }) => {
               </div>
               <div className="flex flex-col min-w-0">
                 <span className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate">{user?.name}</span>
-                <span className="text-xs text-blue-500 font-medium truncate">{getRoleTitle()}</span>
+                <span className="text-xs text-blue-500 font-medium truncate">
+                  {getRoleTitle()}{user?.role === 'trainer' && user?.job_title ? ` / ${user.job_title}` : ''}
+                </span>
               </div>
             </div>
 

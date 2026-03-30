@@ -19,7 +19,7 @@ class TrainerController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Trainer::with('user:id,name,email');
+        $query = Trainer::with('user:id,name,email,job_title,base_salary');
 
         // Search by name (search in both trainer name and user name)
         if ($request->has('search')) {
@@ -108,6 +108,8 @@ public function store(Request $request)
         $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
+            'job_title' => 'nullable|string|max:255',
+            'base_salary' => 'nullable|numeric|min:0',
         ]);
 
         return DB::transaction(function () use ($request) {
@@ -126,6 +128,8 @@ public function store(Request $request)
                 'password' => $hashedPassword,
                 'role'     => 'trainer',
                 'status'   => 'active',
+                'job_title'=> $request->job_title,
+                'base_salary'=> $request->base_salary,
             ]);
 
             // 4. إنشاء المدرب في جدول trainers (المخزن الثاني: يحوي username ويطلب البيانات مكررة)
@@ -176,6 +180,8 @@ public function store(Request $request)
             'max_level' => 'nullable|string|max:10',
             'notes'     => 'nullable|string',
             'password'  => 'nullable|string|min:6',
+            'job_title' => 'nullable|string|max:255',
+            'base_salary' => 'nullable|numeric|min:0',
         ]);
 
         return DB::transaction(function () use ($request, $trainer) {
@@ -193,6 +199,11 @@ public function store(Request $request)
                 if ($request->filled('name'))     $userData['name']     = $request->name;
                 if ($request->filled('email'))    $userData['email']    = $request->email;
                 if ($request->filled('password')) $userData['password'] = \Illuminate\Support\Facades\Hash::make($request->password);
+                
+                // Allow clearing job_title and base_salary by handling them unconditionally from the request if present
+                if ($request->has('job_title'))   $userData['job_title']   = $request->job_title;
+                if ($request->has('base_salary')) $userData['base_salary'] = $request->base_salary;
+                
                 if (!empty($userData)) {
                     $trainer->user->update($userData);
                 }
@@ -219,7 +230,7 @@ public function store(Request $request)
      */
     public function list()
     {
-        $trainers = Trainer::with('user:id,name,email')
+        $trainers = Trainer::with('user:id,name,email,job_title,base_salary')
             ->get()
             ->map(function ($trainer) {
                 return [
@@ -229,6 +240,8 @@ public function store(Request $request)
                         'id' => $trainer->user->id,
                         'name' => $trainer->user->name,
                         'email' => $trainer->user->email,
+                        'job_title' => $trainer->user->job_title,
+                        'base_salary' => $trainer->user->base_salary,
                     ] : null,
                     'phone' => $trainer->phone ?? '',
                     'min_level' => $trainer->min_level,
@@ -267,7 +280,7 @@ public function store(Request $request)
         
         $trainerId = $trainer->id;
 
-        $trainer = Trainer::with(['courses.student', 'courses.lectures', 'courses.package'])
+        $trainer = Trainer::with(['user:id,job_title', 'courses.student', 'courses.lectures', 'courses.package'])
             ->find($trainerId);
 
         if (!$trainer) {
@@ -289,7 +302,9 @@ public function store(Request $request)
         return response()->json([
             'success' => true,
             'data' => [
-                'trainer' => $trainer->only(['id', 'name', 'phone']),
+                'trainer' => array_merge($trainer->only(['id', 'name', 'phone']), [
+                    'job_title' => $trainer->user ? $trainer->user->job_title : null
+                ]),
                 'courses' => $courses,
             ]
         ]);

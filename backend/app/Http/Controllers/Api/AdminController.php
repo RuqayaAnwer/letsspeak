@@ -92,7 +92,7 @@ class AdminController extends Controller
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
-            'role'     => 'required|in:customer_service,finance,admin',
+            'role'     => 'required|in:customer_service,finance,admin,employee',
             'job_title'=> 'nullable|string|max:255',
             'base_salary' => 'nullable|numeric|min:0',
         ]);
@@ -144,7 +144,7 @@ class AdminController extends Controller
             'name'     => 'sometimes|string|max:255',
             'email'    => 'sometimes|email|unique:users,email,' . $id,
             'password' => 'sometimes|string|min:6',
-            'role'     => 'sometimes|in:customer_service,finance,admin,trainer',
+            'role'     => 'sometimes|in:customer_service,finance,admin,trainer,employee',
             'status'   => 'sometimes|in:active,inactive',
             'job_title'=> 'nullable|string|max:255',
             'base_salary' => 'nullable|numeric|min:0',

@@ -9,6 +9,7 @@ const roleLabels = {
   customer_service: { label: 'خدمة العملاء', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',   icon: Users },
   finance:          { label: 'المالية',        color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', icon: DollarSign },
   trainer:          { label: 'مدرب',           color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300', icon: GraduationCap },
+  employee:         { label: 'موظف رواتب',       color: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300', icon: Users },
 };
 
 const sampleUsers = [
@@ -279,6 +280,7 @@ const AdminUsers = () => {
           <option value="customer_service">خدمة العملاء</option>
           <option value="finance">المالية</option>
           <option value="trainer">المدربون</option>
+          <option value="employee">موظف (رواتب فقط)</option>
         </select>
       </div>
 
@@ -537,6 +539,7 @@ const AdminUsers = () => {
               <option value="customer_service">خدمة العملاء</option>
               <option value="finance">المالية</option>
               <option value="admin">مدير النظام</option>
+              <option value="employee">موظف (رواتب فقط - بدون وصول للنظام)</option>
             </select>
           </div>
 
@@ -646,6 +649,29 @@ const AdminUsers = () => {
               dir="ltr"
               autoComplete="new-phone"
             />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">الوظيفة الإدارية الثانية (اختياري)</label>
+              <input
+                type="text"
+                value={addTrainerModal.job_title}
+                onChange={(e) => setAddTrainerModal(prev => ({ ...prev, job_title: e.target.value }))}
+                className="input w-full"
+                placeholder="مثال: ضمان جودة"
+              />
+            </div>
+            <div>
+              <label className="label">الراتب الإداري الثابت (د.ع/اختياري)</label>
+              <input
+                type="number"
+                value={addTrainerModal.base_salary}
+                onChange={(e) => setAddTrainerModal(prev => ({ ...prev, base_salary: e.target.value }))}
+                className="input w-full"
+                placeholder="0"
+                min="0"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
