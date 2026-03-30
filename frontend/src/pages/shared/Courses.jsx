@@ -525,9 +525,11 @@ const Courses = () => {
                           <span>إضافية:</span>
                           <span className="font-bold mx-0.5">{course.extra_lectures_count}</span>
                         </span>
-                        <span className="text-amber-700 dark:text-amber-300 font-bold whitespace-nowrap">
-                          {formatCurrency(course.extra_lectures_fee)}
-                        </span>
+                        {!isTrainer && (
+                          <span className="text-amber-700 dark:text-amber-300 font-bold whitespace-nowrap">
+                            {formatCurrency(course.extra_lectures_fee)}
+                          </span>
+                        )}
                       </div>
                     )}
                     
@@ -688,7 +690,9 @@ const Courses = () => {
                           <div className="w-full flex justify-center mt-1">
                             <span className="flex items-center gap-1 bg-amber-100 dark:bg-amber-900/40 text-[9px] text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded">
                               <span className="font-bold">+{course.extra_lectures_count}</span> إضافية
-                              <span className="mx-0.5 font-bold">({formatCurrency(course.extra_lectures_fee)})</span>
+                              {!isTrainer && (
+                                <span className="mx-0.5 font-bold">({formatCurrency(course.extra_lectures_fee)})</span>
+                              )}
                             </span>
                           </div>
                         )}
