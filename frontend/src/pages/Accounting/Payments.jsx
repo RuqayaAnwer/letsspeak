@@ -2024,12 +2024,34 @@ const Payments = () => {
 
             <div>
               <label className="label" htmlFor="payment-course">الكورس *</label>
-              <select
+              <Select
                 id="payment-course"
-                name="payment-course"
-                value={formData.course_id}
-                onChange={(e) => {
-                  const courseId = e.target.value;
+                options={getStudentCourses().map(course => {
+                  const isDual = course.is_dual || (course.students && Array.isArray(course.students) && course.students.length > 1);
+                  const courseName = course.course_package?.name || course.coursePackage?.name || `كورس #${course.id}`;
+                  return {
+                    value: course.id.toString(),
+                    label: `${courseName} ${isDual ? '(ثنائي)' : ''}`
+                  };
+                })}
+                value={
+                  formData.course_id ? {
+                    value: formData.course_id,
+                    label: (() => {
+                      const selectedC = courses.find(c => c.id.toString() === formData.course_id);
+                      const isD = selectedC?.is_dual || (selectedC?.students && Array.isArray(selectedC.students) && selectedC.students.length > 1);
+                      const tName = selectedC?.course_package?.name || selectedC?.coursePackage?.name || `كورس #${selectedC?.id}`;
+                      return `${tName} ${isD ? '(ثنائي)' : ''}`;
+                    })()
+                  } : null
+                }
+                onChange={(selected) => {
+                  const courseId = selected ? selected.value : '';
+                  if (!courseId) {
+                    setFormData({ ...formData, course_id: '', course_package_id: '', remaining_amount: '0' });
+                    return;
+                  }
+                  
                   const selectedCourse = courses.find(c => c.id.toString() === courseId);
                   const packageId = selectedCourse?.course_package_id || selectedCourse?.coursePackage?.id || '';
                   const packagePrice = selectedCourse?.student_price || getPackagePrice(selectedCourse?.course_package?.price || selectedCourse?.coursePackage?.price || 0);
@@ -2048,21 +2070,25 @@ const Payments = () => {
                     remaining_amount: remainingAmount > 0 ? remainingAmount.toString() : '0',
                   });
                 }}
-                className="select"
-                required
-                disabled={!formData.student_id}
-              >
-                <option value="">اختر الكورس</option>
-                {formData.student_id && getStudentCourses().map((course) => {
-                  const isDual = course.is_dual || (course.students && Array.isArray(course.students) && course.students.length > 1);
-                  const courseName = course.course_package?.name || course.coursePackage?.name || `كورس #${course.id}`;
-                  return (
-                    <option key={course.id} value={course.id}>
-                      {courseName} {isDual ? '(ثنائي)' : ''}
-                    </option>
-                  );
-                })}
-              </select>
+                placeholder="اختر الكورس..."
+                isDisabled={!formData.student_id}
+                isClearable
+                isSearchable
+                className="react-select-container"
+                classNamePrefix="react-select"
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    minHeight: '42px',
+                    borderColor: '#e5e7eb',
+                    borderRadius: '0.5rem',
+                    boxShadow: 'none',
+                    '&:hover': {
+                      borderColor: '#3b82f6'
+                    }
+                  })
+                }}
+              />
             </div>
           </div>
 

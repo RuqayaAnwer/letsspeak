@@ -1,0 +1,1 @@
+<?php require __DIR__.'/backend/vendor/autoload.php'; require __DIR__.'/backend/bootstrap/app.php'; \ = require_once __DIR__.'/backend/bootstrap/app.php'; \ = \->make(Illuminate\Contracts\Console\Kernel::class); \->bootstrap(); \ = App\Models\Course::with(['trainer.user', 'students', 'coursePackage'])->latest()->first(); echo json_encode(\, JSON_PRETTY_PRINT); ?>
