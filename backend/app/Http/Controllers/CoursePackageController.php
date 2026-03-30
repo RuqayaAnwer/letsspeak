@@ -12,7 +12,8 @@ class CoursePackageController extends Controller
      */
     public function index()
     {
-        if (!auth()->user() || (!auth()->user()->isAdmin() && !auth()->user()->isCustomerService())) {
+        $user = auth()->user();
+        if (!$user || (!$user->isAdmin() && !$user->isCustomerService() && !$user->isAccounting() && !$user->isFinance())) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -51,7 +52,8 @@ class CoursePackageController extends Controller
      */
     public function show(CoursePackage $coursePackage)
     {
-        if (!auth()->user() || (!auth()->user()->isAdmin() && !auth()->user()->isCustomerService())) {
+        $user = auth()->user();
+        if (!$user || (!$user->isAdmin() && !$user->isCustomerService() && !$user->isAccounting() && !$user->isFinance())) {
             abort(403, 'Unauthorized action.');
         }
 
