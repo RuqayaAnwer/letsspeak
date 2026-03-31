@@ -431,6 +431,34 @@ class LectureController extends Controller
             }
         }
 
+        // Auto-finish course if all required lectures are completed
+        if ($course && $course->status === 'active') {
+            $completedCount = $course->lectures()->get()->filter(function ($l) {
+                if ($l->student_attendance && is_array($l->student_attendance)) {
+                    foreach ($l->student_attendance as $studentData) {
+                        if (is_array($studentData)) {
+                            $attendance = $studentData['attendance'] ?? null;
+                            if ($attendance === 'present' || $attendance === 'absent') {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return $l->is_completed || in_array($l->attendance, ['present', 'absent']);
+            })->count();
+
+            if ($completedCount >= $course->lectures_count) {
+                $course->status = 'finished';
+                $course->save();
+                
+                \Log::info('Course auto-finished after lecture update', [
+                    'course_id' => $course->id,
+                    'completed_count' => $completedCount,
+                    'total_required' => $course->lectures_count
+                ]);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'تم تحديث المحاضرة بنجاح.',
