@@ -76,7 +76,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/lectures', [LectureController::class, 'index']);
     Route::get('/lectures/{lecture}', [ApiLectureController::class, 'show']);
     Route::put('/lectures/{lecture}', [LectureController::class, 'update']);
-    Route::delete('/lectures/{lecture}', [LectureController::class, 'destroy']);
     Route::post('/lectures/{lecture}/postpone', [ApiLectureController::class, 'postpone']);
     Route::post('/lectures/{lecture}/cancel-postponement', [ApiLectureController::class, 'cancelPostponement']);
     Route::post('/lectures/{lecture}/check-conflicts', [ApiLectureController::class, 'checkConflicts']);

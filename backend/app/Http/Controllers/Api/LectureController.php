@@ -286,53 +286,6 @@ class LectureController extends Controller
     }
 
     /**
-     * Delete a makeup or extra lecture.
-     * 
-     * @route DELETE /api/lectures/{lecture}
-     * 
-     * @param Lecture $lecture
-     * @return JsonResponse
-     */
-    public function destroy(Lecture $lecture): JsonResponse
-    {
-        $user = auth()->user();
-        if (!in_array($user->role, ['admin', 'customer_service'])) {
-            return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
-        }
-
-        if (!$lecture->is_makeup && !$lecture->is_extra) {
-            return response()->json(['success' => false, 'message' => 'لا يمكنك حذف محاضرة أساسية من باقة الكورس. يمكنك فقط حذف المحاضرات التعويضية أو الإضافية.'], 403);
-        }
-
-        $isCompleted = method_exists($lecture, 'isCompleted') ? $lecture->isCompleted() : in_array($lecture->attendance, ['present', 'absent']);
-        if ($isCompleted) {
-            return response()->json(['success' => false, 'message' => 'لا يمكن حذف محاضرة مكتملة. يرجى إزالة الحضور أولاً.'], 403);
-        }
-
-        // If it's a makeup lecture, remove the note from the original lecture
-        if ($lecture->is_makeup && $lecture->makeup_for) {
-            $original = Lecture::find($lecture->makeup_for);
-            if ($original && in_array($original->attendance, ['postponed_by_trainer', 'postponed_by_student', 'postponed_holiday'])) {
-                $original->update(['attendance' => 'pending', 'notes' => null]);
-                
-                // Refund the postponement count
-                if ($original->course && $original->course->postponements_used > 0) {
-                    $original->course->decrement('postponements_used');
-                }
-            }
-        }
-
-        // If it's an extra lecture, fix the course lectures count
-        if ($lecture->is_extra && $lecture->course) {
-            $lecture->course->decrement('lectures_count');
-        }
-
-        $lecture->delete();
-
-        return response()->json(['success' => true, 'message' => 'تم حذف المحاضرة بنجاح']);
-    }
-
-    /**
      * Update a lecture (general update, not postponement).
      * 
      * @route PUT /api/lectures/{id}

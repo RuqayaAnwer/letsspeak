@@ -784,29 +784,6 @@ const CourseDetails = () => {
   };
 
   /**
-   * Delete a makeup or extra lecture
-   */
-  const handleDeleteLecture = async (lectureId) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذه المحاضرة نهائياً؟')) return;
-    
-    setSaving(true);
-    try {
-      const response = await api.delete(`/lectures/${lectureId}`);
-      if (response.data.success) {
-        alert('تم حذف المحاضرة بنجاح');
-        fetchCourse();
-      } else {
-        alert(response.data.message || 'حدث خطأ أثناء الحذف');
-      }
-    } catch (error) {
-      console.error('Error deleting lecture:', error);
-      alert(error.response?.data?.message || 'تعذر حذف المحاضرة');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  /**
    * Handle course status change - shows confirmation for paused/finished
    */
   const handleCourseStatusChange = (value) => {
@@ -1897,39 +1874,27 @@ const CourseDetails = () => {
                         {getAttendanceLabel(currentAttendance)}
                       </span>
                     ) : (
-                      <div className="flex gap-1 items-center">
-                        <select
-                          value={currentAttendance}
-                          onChange={(e) => handleLectureChange(lecture.id, 'attendance', e.target.value)}
-                          className="text-[9px] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border border-[var(--color-border)]"
-                          disabled={isLocked}
-                          style={{ 
-                            fontSize: '9px', 
-                            paddingTop: '2px', 
-                            paddingBottom: '2px', 
-                            paddingLeft: '6px',
-                            paddingRight: '6px',
-                            height: '20px',
-                            width: '80px',
-                            borderRadius: '0.5rem'
-                          }}
-                        >
-                          <option value="pending">لم يحدد</option>
-                          <option value="present">حاضر</option>
-                          <option value="absent">غائب</option>
-                          <option value="postponed">مؤجل</option>
-                        </select>
-                        {(lecture.is_makeup || lecture.is_extra) && isCustomerService && !isAccounting && (
-                          <button
-                            onClick={() => handleDeleteLecture(lecture.id)}
-                            className="text-red-500 hover:text-red-700 p-0.5"
-                            title="حذف هذه المحاضرة نهائياً"
-                            disabled={saving}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
+                      <select
+                        value={currentAttendance}
+                        onChange={(e) => handleLectureChange(lecture.id, 'attendance', e.target.value)}
+                        className="text-[9px] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border border-[var(--color-border)]"
+                        disabled={isLocked}
+                        style={{ 
+                          fontSize: '9px', 
+                          paddingTop: '2px', 
+                          paddingBottom: '2px', 
+                          paddingLeft: '6px',
+                          paddingRight: '6px',
+                          height: '20px',
+                          width: '80px',
+                          borderRadius: '0.5rem'
+                        }}
+                      >
+                        <option value="pending">لم يحدد</option>
+                        <option value="present">حاضر</option>
+                        <option value="absent">غائب</option>
+                        <option value="postponed">مؤجل</option>
+                      </select>
                     )}
                   </div>
                   
@@ -2373,31 +2338,19 @@ const CourseDetails = () => {
                           {getAttendanceLabel(currentAttendance)}
                         </span>
                       ) : (
-                        <div className="flex gap-1 items-center justify-center">
-                          <select
-                            value={currentAttendance}
-                            onChange={(e) =>
-                              handleLectureChange(lecture.id, 'attendance', e.target.value)
-                            }
-                            className="select text-[9px] py-0.5 px-1 w-20 mx-auto"
-                            disabled={isLocked}
-                          >
-                            <option value="pending">لم يحدد</option>
-                            <option value="present">حاضر</option>
-                            <option value="absent">غائب</option>
-                            <option value="postponed">مؤجل</option>
-                          </select>
-                          {(lecture.is_makeup || lecture.is_extra) && isCustomerService && !isAccounting && (
-                            <button
-                              onClick={() => handleDeleteLecture(lecture.id)}
-                              className="text-red-500 hover:text-red-700 p-0.5"
-                              title="حذف هذه المحاضرة نهائياً"
-                              disabled={saving}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
+                        <select
+                          value={currentAttendance}
+                          onChange={(e) =>
+                            handleLectureChange(lecture.id, 'attendance', e.target.value)
+                          }
+                          className="select text-[9px] py-0.5 px-1 w-20 mx-auto"
+                          disabled={isLocked}
+                        >
+                          <option value="pending">لم يحدد</option>
+                          <option value="present">حاضر</option>
+                          <option value="absent">غائب</option>
+                          <option value="postponed">مؤجل</option>
+                        </select>
                       )}
                     </td>
                     <td className="border-l border-[var(--color-border)] px-1 py-0.5 text-center align-middle">
