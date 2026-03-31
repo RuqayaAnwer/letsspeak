@@ -158,6 +158,10 @@ const CourseDetails = () => {
 
   // تفعيل بدء الكورس الفعلي (للمدرب)
   const [startingCourse, setStartingCourse] = useState(false);
+  const [startCourseModal, setStartCourseModal] = useState({
+    open: false,
+    date: new Date().toISOString().split('T')[0]
+  });
 
   // Extra lectures modal (Customer service)
   const [extraLecturesModal, setExtraLecturesModal] = useState({ 
@@ -282,12 +286,30 @@ const CourseDetails = () => {
   // تفعيل بدء الكورس الفعلي (للمدرب أو خدمة العملاء)
   const handleStartCourse = async () => {
     if (!course?.id) return;
+    
+    // If modal is not open, open it instead of starting immediately
+    if (!startCourseModal.open) {
+      setStartCourseModal({
+        open: true,
+        date: new Date().toISOString().split('T')[0]
+      });
+      return;
+    }
+
+    if (!startCourseModal.date) {
+      alert('يرجى اختيار تاريخ البدء الفعلي');
+      return;
+    }
+
     try {
       setStartingCourse(true);
-      const res = await api.put(`/courses/${course.id}/actual-start`, {});
+      const res = await api.put(`/courses/${course.id}/actual-start`, {
+        actual_start_date: startCourseModal.date
+      });
       if (res.data) {
         setCourse(res.data);
         if (res.data.lectures) setLectures(sortLecturesByDate(res.data.lectures));
+        setStartCourseModal({ open: false, date: '' });
       }
     } catch (err) {
       alert(err.response?.data?.message || 'فشل تفعيل بدء الكورس');
@@ -1416,12 +1438,12 @@ const CourseDetails = () => {
                 {(isTrainer || isCustomerService) && !course.actual_start_date && (
                   <button
                     type="button"
-                    onClick={handleStartCourse}
+                    onClick={() => setStartCourseModal({ open: true, date: new Date().toISOString().split('T')[0] })}
                     disabled={startingCourse}
-                    className="mr-2 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 text-[11px] font-medium"
+                    className="mr-2 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 text-[11px] font-medium transition-colors"
                   >
                     <PlayCircle className="w-3.5 h-3.5" />
-                    {startingCourse ? 'جاري التفعيل...' : 'بدء الكورس'}
+                    بدء الكورس
                   </button>
                 )}
               </span>
@@ -3205,6 +3227,69 @@ const CourseDetails = () => {
                   {extraLecturesModal.saving ? 'جاري الإضافة...' : 'إضافة'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Start Course Modal */}
+      {startCourseModal.open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 shadow-2xl backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <PlayCircle className="w-6 h-6 text-green-500" />
+                تحديد تاريخ بدء الكورس
+              </h3>
+              <button 
+                onClick={() => setStartCourseModal({ open: false, date: '' })}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors bg-white dark:bg-gray-700 rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 p-4 rounded-xl text-sm border border-blue-100 dark:border-blue-800/30 flex gap-3 leading-relaxed">
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-blue-500" />
+                <p>يرجى تحديد التاريخ الفعلي الذي بدأ فيه هذا الكورس. سيتم ترتيب تواريخ المحاضرات القادمة بناءً على هذا التاريخ.</p>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                  تاريخ البدء الفعلي
+                </label>
+                <input
+                  type="date"
+                  value={startCourseModal.date}
+                  onChange={(e) => setStartCourseModal({ ...startCourseModal, date: e.target.value })}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-900/50 dark:border-gray-700 dark:focus:ring-green-500 dark:text-white transition-all outline-none"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+            
+            <div className="p-6 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+              <button
+                onClick={() => setStartCourseModal({ open: false, date: '' })}
+                disabled={startingCourse}
+                className="px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-xl transition-all font-medium disabled:opacity-50"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleStartCourse}
+                disabled={startingCourse || !startCourseModal.date}
+                className={`px-5 py-2.5 text-white rounded-xl transition-all font-medium flex items-center gap-2 shadow-sm ${
+                  startingCourse || !startCourseModal.date 
+                    ? 'bg-gray-400 opacity-70 cursor-not-allowed' 
+                    : 'bg-green-600 hover:bg-green-700 shadow-green-600/20 hover:shadow-md hover:shadow-green-600/30'
+                }`}
+              >
+                <PlayCircle className="w-5 h-5" />
+                {startingCourse ? 'جاري التفعيل...' : 'تأكيد البدء'}
+              </button>
             </div>
           </div>
         </div>
