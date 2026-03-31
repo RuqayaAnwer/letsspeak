@@ -1823,7 +1823,7 @@ const CourseDetails = () => {
                   
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الوقت</span>
-                    {isCustomerService && !isAccounting && isSelected ? (
+                    {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <input
                           type="time"
@@ -1850,13 +1850,13 @@ const CourseDetails = () => {
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    ) : isCustomerService && !isAccounting ? (
+                    ) : (isCustomerService || isTrainer) && !isAccounting ? (
                       <button
                         type="button"
                         onClick={() => handleLectureSelect(lecture)}
                         className="text-xs font-medium text-gray-800 dark:text-white hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded px-1 py-0.5 -m-1"
                         dir="ltr"
-                        title="انقر لتعديل التاريخ والوقت"
+                        title={isCustomerService ? "انقر لتعديل التاريخ والوقت" : "انقر لتعديل وقت المحاضرة"}
                       >
                         {formatTime12Hour(lecture.time || course?.lecture_time)}
                       </button>
@@ -2179,7 +2179,7 @@ const CourseDetails = () => {
                     } ${
                       isMakeup && !isCompleted ? 'bg-green-50 dark:bg-green-900/10' : ''
                     } ${
-                      isPostponedOrig ? 'bg-gray-100 dark:bg-gray-800/50' : ''
+                      isPostponedOrig ? 'bg-gray-100 dark:bg-gray-800/50 opacity-50 grayscale pointer-events-none' : ''
                     } ${
                       isSelected ? 'ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-900/20' : ''
                     }`}
@@ -2248,7 +2248,7 @@ const CourseDetails = () => {
                       )}
                     </td>
                     <td className="border-l border-[var(--color-border)] px-1 py-0.5 text-center text-[10px] align-middle" dir="ltr">
-                      {isCustomerService && !isAccounting && isSelected ? (
+                      {(isCustomerService || isTrainer) && !isAccounting && isSelected ? (
                         <div className="flex items-center justify-center gap-2 flex-wrap">
                           <input
                             type="time"
@@ -2280,14 +2280,14 @@ const CourseDetails = () => {
                             <X className="w-4 h-4" />
                           </button>
                         </div>
-                      ) : isCustomerService && !isAccounting ? (
+                      ) : (isCustomerService || isTrainer) && !isAccounting ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleLectureSelect(lecture);
                           }}
                           className="text-[10px] font-medium px-1 py-0.5 rounded transition-all text-[var(--color-text-primary)] hover:bg-amber-100 dark:hover:bg-amber-900/30"
-                          title="انقر لتعديل التاريخ والوقت"
+                          title={isCustomerService ? "انقر لتعديل التاريخ والوقت" : "انقر لتعديل وقت المحاضرة"}
                         >
                           {formatTime12Hour(lecture.time || course?.lecture_time)}
                         </button>
@@ -2568,7 +2568,6 @@ const CourseDetails = () => {
                     setPostponeModal(prev => ({ ...prev, newDate: e.target.value, conflicts: [] }));
                   }}
                   onBlur={checkConflicts}
-                  min={new Date().toISOString().split('T')[0]}
                   className="input w-full mb-3"
                   dir="ltr"
                 />

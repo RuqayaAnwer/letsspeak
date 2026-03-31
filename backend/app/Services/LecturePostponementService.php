@@ -490,9 +490,6 @@ class LecturePostponementService
         $maxLectureNumber = $course->lectures()->max('lecture_number') ?? 0;
         $newLectureNumber = $maxLectureNumber + 1;
 
-        // Increment the course's total lectures count
-        $course->increment('lectures_count');
-
         // Use the new time, or fall back to original lecture time, or course default time
         $lectureTime = $newTime ?? $originalLecture->time ?? $course->lecture_time;
 
@@ -544,8 +541,6 @@ class LecturePostponementService
                         );
                     }
                     
-                    // Decrement course lectures count and postponements used
-                    $lecture->course->decrement('lectures_count');
                     if ($lecture->course->postponements_used > 0) {
                         $lecture->course->decrement('postponements_used');
                     }
