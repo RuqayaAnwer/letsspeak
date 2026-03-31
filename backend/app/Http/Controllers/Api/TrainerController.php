@@ -485,7 +485,7 @@ class TrainerController extends Controller
             // Allow optional month/year or period=previous (الشهر من 1 إلى آخر يوم 28/29/30/31)
             $period = $request->input('period', 'current');
             if ($period === 'previous') {
-                $targetDate = $today->copy()->subMonth();
+                $targetDate = $today->copy()->subMonthNoOverflow();
                 $month = $targetDate->month;
                 $year = $targetDate->year;
             } else {

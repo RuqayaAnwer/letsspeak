@@ -119,6 +119,14 @@ class TrainerPayroll extends Model
         // Add bonus/deduction
         $total += ($this->bonus_deduction ?? 0);
         
+        // Add dual-role administrative salary if the user has one
+        if ($this->user_id) {
+            $user = User::find($this->user_id);
+            if ($user && $user->base_salary > 0) {
+                $total += (float) $user->base_salary;
+            }
+        }
+        
         return $total;
     }
 

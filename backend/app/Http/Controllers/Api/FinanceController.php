@@ -347,6 +347,7 @@ class FinanceController extends Controller
                 }
             }
             $calculatedTotalPay += $bonusDeduction;
+            $calculatedTotalPay += (float) $employeeBaseSalary;
 
             $payrolls[] = [
                 'user_id' => $userId,
