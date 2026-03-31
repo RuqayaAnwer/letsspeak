@@ -127,14 +127,14 @@ const Achievements = () => {
           </div>
           <div className="p-3 sm:p-6">
             <div className="space-y-2.5 sm:space-y-4">
-              {/* Base Pay */}
+              {/* Lecture Pay */}
               <div className="flex items-center justify-between p-2.5 sm:p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                   <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs sm:text-base">💰</span>
+                    <span className="text-xs sm:text-base">💎</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">الراتب الأساسي</p>
+                    <p className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">أجور المحاضرات المكتملة</p>
                     <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-500 mt-0.5">
                       {achievements.completed_lectures || 0} محاضرة × {formatCurrency(achievements.earnings.lecture_rate || 4000)}
                     </p>
@@ -144,6 +144,26 @@ const Achievements = () => {
                   {formatCurrency(achievements.earnings.base_pay || 0)}
                 </p>
               </div>
+
+              {/* Administrative Salary Profile */}
+              {achievements.earnings.administrative_salary > 0 && (
+                <div className="flex items-center justify-between p-2.5 sm:p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                    <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs sm:text-base">💼</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">الراتب الإداري الثابت</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                        {achievements.earnings.job_title || 'مهام إدارية'}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm sm:text-lg font-bold text-teal-600 dark:text-teal-400 mr-2 sm:mr-0 flex-shrink-0">
+                    +{formatCurrency(achievements.earnings.administrative_salary || 0)}
+                  </p>
+                </div>
+              )}
 
               {/* Renewal Bonus */}
               {achievements.earnings.renewal_bonus > 0 && (

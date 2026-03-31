@@ -630,6 +630,10 @@ class TrainerController extends Controller
             $lectureRate = 4000;
             $basePay = $completedLectures * $lectureRate;
             
+            // Get Dual-Role Employee / Admin Salary
+            $administrativeSalary = (float) ($user->base_salary ?? 0);
+            $jobTitle = $user->job_title ?? null;
+            
             // Calculate renewal bonus (tiered system)
             $renewalBonus = 0;
             if ($renewalsCount >= 7) {
@@ -650,7 +654,7 @@ class TrainerController extends Controller
             }
             
             // Total earnings
-            $totalEarnings = $basePay + $renewalBonus + $competitionBonus + $volumeBonus;
+            $totalEarnings = $basePay + $renewalBonus + $competitionBonus + $volumeBonus + $administrativeSalary;
 
             $arMonths = ['', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
             $monthName = ($arMonths[$month] ?? $month) . ' ' . $year;
@@ -671,6 +675,8 @@ class TrainerController extends Controller
                     'renewals_count' => $renewalsCount,
                     'earnings' => [
                         'base_pay' => $basePay,
+                        'administrative_salary' => $administrativeSalary,
+                        'job_title' => $jobTitle,
                         'renewal_bonus' => $renewalBonus,
                         'competition_bonus' => $competitionBonus,
                         'volume_bonus' => $volumeBonus,
