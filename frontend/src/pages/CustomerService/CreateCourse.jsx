@@ -451,19 +451,24 @@ const CreateCourse = () => {
 
   const handleAddStudentSubmit = async (e) => {
     e.preventDefault();
+    if (addingStudent) return; // Prevent double submission
+    
     setAddingStudent(true);
     
     try {
       const response = await api.post('/students', newStudentData);
       
-      if (response.data.success || response.data.data) {
-        const createdStudent = response.data.data || response.data;
+      // StudentController returns the student object directly
+      const createdStudent = response.data.data || response.data;
+      
+      if (createdStudent && createdStudent.id) {
         alert('تم إضافة الطالب بنجاح');
         
-        // Refresh students list
-        const studentsRes = await api.get('/students');
-        const studentsList = studentsRes.data?.data || studentsRes.data || [];
-        setStudents(Array.isArray(studentsList) ? studentsList : []);
+        // Force add the new student to our local state IMMEDIATELY so the dropdown can find them
+        setStudents(prev => {
+          const exists = prev.find(s => s.id === createdStudent.id);
+          return exists ? prev : [createdStudent, ...prev];
+        });
         
         // Auto select the new student
         const newIds = [...formData.student_ids];
@@ -473,6 +478,17 @@ const CreateCourse = () => {
         // Close modal and reset
         setIsAddStudentModalOpen(false);
         setNewStudentData({ name: '', phone: '', level: '', gender: 'male' });
+        
+        // Quietly refresh the full list from server in the background
+        api.get('/students').then(res => {
+          const studentsList = res.data?.data || res.data || [];
+          if (Array.isArray(studentsList)) {
+            setStudents(prev => {
+              const existsInNew = studentsList.find(s => s.id === createdStudent.id);
+              return existsInNew ? studentsList : [createdStudent, ...studentsList];
+            });
+          }
+        }).catch(err => console.error(err));
       }
     } catch (error) {
       console.error('Error adding student:', error);
