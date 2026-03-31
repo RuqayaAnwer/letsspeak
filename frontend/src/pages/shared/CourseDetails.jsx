@@ -1786,7 +1786,7 @@ const CourseDetails = () => {
                     <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">رقم المحاضرة</span>
                     <div className="flex items-center gap-1 flex-wrap">
                       <span className={`text-xs font-bold ${isPostponedOrig ? 'text-gray-400 line-through' : 'text-gray-800 dark:text-white'}`}>
-                        {String(lecture.lecture_number).padStart(2, '0')}
+                        {lecture.lecture_number}
                       </span>
                       {lecture.is_extra && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-bold whitespace-nowrap" title="محاضرة إضافية">
@@ -2222,7 +2222,7 @@ const CourseDetails = () => {
                     <td className="border-l border-[var(--color-border)] px-1 py-1 font-bold text-[var(--color-text-primary)] text-[10px] text-center align-middle">
                       <div className="flex flex-col items-center justify-center gap-1 flex-wrap">
                         <span className={isPostponedOrig ? 'text-gray-400 line-through' : ''}>
-                          {String(lecture.lecture_number).padStart(2, '0')}
+                          {lecture.lecture_number}
                         </span>
                         {lecture.is_extra && (
                           <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-bold whitespace-nowrap" title="محاضرة إضافية">
