@@ -142,14 +142,18 @@ const CourseDetails = () => {
               level = fullCourse.student_level;
             }
             
-            // تنسيق الوقت
+            // تنسيق الوقت בצيغة 12 ساعة
             let lectureTime = '-';
             if (fullCourse.lecture_time) {
-              // إذا كان الوقت بصيغة H:i (مثل 20:00:00 أو 20:00)
               if (typeof fullCourse.lecture_time === 'string') {
                 const timeParts = fullCourse.lecture_time.split(':');
                 if (timeParts.length >= 2) {
-                  lectureTime = `${timeParts[0]}:${timeParts[1]}`;
+                  let hours = parseInt(timeParts[0], 10);
+                  const minutes = timeParts[1];
+                  const ampm = hours >= 12 ? 'م' : 'ص';
+                  hours = hours % 12;
+                  hours = hours ? hours : 12; // 0 becomes 12
+                  lectureTime = `${hours}:${minutes} ${ampm}`;
                 } else {
                   lectureTime = fullCourse.lecture_time;
                 }
@@ -169,6 +173,7 @@ const CourseDetails = () => {
               lecture_time: lectureTime,
               status: fullCourse.status || 'active',
               level: level,
+              previous_trainer_name: fullCourse.previous_trainer_name || '-',
             };
           } catch (err) {
             console.error(`Error fetching details for course ${course.id}:`, err);
@@ -800,7 +805,7 @@ const CourseDetails = () => {
                   <div className="bg-slate-50 dark:bg-slate-900/30 rounded p-2 border-r-2 border-slate-300 dark:border-slate-700">
                     <span className="text-[9px] text-gray-500 dark:text-gray-400 block mb-0.5">كان مع المدرب</span>
                     <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                      {course.trainer_name || '-'}
+                      {course.previous_trainer_name || '-'}
                     </span>
                   </div>
                 </div>

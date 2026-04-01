@@ -128,6 +128,34 @@ class CourseController extends Controller
             // Make coursePackage visible and ensure it's serialized as course_package
             $course->makeVisible('coursePackage');
             
+            // Add previous trainer name if available
+            $previousTrainerName = '-';
+            $studentId = $course->student_id;
+            
+            // If the course uses the new pivot relation
+            if (!$studentId && $course->students->count() > 0) {
+                $studentId = $course->students->first()->id;
+            }
+            
+            if ($studentId) {
+                // Find previous course for this student before the current course
+                $previousCourse = \App\Models\Course::where(function ($q) use ($studentId) {
+                        $q->where('student_id', $studentId)
+                          ->orWhereHas('students', function ($sq) use ($studentId) {
+                              $sq->where('students.id', $studentId);
+                          });
+                    })
+                    ->where('id', '<', $course->id)
+                    ->orderBy('id', 'desc')
+                    ->with('trainer.user')
+                    ->first();
+                
+                if ($previousCourse && $previousCourse->trainer) {
+                    $previousTrainerName = $previousCourse->trainer->user->name ?? $previousCourse->trainer->name;
+                }
+            }
+            $course->previous_trainer_name = $previousTrainerName;
+            
             return $course;
         });
 
