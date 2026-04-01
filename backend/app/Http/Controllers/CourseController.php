@@ -151,7 +151,7 @@ class CourseController extends Controller
                     ->first();
                 
                 if ($previousCourse && $previousCourse->trainer) {
-                    $previousTrainerName = $previousCourse->trainer->user->name ?? $previousCourse->trainer->name;
+                    $previousTrainerName = $previousCourse->trainer->user?->name ?? $previousCourse->trainer->name;
                 }
             }
             $course->previous_trainer_name = $previousTrainerName;
