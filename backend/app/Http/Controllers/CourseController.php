@@ -130,29 +130,38 @@ class CourseController extends Controller
             
             // Add previous trainer name if available
             $previousTrainerName = '-';
-            $studentId = $course->student_id;
-            
-            // If the course uses the new pivot relation
-            if (!$studentId && $course->students->count() > 0) {
-                $studentId = $course->students->first()->id;
-            }
-            
-            if ($studentId) {
-                // Find previous course for this student before the current course
-                $previousCourse = \App\Models\Course::where(function ($q) use ($studentId) {
-                        $q->where('student_id', $studentId)
-                          ->orWhereHas('students', function ($sq) use ($studentId) {
-                              $sq->where('students.id', $studentId);
-                          });
-                    })
-                    ->where('id', '<', $course->id)
-                    ->orderBy('id', 'desc')
-                    ->with('trainer.user')
-                    ->first();
+            try {
+                $pStudentId = $course->student_id;
                 
-                if ($previousCourse && $previousCourse->trainer) {
-                    $previousTrainerName = $previousCourse->trainer->user?->name ?? $previousCourse->trainer->name;
+                // If the course uses the new pivot relation
+                if (!$pStudentId && $course->students()->exists()) {
+                    $firstStudent = $course->students()->first();
+                    $pStudentId = $firstStudent ? $firstStudent->id : null;
                 }
+                
+                if ($pStudentId) {
+                    // Find previous course for this student before the current course
+                    $previousCourse = \App\Models\Course::where(function ($q) use ($pStudentId) {
+                            $q->where('courses.student_id', $pStudentId)
+                              ->orWhereHas('students', function ($sq) use ($pStudentId) {
+                                  $sq->where('students.id', $pStudentId);
+                              });
+                        })
+                        ->where('courses.id', '<', $course->id)
+                        ->orderBy('courses.id', 'desc')
+                        ->with('trainer.user')
+                        ->first();
+                    
+                    if ($previousCourse && $previousCourse->trainer) {
+                        if ($previousCourse->trainer->user) {
+                            $previousTrainerName = $previousCourse->trainer->user->name;
+                        } else {
+                            $previousTrainerName = $previousCourse->trainer->name;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                $previousTrainerName = 'Error: ' . $e->getMessage();
             }
             $course->previous_trainer_name = $previousTrainerName;
             
