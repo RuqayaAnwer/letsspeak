@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Services\LecturePostponementService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class CourseController extends Controller
 {
@@ -287,34 +288,54 @@ class CourseController extends Controller
             }
         }
         
-        $course = Course::create($courseData);
+        $course = DB::transaction(function () use ($courseData, $studentIds, $isDual, $request) {
+            $course = Course::create($courseData);
 
-        // Attach students to course (for dual courses)
-        foreach ($studentIds as $index => $studentId) {
-            $course->students()->attach($studentId, [
-                'is_primary' => $index === 0,
-            ]);
-        }
+            // Attach students to course (for dual courses)
+            foreach ($studentIds as $index => $studentId) {
+                $course->students()->attach($studentId, [
+                    'is_primary' => $index === 0,
+                ]);
+            }
 
-        // Generate lecture schedule
-        $this->generateLectureSchedule($course);
+            // Generate lecture schedule
+            $this->generateLectureSchedule($course);
 
-        // Create payment record(s) if paid_amount is provided
-        if ($isDual && count($studentIds) > 1) {
-            // For dual courses, check if student_payments array is provided
-            $studentPayments = $request->input('student_payments', []);
-            if (!empty($studentPayments) && is_array($studentPayments)) {
-                // Create separate payment for each student with their specific amount
-                foreach ($studentIds as $index => $studentId) {
-                    $studentPayment = $studentPayments[$index] ?? null;
-                    if ($studentPayment && isset($studentPayment['paid_amount'])) {
-                        $paidAmount = floatval($studentPayment['paid_amount'] ?? 0);
-                        if ($paidAmount > 0) {
+            // Create payment record(s) if paid_amount is provided
+            if ($isDual && count($studentIds) > 1) {
+                // For dual courses, check if student_payments array is provided
+                $studentPayments = $request->input('student_payments', []);
+                if (!empty($studentPayments) && is_array($studentPayments)) {
+                    // Create separate payment for each student with their specific amount
+                    foreach ($studentIds as $index => $studentId) {
+                        $studentPayment = $studentPayments[$index] ?? null;
+                        if ($studentPayment && isset($studentPayment['paid_amount'])) {
+                            $paidAmount = floatval($studentPayment['paid_amount'] ?? 0);
+                            if ($paidAmount > 0) {
+                                Payment::create([
+                                    'course_id' => $course->id,
+                                    'student_id' => $studentId,
+                                    'amount' => $paidAmount,
+                                    'payment_method' => $studentPayment['payment_method'] ?? $request->payment_method,
+                                    'status' => 'completed',
+                                    'payment_date' => $request->start_date ?? now()->toDateString(),
+                                    'receipt_number' => null,
+                                    'notes' => 'دفعة أولية عند إنشاء الكورس',
+                                    'recorded_by' => auth()->id(),
+                                ]);
+                            }
+                        }
+                    }
+                } else {
+                    // Fallback: use paid_amount if student_payments not provided
+                    $paidAmount = $request->paid_amount ?? 0;
+                    if ($paidAmount > 0) {
+                        foreach ($studentIds as $studentId) {
                             Payment::create([
                                 'course_id' => $course->id,
                                 'student_id' => $studentId,
                                 'amount' => $paidAmount,
-                                'payment_method' => $studentPayment['payment_method'] ?? $request->payment_method,
+                                'payment_method' => $request->payment_method,
                                 'status' => 'completed',
                                 'payment_date' => $request->start_date ?? now()->toDateString(),
                                 'receipt_number' => null,
@@ -325,13 +346,14 @@ class CourseController extends Controller
                     }
                 }
             } else {
-                // Fallback: use paid_amount if student_payments not provided
+                // For single courses, create one payment for the primary student
                 $paidAmount = $request->paid_amount ?? 0;
                 if ($paidAmount > 0) {
-                    foreach ($studentIds as $studentId) {
+                    $primaryStudentId = $studentIds[0] ?? null;
+                    if ($primaryStudentId) {
                         Payment::create([
                             'course_id' => $course->id,
-                            'student_id' => $studentId,
+                            'student_id' => $primaryStudentId,
                             'amount' => $paidAmount,
                             'payment_method' => $request->payment_method,
                             'status' => 'completed',
@@ -343,26 +365,9 @@ class CourseController extends Controller
                     }
                 }
             }
-        } else {
-            // For single courses, create one payment for the primary student
-            $paidAmount = $request->paid_amount ?? 0;
-            if ($paidAmount > 0) {
-                $primaryStudentId = $studentIds[0] ?? null;
-                if ($primaryStudentId) {
-                    Payment::create([
-                        'course_id' => $course->id,
-                        'student_id' => $primaryStudentId,
-                        'amount' => $paidAmount,
-                        'payment_method' => $request->payment_method,
-                        'status' => 'completed',
-                        'payment_date' => $request->start_date ?? now()->toDateString(),
-                        'receipt_number' => null,
-                        'notes' => 'دفعة أولية عند إنشاء الكورس',
-                        'recorded_by' => auth()->id(),
-                    ]);
-                }
-            }
-        }
+
+            return $course;
+        });
 
         $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);
         
@@ -872,68 +877,49 @@ class CourseController extends Controller
      */
     public function nearingCompletion(Request $request)
     {
-        $courses = Course::with(['trainer.user', 'student', 'students', 'coursePackage', 'lectures'])
+        // 1. Get courses with lecture counts through SQL, much faster and zero Memory leakage
+        $coursesData = Course::with(['trainer.user', 'student', 'coursePackage'])
             ->where('status', 'active')
-            ->get()
-            ->filter(function ($course) {
-                $completedCount = $course->lectures->filter(function($l) {
-                    // تحقق من بيانات كل طالب
-                    if ($l->student_attendance && is_array($l->student_attendance)) {
-                        foreach ($l->student_attendance as $studentData) {
-                            if (is_array($studentData)) {
-                                $att = $studentData['attendance'] ?? null;
-                                if ($att === 'present' || $att === 'absent' || $att === 'partially') {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                    return $l->is_completed || in_array($l->attendance, ['present', 'partially', 'absent']);
-                })->count();
-                
-                $totalLectures = $course->lectures->count() > 0 ? $course->lectures->count() : ($course->coursePackage->lectures_count ?? 0);
-                if ($totalLectures == 0) return false;
-                
-                $percentage = round(($completedCount / $totalLectures) * 100);
-                return $percentage >= 75 && $percentage < 100;
-            })
-            ->map(function ($course) {
-                $completedCount = $course->lectures->filter(function($l) {
-                    if ($l->student_attendance && is_array($l->student_attendance)) {
-                        foreach ($l->student_attendance as $st) {
-                            if (is_array($st) && in_array($st['attendance'] ?? '', ['present', 'absent', 'partially'])) return true;
-                        }
-                    }
-                    return $l->is_completed || in_array($l->attendance, ['present', 'partially', 'absent']);
-                })->count();
-                
-                $totalLectures = $course->lectures->count() > 0 ? $course->lectures->count() : ($course->coursePackage->lectures_count ?? 0);
-                
-                return [
-                    'id' => $course->id,
-                    'is_dual' => $course->is_dual,
-                    'is_custom' => $course->is_custom,
-                    'package' => $course->coursePackage,
-                    'course_package' => $course->coursePackage,
-                    'student' => $course->student,
-                    'students' => $course->students,
-                    'student_name' => $course->student ? $course->student->name : null,
-                    'student_id' => $course->student_id,
-                    'trainer' => $course->trainer,
-                    'trainer_name' => $course->trainer ? $course->trainer->name : null,
-                    'completed_lectures' => $completedCount,
-                    'total_lectures' => $totalLectures,
-                    'remaining_lectures' => max(0, $totalLectures - $completedCount),
-                    'completion_percentage' => $totalLectures > 0 ? round(($completedCount / $totalLectures) * 100) : 0,
-                    'status' => $course->status,
-                    'renewal_status' => $course->renewal_status ?? 'alert',
-                ];
-            })
-            ->values();
+            ->withCount('lectures as total_lectures')
+            ->withCount(['lectures as completed_lectures' => function ($query) {
+                // Count how many lectures are considered finished (present, partially, absent)
+                $query->whereIn('attendance', [\App\Models\Lecture::ATTENDANCE_PRESENT, \App\Models\Lecture::ATTENDANCE_PARTIALLY, \App\Models\Lecture::ATTENDANCE_ABSENT]);
+            }])
+            ->get();
+
+        // 2. Filter in memory ONLY the numeric counts (blazing fast)
+        $nearingCourses = $coursesData->filter(function ($course) {
+            $total = $course->total_lectures > 0 ? $course->total_lectures : ($course->coursePackage->lectures_count ?? 0);
+            if ($total == 0) return false;
+            
+            $percentage = round(($course->completed_lectures / $total) * 100);
+            return $percentage >= 75 && $percentage < 100;
+        })->map(function ($course) {
+            $total = $course->total_lectures > 0 ? $course->total_lectures : ($course->coursePackage->lectures_count ?? 0);
+            return [
+                'id' => $course->id,
+                'is_dual' => $course->is_dual,
+                'is_custom' => $course->is_custom,
+                'package' => $course->coursePackage,
+                'course_package' => $course->coursePackage,
+                'student' => $course->student,
+                'students' => $course->students,
+                'student_name' => $course->student ? $course->student->name : null,
+                'student_id' => $course->student_id,
+                'trainer' => $course->trainer,
+                'trainer_name' => $course->trainer ? $course->trainer->name : null,
+                'completed_lectures' => $course->completed_lectures,
+                'total_lectures' => $total,
+                'remaining_lectures' => max(0, $total - $course->completed_lectures),
+                'completion_percentage' => $total > 0 ? round(($course->completed_lectures / $total) * 100) : 0,
+                'status' => $course->status,
+                'renewal_status' => $course->renewal_status ?? 'alert',
+            ];
+        })->values();
 
         return response()->json([
             'success' => true,
-            'data' => $courses
+            'data' => $nearingCourses
         ]);
     }
 
@@ -963,11 +949,8 @@ class CourseController extends Controller
         foreach ($request->lectures as $lectureData) {
             $lecture = Lecture::find($lectureData['id']);
             if ($lecture && $lecture->course_id === $course->id) {
-                // Check if lecture can be modified using reflection
-                $reflection = new \ReflectionClass($lectureController);
-                $canModifyMethod = $reflection->getMethod('canModifyLecture');
-                $canModifyMethod->setAccessible(true);
-                $canModify = $canModifyMethod->invoke($lectureController, $lecture);
+                // Check if lecture can be modified
+                $canModify = $lecture->canBeModifiedArray();
                 
                 if (!$canModify['canModify']) {
                     continue;
@@ -1017,61 +1000,25 @@ class CourseController extends Controller
                     $updateData['notes'] = $lectureData['notes'];
                 }
                 
-                // Handle student_attendance for dual courses
+                // Handle student_attendance for dual courses using pivot table
                 if (isset($lectureData['student_attendance']) && is_array($lectureData['student_attendance'])) {
-                    \Log::info('Processing student_attendance', [
-                        'lecture_id' => $lecture->id,
-                        'received_data' => $lectureData['student_attendance'],
-                        'existing_data' => $lecture->student_attendance
-                    ]);
-                    
-                    // Get existing student_attendance or initialize empty array
-                    $existingStudentAttendance = $lecture->student_attendance ?? [];
-                    
-                    // Convert existing to associative array if it's a numeric array
-                    if (!empty($existingStudentAttendance) && array_keys($existingStudentAttendance) === range(0, count($existingStudentAttendance) - 1)) {
-                        // It's a numeric array, convert to empty object (we'll rebuild from new data)
-                        $existingStudentAttendance = [];
-                    }
-                    
-                    // Merge new student attendance data with existing (preserve keys)
-                    // Use array_merge_recursive to properly merge nested arrays
-                    $mergedStudentAttendance = $existingStudentAttendance;
+                    $syncData = [];
                     foreach ($lectureData['student_attendance'] as $studentId => $studentData) {
                         if (is_array($studentData)) {
-                            // Merge with existing data for this student, or create new
-                            $mergedStudentAttendance[$studentId] = array_merge(
-                                $mergedStudentAttendance[$studentId] ?? [],
-                                $studentData
-                            );
-                        }
-                    }
-                    
-                    // For each student in the merged data, handle auto-completion
-                    foreach ($mergedStudentAttendance as $studentId => $studentData) {
-                        if (is_array($studentData) && isset($studentData['attendance'])) {
-                            $studentAttendance = $studentData['attendance'];
-                            // Auto-complete if attendance is present or absent
-                            if ($studentAttendance === 'present' || $studentAttendance === 'absent') {
-                                $mergedStudentAttendance[$studentId]['is_completed'] = true;
-                            } elseif ($studentAttendance === 'pending') {
-                                $mergedStudentAttendance[$studentId]['is_completed'] = false;
+                            $pivotData = [];
+                            if (isset($studentData['attendance'])) $pivotData['attendance'] = $studentData['attendance'];
+                            if (isset($studentData['activity'])) $pivotData['activity'] = $studentData['activity'];
+                            if (isset($studentData['homework'])) $pivotData['homework'] = $studentData['homework'];
+                            if (isset($studentData['notes'])) $pivotData['notes'] = $studentData['notes'];
+
+                            if (!empty($pivotData)) {
+                                $syncData[$studentId] = $pivotData;
                             }
                         }
                     }
-                    
-                    \Log::info('Merged student_attendance', [
-                        'lecture_id' => $lecture->id,
-                        'merged_data' => $mergedStudentAttendance
-                    ]);
-                    
-                    // Ensure keys are strings (JSON requires string keys for objects)
-                    $finalStudentAttendance = [];
-                    foreach ($mergedStudentAttendance as $studentId => $studentData) {
-                        $finalStudentAttendance[(string)$studentId] = $studentData;
+                    if (!empty($syncData)) {
+                        $lecture->students()->syncWithoutDetaching($syncData);
                     }
-                    
-                    $updateData['student_attendance'] = $finalStudentAttendance;
                 }
 
                 // Finance and customer_service can update trainer_payment_status
@@ -1087,15 +1034,10 @@ class CourseController extends Controller
                     $updateData['time'] = $lectureData['time'];
                 }
 
-                // Auto-complete lecture when attendance is set to 'present' or 'absent'
+                // All users can update attendance, activity, homework, notes
                 if (isset($lectureData['attendance'])) {
                     $attendance = $lectureData['attendance'];
-                    if ($attendance === 'present' || $attendance === 'absent') {
-                        $updateData['is_completed'] = true;
-                    } elseif ($attendance === 'pending') {
-                        // If attendance is reset to pending, mark as not completed
-                        $updateData['is_completed'] = false;
-                    }
+                    $updateData['attendance'] = $attendance;
                 }
 
                 if (!empty($updateData)) {

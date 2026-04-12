@@ -68,8 +68,6 @@ class Lecture extends Model
         'is_makeup',
         'makeup_for',
         'notes',
-        'is_completed',
-        'student_attendance',
         'trainer_payment_status',
         'is_extra',
     ];
@@ -77,8 +75,10 @@ class Lecture extends Model
     protected $casts = [
         'date' => 'date',
         'is_makeup' => 'boolean',
-        'is_completed' => 'boolean',
-        'student_attendance' => 'array',
+    ];
+
+    protected $appends = [
+        'is_completed'
     ];
 
     /**
@@ -131,11 +131,23 @@ class Lecture extends Model
     }
 
     /**
-     * Check if lecture is completed (present or partially attended).
+     * Get is_completed attribute automatically based on attendance.
+     */
+    public function getIsCompletedAttribute(): bool
+    {
+        return in_array($this->attendance, [
+            self::ATTENDANCE_PRESENT, 
+            self::ATTENDANCE_PARTIALLY,
+            self::ATTENDANCE_ABSENT
+        ]);
+    }
+
+    /**
+     * Check if lecture is completed (present or partially attended or absent).
      */
     public function isCompleted(): bool
     {
-        return in_array($this->attendance, [self::ATTENDANCE_PRESENT, self::ATTENDANCE_PARTIALLY]);
+        return $this->getIsCompletedAttribute();
     }
 
     /**
@@ -176,6 +188,34 @@ class Lecture extends Model
     public function canBePostponed(): bool
     {
         return !$this->isCompleted() && !$this->isPostponed();
+    }
+
+    /**
+     * Check if a lecture can be modified based on its date/time.
+     * - Future lectures: Cannot be modified
+     * - Today's lectures: Can be modified (regardless of time)
+     * - Past lectures: Can be modified
+     */
+    public function canBeModifiedArray(): array
+    {
+        $lectureDate = \Carbon\Carbon::parse($this->date)->startOfDay();
+        $today = \Carbon\Carbon::today();
+
+        // Future lecture (date is after today) - cannot be modified
+        if ($lectureDate->gt($today)) {
+            return [
+                'canModify' => false,
+                'reason' => 'لا يمكن تعديل محاضرة مستقبلية',
+                'type' => 'future'
+            ];
+        }
+
+        // Today's lecture or past lecture - can be modified
+        return [
+            'canModify' => true,
+            'reason' => null,
+            'type' => $lectureDate->eq($today) ? 'today' : 'past'
+        ];
     }
 
     /**

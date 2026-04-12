@@ -314,7 +314,6 @@ class LectureController extends Controller
             'payment_status' => 'sometimes|in:unpaid,paid,partial',
             'trainer_payment_status' => 'sometimes|in:unpaid,paid',
             'notes' => 'sometimes|nullable|string|max:1000',
-            'is_completed' => 'sometimes|boolean',
         ]);
 
         // غائب ولديه محاولة تأجيل → تأجيل تلقائي بدل حفظ غائب

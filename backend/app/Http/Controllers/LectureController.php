@@ -10,33 +10,7 @@ use Carbon\Carbon;
 
 class LectureController extends Controller
 {
-    /**
-     * Check if a lecture can be modified based on its date/time.
-     * - Future lectures: Cannot be modified
-     * - Today's lectures: Can be modified (regardless of time)
-     * - Past lectures: Can be modified
-     */
-    protected function canModifyLecture(Lecture $lecture): array
-    {
-        $lectureDate = Carbon::parse($lecture->date)->startOfDay();
-        $today = Carbon::today();
-
-        // Future lecture (date is after today) - cannot be modified
-        if ($lectureDate->gt($today)) {
-            return [
-                'canModify' => false,
-                'reason' => 'لا يمكن تعديل محاضرة مستقبلية',
-                'type' => 'future'
-            ];
-        }
-
-        // Today's lecture or past lecture - can be modified
-        return [
-            'canModify' => true,
-            'reason' => null,
-            'type' => $lectureDate->eq($today) ? 'today' : 'past'
-        ];
-    }
+    // canModifyLecture moved to Lecture model
 
     /**
      * Log lecture modification activity.
@@ -110,7 +84,7 @@ class LectureController extends Controller
             && !$request->hasAny(['attendance', 'activity', 'homework', 'notes']);
 
         if (!$isDateTimeOnly) {
-            $canModify = $this->canModifyLecture($lecture);
+            $canModify = $lecture->canBeModifiedArray();
             if (!$canModify['canModify']) {
                 return response()->json([
                     'message' => $canModify['reason'],
@@ -137,7 +111,7 @@ class LectureController extends Controller
         // Save old data for logging
         $oldData = $lecture->only(['attendance', 'activity', 'homework', 'notes', 'date', 'time', 'is_completed']);
 
-        $updateData = $request->only(['attendance', 'activity', 'homework', 'notes', 'is_completed']);
+        $updateData = $request->only(['attendance', 'activity', 'homework', 'notes']);
         
         // Allow trainers and customer_service to update date and time
         if (($user->isTrainer() || $user->isCustomerService()) && $request->has('date')) {
@@ -173,15 +147,7 @@ class LectureController extends Controller
             }
         }
 
-        // Auto-complete lecture when attendance is set to 'present' or 'absent'
-        if ($request->has('attendance')) {
-            $attendance = $request->input('attendance');
-            if ($attendance === 'present' || $attendance === 'absent') {
-                $updateData['is_completed'] = true;
-            } elseif ($attendance === 'pending') {
-                $updateData['is_completed'] = false;
-            }
-        }
+        // Note: is_completed is automatically calculated by Lecture model now
 
         $lecture->update($updateData);
 

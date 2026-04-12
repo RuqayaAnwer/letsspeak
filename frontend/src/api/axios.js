@@ -46,6 +46,24 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Helper لإنشاء نافذة منبثقة (Toast) للأخطاء بدون مكتبات خارجية
+const showToast = (message) => {
+  const toast = document.createElement('div');
+  toast.innerText = message;
+  toast.style.cssText = `
+    position: fixed; top: 20px; right: 20px; background: #dc2626;
+    color: white; padding: 15px 20px; border-radius: 8px; z-index: 9999; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 350px;
+    font-family: inherit; text-align: right; direction: rtl; 
+    transition: opacity 0.3s ease;
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => { 
+    toast.style.opacity = '0'; 
+    setTimeout(() => toast.remove(), 300); 
+  }, 4000);
+};
+
 // تشخيص: تسجيل كل أخطاء الـ API في الـ Console
 const logApiError = (error, context = '') => {
   const url = error.config?.url || error.config?.baseURL || 'unknown';
@@ -78,16 +96,22 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const url = error.config?.url || error.config?.baseURL || '';
+    const isCors = !error.response && (error.message?.includes('Network') || error.code === 'ERR_NETWORK');
 
     logApiError(error, `API ${status || 'Network'}`);
 
-    // التوجيه لصفحة الدخول فقط عند 401 (انتهاء الجلسة أو توكن غير صالح)
-    // لا نوجّه عند 504/502/503 حتى يظهر الخطأ للمستخدم
     if (status === 401) {
       console.warn('[API] 401 — انتهت الجلسة أو التوكن غير صالح. جاري التوجيه إلى /login');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
+    } else if (status >= 500) {
+      showToast('حدث خطأ في الخادم ' + status + '. يرجى المحاولة لاحقاً مراجعة الدعم الفني.');
+    } else if (status === 422) {
+      const msg = error.response?.data?.message || 'بيانات غير صحيحة، يرجى مراجعة الحقول.';
+      showToast('خطأ في البيانات المكتسلة: ' + msg);
+    } else if (isCors || status === undefined) {
+      showToast('تعذر الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت.');
     }
     return Promise.reject(error);
   }

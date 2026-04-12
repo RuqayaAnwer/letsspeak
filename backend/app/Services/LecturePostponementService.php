@@ -194,20 +194,7 @@ class LecturePostponementService
 
         $course->loadMissing('coursePackage');
         if ($course->coursePackage) {
-            // Always respect the Database setting if explicitly set by admin in UI
-            if (isset($course->coursePackage->trainee_max_postponements)) {
-                return (int) $course->coursePackage->trainee_max_postponements;
-            }
-
-            $name = $course->coursePackage->name ?? '';
-            if (str_contains($name, 'سرعة') || str_contains($name, 'السرعة')) {
-                return 3;
-            }
-            if (str_contains($name, 'مزاجي') || str_contains($name, 'توازن') || str_contains($name, 'التوازن')) {
-                return 1;
-            }
-            
-            return 3;
+            return (int) ($course->coursePackage->trainee_max_postponements ?? 3);
         }
         return 3; // كورس مخصص
     }

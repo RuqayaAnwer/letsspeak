@@ -19,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
         // Use GeneralObserver for all important models to centralize logging
         \App\Models\Course::observe(\App\Observers\GeneralObserver::class);
         \App\Models\Payment::observe(\App\Observers\GeneralObserver::class);
+        \App\Models\Payment::observe(\App\Observers\PaymentObserver::class);
         \App\Models\Lecture::observe(\App\Observers\GeneralObserver::class);
         \App\Models\Student::observe(\App\Observers\GeneralObserver::class);
         \App\Models\Trainer::observe(\App\Observers\GeneralObserver::class);

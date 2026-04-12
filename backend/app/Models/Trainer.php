@@ -13,10 +13,6 @@ class Trainer extends Model
 
     protected $fillable = [
         'user_id',
-        'name',
-        'username',
-        'password',
-        'email',
         'phone',
         'min_level',
         'max_level',
@@ -26,8 +22,10 @@ class Trainer extends Model
         'payment_account_number',
     ];
 
-    protected $hidden = [
-        'password',
+    protected $appends = [
+        'name',
+        'username',
+        'email',
     ];
 
     /**
@@ -44,6 +42,30 @@ class Trainer extends Model
     public function courses(): HasMany
     {
         return $this->hasMany(Course::class);
+    }
+
+    /**
+     * Get trainer's name from User table.
+     */
+    public function getNameAttribute(): ?string
+    {
+        return $this->user ? $this->user->name : null;
+    }
+
+    /**
+     * Get trainer's username from User table.
+     */
+    public function getUsernameAttribute(): ?string
+    {
+        return $this->user ? $this->user->username : null;
+    }
+
+    /**
+     * Get trainer's email from User table.
+     */
+    public function getEmailAttribute(): ?string
+    {
+        return $this->user ? $this->user->email : null;
     }
 
     /**
