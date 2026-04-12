@@ -5,8 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Student;
 use Illuminate\Http\Request;
 
-use App\Models\Student;
-use Illuminate\Http\Request;
+
 use App\Services\StudentAnalyticsService;
 
 class StudentController extends Controller
