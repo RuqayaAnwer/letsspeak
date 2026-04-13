@@ -115,7 +115,26 @@ class LectureController extends Controller
         
         // Allow trainers and customer_service to update date and time
         if (($user->isTrainer() || $user->isCustomerService()) && $request->has('date')) {
-            $updateData['date'] = $request->date;
+            $newDate = $request->date;
+            
+            // Check for conflict
+            $conflict = \App\Models\Lecture::where('course_id', $lecture->course_id)
+                ->where('id', '!=', $lecture->id)
+                ->whereDate('date', $newDate)
+                ->whereNotIn('attendance', [
+                    \App\Models\Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
+                    \App\Models\Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
+                    \App\Models\Lecture::ATTENDANCE_POSTPONED_HOLIDAY
+                ])
+                ->exists();
+                
+            if ($conflict) {
+                return response()->json([
+                    'message' => 'لا يمكن تغيير التاريخ. هناك محاضرة أخرى مجدولة لنفس الكورس في هذا اليوم.'
+                ], 422);
+            }
+            
+            $updateData['date'] = $newDate;
         }
         if (($user->isTrainer() || $user->isCustomerService()) && $request->has('time')) {
             $updateData['time'] = $request->time;

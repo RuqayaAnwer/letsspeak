@@ -1028,7 +1028,27 @@ class CourseController extends Controller
                 
                 // Trainers and customer_service can update date and time
                 if (($user->isTrainer() || $user->isCustomerService()) && isset($lectureData['date'])) {
-                    $updateData['date'] = $lectureData['date'];
+                    $newDate = $lectureData['date'];
+                    
+                    // Check for conflict
+                    $conflict = \App\Models\Lecture::where('course_id', $course->id)
+                        ->where('id', '!=', $lecture->id)
+                        ->whereDate('date', $newDate)
+                        ->whereNotIn('attendance', [
+                            \App\Models\Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
+                            \App\Models\Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
+                            \App\Models\Lecture::ATTENDANCE_POSTPONED_HOLIDAY
+                        ])
+                        ->exists();
+
+                    if ($conflict) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'تعذر تحديث المحاضرة رقم ' . $lecture->lecture_number . ' لأنه يوجد محاضرة أخرى لنفس الكورس مجدولة في هذا التاريخ (' . $newDate . ').'
+                        ], 422);
+                    }
+                    
+                    $updateData['date'] = $newDate;
                 }
                 if (($user->isTrainer() || $user->isCustomerService()) && isset($lectureData['time'])) {
                     $updateData['time'] = $lectureData['time'];
