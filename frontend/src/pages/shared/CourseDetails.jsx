@@ -1754,7 +1754,7 @@ const CourseDetails = () => {
                       : isMakeup && !isCompleted
                         ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-700'
                         : isPostponedOrig
-                          ? 'bg-gray-100 dark:bg-gray-800/70 border-gray-300 dark:border-gray-600'
+                          ? 'bg-gray-100 dark:bg-gray-800/70 border-gray-300 dark:border-gray-600 opacity-80'
                           : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50'
                 }`}
               >
@@ -1763,7 +1763,7 @@ const CourseDetails = () => {
                     <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">رقم المحاضرة</span>
                     <div className="flex items-center gap-1 flex-wrap">
                       <span className={`text-xs font-bold ${isPostponedOrig ? 'text-gray-400 line-through' : 'text-gray-800 dark:text-white'}`}>
-                        {lecture.lecture_number}
+                        {Number(lecture.lecture_number)}
                       </span>
                       {lecture.is_extra && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-bold whitespace-nowrap" title="محاضرة إضافية">
@@ -1870,9 +1870,20 @@ const CourseDetails = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">الحضور</span>
                     {isLocked || isAccounting ? (
-                      <span className={`badge text-[9px] px-1 py-0.5 ${getAttendanceBadge(currentAttendance)}`}>
-                        {getAttendanceLabel(currentAttendance)}
-                      </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`badge text-[9px] px-1 py-0.5 ${getAttendanceBadge(currentAttendance)}`}>
+                      {getAttendanceLabel(currentAttendance)}
+                    </span>
+                    {(isCustomerService || isTrainer) && !isAccounting && ['postponed_by_trainer', 'postponed_by_student', 'postponed_holiday'].includes(currentAttendance) && (
+                      <button
+                        onClick={() => handleCancelPostponement(lecture.id)}
+                        disabled={saving}
+                        className="text-[9px] text-red-500 hover:text-red-700 underline font-bold pointer-events-auto"
+                      >
+                        إلغاء التأجيل
+                      </button>
+                    )}
+                  </div>
                     ) : (
                       <select
                         value={currentAttendance}
@@ -2179,7 +2190,7 @@ const CourseDetails = () => {
                     } ${
                       isMakeup && !isCompleted ? 'bg-green-50 dark:bg-green-900/10' : ''
                     } ${
-                      isPostponedOrig ? 'bg-gray-100 dark:bg-gray-800/50 opacity-50 grayscale pointer-events-none' : ''
+                      isPostponedOrig ? 'bg-gray-100 dark:bg-gray-800/50 opacity-80' : ''
                     } ${
                       isSelected ? 'ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-900/20' : ''
                     }`}
@@ -2187,7 +2198,7 @@ const CourseDetails = () => {
                     <td className="border-l border-[var(--color-border)] px-1 py-1 font-bold text-[var(--color-text-primary)] text-[10px] text-center align-middle">
                       <div className="flex flex-col items-center justify-center gap-1 flex-wrap">
                         <span className={isPostponedOrig ? 'text-gray-400 line-through' : ''}>
-                          {lecture.lecture_number}
+                          {Number(lecture.lecture_number)}
                         </span>
                         {lecture.is_extra && (
                           <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-bold whitespace-nowrap" title="محاضرة إضافية">
