@@ -123,6 +123,7 @@ const CourseDetails = () => {
   const [editingLectureDateTime, setEditingLectureDateTime] = useState({ date: '', time: '' });
   
   // Selected student for dual courses (to show their attendance data)
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
   
   
   // Status change confirmation modal
@@ -239,7 +240,7 @@ const CourseDetails = () => {
       
       // Set default selected student for dual courses
       if (response.data.is_dual && response.data.students?.length > 0) {
-        navigate('/students/' + response.data.students[0]?.id);
+        setSelectedStudentId(response.data.students[0]?.id);
       }
       
       // Check for evaluation milestone (for trainers only)
@@ -1598,8 +1599,8 @@ const CourseDetails = () => {
                 {course.students.map((student, index) => (
                   <button
                     key={student.id}
-                    onClick={() => navigate('/students/' + student.id)}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all cursor-pointer max-w-full min-w-0 ${
+                    onClick={() => setSelectedStudentId(student.id)}
+                      className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all cursor-pointer max-w-full min-w-0 ${
                       selectedStudentId === student.id
                         ? index === 0 
                           ? 'bg-blue-500 text-white ring-2 ring-blue-300'

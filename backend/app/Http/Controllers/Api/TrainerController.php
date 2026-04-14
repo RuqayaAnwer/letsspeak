@@ -197,6 +197,7 @@ class TrainerController extends Controller
     public function list()
     {
         $trainers = Trainer::with('user:id,name,email')
+            ->whereNotNull('user_id')
             ->get()
             ->map(function ($trainer) {
                 return [
