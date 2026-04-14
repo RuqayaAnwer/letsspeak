@@ -45,7 +45,7 @@ const StudentProfile = () => {
       setProfileData(response.data);
     } catch (err) {
       console.error('Error fetching student profile:', err);
-      setError('Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø·Ø§Ù„Ø¨');
+      setError('حدث خطأ أثناء تحميل بيانات الطالب');
     } finally {
       setLoading(false);
     }
@@ -73,17 +73,17 @@ const StudentProfile = () => {
       // Refresh profile data
       await fetchProfileData();
       setPaymentModal({ ...paymentModal, open: false });
-      alert('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯ÙØ¹Ø© Ø¨Ù†Ø¬Ø§Ø­!');
+      alert('تم تسجيل الدفعة بنجاح!');
     } catch (err) {
       console.error('Error submitting payment:', err);
-      const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Ø­Ø¯Ø« Ø®Ø·Ø£ ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ';
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || 'حدث خطأ غير معروف';
       
       let validationErrors = '';
       if (err.response?.data?.errors) {
          validationErrors = '\\n' + Object.values(err.response.data.errors).flat().join('\\n');
       }
       
-      alert('ÙØ´Ù„ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯ÙØ¹Ø©:\\n' + errorMsg + validationErrors);
+      alert('فشل تسجيل الدفعة:\\n' + errorMsg + validationErrors);
     } finally {
       setSubmittingPayment(false);
     }
@@ -135,11 +135,11 @@ const StudentProfile = () => {
   const getPaymentMethodBadge = (method) => {
     if (!method) return null;
     switch (method.toLowerCase()) {
-      case 'zain_cash': return <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">Ø²ÙŠÙ† ÙƒØ§Ø´</span>;
+      case 'zain_cash': return <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">زين كاش</span>;
       case 'qi_card':
-      case 'q_card': return <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">Ø¨Ø·Ø§Ù‚Ø© ÙƒÙŠ</span>;
-      case 'delivery': return <span className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">ØªÙˆØµÙŠÙ„</span>;
-      case 'cash': return <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">Ù†Ù‚Ø¯ÙŠ</span>;
+      case 'q_card': return <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">بطاقة كي</span>;
+      case 'delivery': return <span className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">توصيل</span>;
+      case 'cash': return <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">نقدي</span>;
       default: return <span className="bg-gray-100 text-gray-700 text-[10px] px-2 py-0.5 rounded ml-2 inline-block font-semibold">{method}</span>;
     }
   };
@@ -158,10 +158,10 @@ const StudentProfile = () => {
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-                {profileData?.student?.name || 'Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØ­Ù…ÙŠÙ„...'}
+                {profileData?.student?.name || 'جاري التحميل...'}
                 {!loading && profileData?.stats?.commitment_score >= 80 && (
-                  <span className="bg-amber-400 text-amber-900 text-xs px-2 py-0.5 rounded-full font-bold shadow-sm" title="Ø·Ø§Ù„Ø¨ Ù…ØªÙ…ÙŠØ² (ØªÙ‚ÙŠÙŠÙ… Ø§Ù„ØªØ²Ø§Ù… Ù…Ø±ØªÙØ¹)">
-                    ðŸŒŸ Ù…ØªÙ…ÙŠØ²
+                  <span className="bg-amber-400 text-amber-900 text-xs px-2 py-0.5 rounded-full font-bold shadow-sm" title="طالب متميز (تقييم التزام مرتفع)">
+                    🌟 متميز
                   </span>
                 )}
               </h2>
@@ -192,14 +192,14 @@ const StudentProfile = () => {
           {loading ? (
             <div className="py-20 flex flex-col items-center justify-center gap-4">
               <LoadingSpinner size="lg" />
-              <p className="text-gray-500 font-medium">Ø¬Ø§Ø±ÙŠ Ø¥Ø¹Ø¯Ø§Ø¯ Ø§Ù„Ø³Ø¬Ù„ Ø§Ù„Ø´Ø§Ù…Ù„ Ù„Ù„Ø·Ø§Ù„Ø¨...</p>
+              <p className="text-gray-500 font-medium">جاري إعداد السجل الشامل للطالب...</p>
             </div>
           ) : error ? (
             <div className="py-20 text-center">
               <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
               <p className="text-red-500 font-medium">{error}</p>
               <button onClick={fetchProfileData} className="mt-4 btn-secondary flex items-center gap-2 mx-auto">
-                <RefreshCw className="w-4 h-4" /> Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©
+                <RefreshCw className="w-4 h-4" /> إعادة المحاولة
               </button>
             </div>
           ) : (
@@ -209,31 +209,31 @@ const StudentProfile = () => {
               <div>
                 <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
                   <Activity className="w-5 h-5 text-primary-500" />
-                  Ù…Ø¤Ø´Ø±Ø§Øª Ø§Ù„Ø§Ù„ØªØ²Ø§Ù… Ø§Ù„Ø¹Ø§Ù…
+                  مؤشرات الالتزام العام
                 </h3>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {renderProgressCircle(
                     profileData.stats.commitment_score, 
                     profileData.stats.commitment_score >= 70 ? 'text-green-500' : profileData.stats.commitment_score >= 40 ? 'text-amber-500' : 'text-red-500',
-                    'ØªÙ‚ÙŠÙŠÙ… Ø§Ù„Ø§Ù„ØªØ²Ø§Ù… (Ø¥Ø¬Ù…Ø§Ù„ÙŠ)',
+                    'تقييم الالتزام (إجمالي)',
                     <Activity className={`w-5 h-5 ${profileData.stats.commitment_score >= 70 ? 'text-green-500' : 'text-amber-500'}`} />
                   )}
                   {renderProgressCircle(
                     profileData.stats.attendance_rate, 
                     'text-blue-500', 
-                    'Ù†Ø³Ø¨Ø© Ø§Ù„Ø­Ø¶ÙˆØ±',
+                    'نسبة الحضور',
                     <CheckCircle className="w-5 h-5 text-blue-500" />
                   )}
                   {renderProgressCircle(
                     profileData.stats.homework_rate, 
                     'text-purple-500', 
-                    'Ø¥Ù†Ø¬Ø§Ø² Ø§Ù„ÙˆØ§Ø¬Ø¨Ø§Øª',
+                    'إنجاز الواجبات',
                     <BookOpen className="w-5 h-5 text-purple-500" />
                   )}
                   {renderProgressCircle(
                     profileData.stats.engagement_rate, 
                     'text-orange-500', 
-                    'Ù…Ø¯Ù‰ Ø§Ù„ØªÙØ§Ø¹Ù„',
+                    'مدى التفاعل',
                     <User className="w-5 h-5 text-orange-500" />
                   )}
                 </div>
@@ -246,7 +246,7 @@ const StudentProfile = () => {
                     <BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Ø¹Ø¯Ø¯ Ø§Ù„ÙƒÙˆØ±Ø³Ø§Øª</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">عدد الكورسات</p>
                     <p className="text-xl font-bold text-gray-800 dark:text-gray-200">{profileData.stats.total_courses}</p>
                   </div>
                 </div>
@@ -258,7 +258,7 @@ const StudentProfile = () => {
                         <CreditCard className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">إجمالي المدفوعات</p>
                         <p className="text-xl font-bold text-gray-800 dark:text-gray-200">
                           {formatCurrency(profileData.financials.total_paid)}
                         </p>
@@ -270,7 +270,7 @@ const StudentProfile = () => {
                         <AlertCircle className="w-6 h-6 text-rose-600 dark:text-rose-400" />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø¯ÙŠÙˆÙ† (Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ)</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">إجمالي الديون (المتبقي)</p>
                         <p className="text-xl font-bold text-rose-600 dark:text-rose-400">
                           {formatCurrency(profileData.financials.total_remaining)}
                         </p>
@@ -284,12 +284,12 @@ const StudentProfile = () => {
               <div>
                 <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
                   <Clock className="w-5 h-5 text-primary-500" />
-                  Ø³Ø¬Ù„ Ø§Ù„ÙƒÙˆØ±Ø³Ø§Øª ÙˆØ§Ù„ØªØ§Ø±ÙŠØ®
+                  سجل الكورسات والتاريخ
                 </h3>
                 
                 {profileData.courses_history.length === 0 ? (
                   <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
-                    <p className="text-gray-500">Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø³Ø¬Ù„ ÙƒÙˆØ±Ø³Ø§Øª Ù„Ù‡Ø°Ø§ Ø§Ù„Ø·Ø§Ù„Ø¨ Ø­ØªÙ‰ Ø§Ù„Ø¢Ù†.</p>
+                    <p className="text-gray-500">لا يوجد سجل كورسات لهذا الطالب حتى الآن.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -309,15 +309,15 @@ const StudentProfile = () => {
                                 {course.title} {getPaymentMethodBadge(course.payment_method)}
                               </h4>
                               <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                <span className="flex items-center gap-1"><User className="w-3 h-3"/> Ø§Ù„Ù…Ø¯Ø±Ø¨: {course.trainer}</span>
-                                <span>â€¢</span>
-                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3"/> {course.start_date || 'ØºÙŠØ± Ù…Ø­Ø¯Ø¯'}</span>
+                                <span className="flex items-center gap-1"><User className="w-3 h-3"/> المدرب: {course.trainer}</span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3"/> {course.start_date || 'غير محدد'}</span>
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-4 mt-3 sm:mt-0 px-5 sm:px-0">
                             <span className={`text-xs px-2 py-1 rounded-md font-semibold ${course.status === 'active' ? 'bg-green-100 text-green-700' : course.status === 'finished' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
-                              {course.status === 'active' ? 'Ù†Ø´Ø·' : course.status === 'finished' ? 'Ù…Ù†ØªÙ‡ÙŠ' : 'Ù…ÙƒØªÙ…Ù„'}
+                              {course.status === 'active' ? 'نشط' : course.status === 'finished' ? 'منتهي' : 'مكتمل'}
                             </span>
                             {expandedCourse === course.id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                           </div>
@@ -327,22 +327,22 @@ const StudentProfile = () => {
                           <div className="px-4 pb-4 pt-2 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 animate-fade-in text-sm">
                             <div className={`grid gap-4 mt-2 ${user?.role !== 'trainer' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
                               <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <span className="text-xs text-gray-500 block mb-1">Ø§Ù„ØªÙ‚Ø¯Ù… ÙÙŠ Ø§Ù„Ù…Ø­Ø§Ø¶Ø±Ø§Øª</span>
+                                <span className="text-xs text-gray-500 block mb-1">التقدم في المحاضرات</span>
                                 <span className="font-bold text-gray-700 dark:text-gray-300">{course.completed_lectures} / {course.total_lectures}</span>
                               </div>
                               <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <span className="text-xs text-gray-500 block mb-1">Ù†Ø³Ø¨Ø© Ø§Ù„Ø­Ø¶ÙˆØ±</span>
+                                <span className="text-xs text-gray-500 block mb-1">نسبة الحضور</span>
                                 <span className="font-bold text-primary-600">{course.attendance_rate}%</span>
                               </div>
                               {user?.role !== 'trainer' && (
                                 <>
                                   <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                                    <span className="text-xs text-gray-500 block mb-1">Ø§Ù„Ù…Ø¯ÙÙˆØ¹ Ù„Ù‡Ø°Ø§ Ø§Ù„ÙƒÙˆØ±Ø³</span>
+                                    <span className="text-xs text-gray-500 block mb-1">المدفوع لهذا الكورس</span>
                                     <span className="font-bold text-emerald-600">{formatCurrencyAmount(course.paid_amount || 0)}</span>
                                   </div>
                                   <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col justify-between">
                                     <div>
-                                      <span className="text-xs text-gray-500 block mb-1">Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ (Ø¯ÙŠÙˆÙ†)</span>
+                                      <span className="text-xs text-gray-500 block mb-1">المتبقي (ديون)</span>
                                       <span className="font-bold text-rose-600">{formatCurrencyAmount(course.remaining_amount || 0)}</span>
                                     </div>
                                     <button
@@ -359,7 +359,7 @@ const StudentProfile = () => {
                                       }}
                                       className="mt-2 text-[10px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 px-2 py-1 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors w-full flex items-center justify-center gap-1"
                                     >
-                                      <CreditCard className="w-3 h-3" /> ØªØ³Ø¯ÙŠØ¯
+                                      <CreditCard className="w-3 h-3" /> تسديد
                                     </button>
                                   </div>
                                 </>
@@ -369,13 +369,13 @@ const StudentProfile = () => {
                             {/* Payments List */}
                             {user?.role !== 'trainer' && course.payments && course.payments.length > 0 && (
                               <div className="mt-3">
-                                <h5 className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">Ø§Ù„Ø¯ÙØ¹Ø§Øª Ø§Ù„Ù…Ø¤ÙƒØ¯Ø©:</h5>
+                                <h5 className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">الدفعات المؤكدة:</h5>
                                 <div className="space-y-1.5">
                                   {course.payments.map((p, idx) => (
                                     <div key={idx} className="flex items-center justify-between text-xs bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
                                       <span className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
                                         <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
-                                        Ø¯ÙØ¹Ø© Ø±Ù‚Ù… {idx + 1}
+                                        دفعة رقم {idx + 1}
                                       </span>
                                       <span className="text-gray-500 flex items-center gap-1">
                                         <Calendar className="w-3.5 h-3.5" />
@@ -407,14 +407,14 @@ const StudentProfile = () => {
       <Modal
         isOpen={paymentModal.open}
         onClose={() => !submittingPayment && setPaymentModal({ ...paymentModal, open: false })}
-        title="ØªØ³Ø¯ÙŠØ¯ Ø¯ÙØ¹Ø© Ù…ØªØ¨Ù‚ÙŠØ©"
+        title="تسديد دفعة متبقية"
         size="sm"
         zIndex="z-[200]"
       >
         <form onSubmit={handlePaymentSubmit} className="space-y-4">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Ø§Ù„Ù…Ø¨Ù„Øº (Ø¯.Ø¹)
+              المبلغ (د.ع)
             </label>
             <input
               type="number"
@@ -427,7 +427,7 @@ const StudentProfile = () => {
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¯ÙØ¹
+              تاريخ الدفع
             </label>
             <input
               type="date"
@@ -440,7 +440,7 @@ const StudentProfile = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¯ÙØ¹
+              طريقة الدفع
             </label>
             <select
               value={paymentModal.payment_method}
@@ -448,9 +448,9 @@ const StudentProfile = () => {
               className="input-field"
               required
             >
-              <option value="zain_cash">Ø²ÙŠÙ† ÙƒØ§Ø´</option>
-              <option value="qi_card">Ø¨Ø·Ø§Ù‚Ø© ÙƒÙŠ</option>
-              <option value="delivery">ØªÙˆØµÙŠÙ„</option>
+              <option value="zain_cash">زين كاش</option>
+              <option value="qi_card">بطاقة كي</option>
+              <option value="delivery">توصيل</option>
             </select>
           </div>
 
@@ -460,7 +460,7 @@ const StudentProfile = () => {
               disabled={submittingPayment}
               className="btn-primary flex-1 flex justify-center items-center"
             >
-              {submittingPayment ? <LoadingSpinner size="sm" /> : 'ØªØ£ÙƒÙŠØ¯ ÙˆØ¯ÙØ¹'}
+              {submittingPayment ? <LoadingSpinner size="sm" /> : 'تأكيد ودفع'}
             </button>
             <button
               type="button"
@@ -468,7 +468,7 @@ const StudentProfile = () => {
               disabled={submittingPayment}
               className="btn-secondary flex-1"
             >
-              Ø¥Ù„ØºØ§Ø¡
+              إلغاء
             </button>
           </div>
         </form>
