@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/axios';
+import api from '../../api/axios';
+import { formatCurrency, formatCurrencyAmount } from '../../utils/currencyFormat';
+import { useAuth } from '../../context/AuthContext';
 import { 
   X, User, Phone, GraduationCap, Calendar, 
   BookOpen, Clock, Activity, CheckCircle, 
   AlertCircle, CreditCard, ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react';
-import LoadingSpinner from './LoadingSpinner';
-import Modal from './Modal';
-import { formatCurrency, formatCurrencyAmount } from '../utils/currencyFormat';
-import { useAuth } from '../context/AuthContext';
+import Modal from '../../components/Modal';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { useParams, useNavigate } from 'react-router-dom';
 
-const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
+const StudentProfile = () => {
+  const { id: studentId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState(null);
@@ -29,10 +32,10 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
   const [submittingPayment, setSubmittingPayment] = useState(false);
 
   useEffect(() => {
-    if (isOpen && studentId) {
+    if (studentId) {
       fetchProfileData();
     }
-  }, [isOpen, studentId]);
+  }, [studentId]);
 
   const fetchProfileData = async () => {
     setLoading(true);
@@ -42,7 +45,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
       setProfileData(response.data);
     } catch (err) {
       console.error('Error fetching student profile:', err);
-      setError('حدث خطأ أثناء تحميل بيانات الطالب');
+      setError('Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø·Ø§Ù„Ø¨');
     } finally {
       setLoading(false);
     }
@@ -70,23 +73,21 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
       // Refresh profile data
       await fetchProfileData();
       setPaymentModal({ ...paymentModal, open: false });
-      alert('تم تسجيل الدفعة بنجاح!');
+      alert('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯ÙØ¹Ø© Ø¨Ù†Ø¬Ø§Ø­!');
     } catch (err) {
       console.error('Error submitting payment:', err);
-      const errorMsg = err.response?.data?.message || err.response?.data?.error || 'حدث خطأ غير معروف';
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Ø­Ø¯Ø« Ø®Ø·Ø£ ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ';
       
       let validationErrors = '';
       if (err.response?.data?.errors) {
          validationErrors = '\\n' + Object.values(err.response.data.errors).flat().join('\\n');
       }
       
-      alert('فشل تسجيل الدفعة:\\n' + errorMsg + validationErrors);
+      alert('ÙØ´Ù„ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯ÙØ¹Ø©:\\n' + errorMsg + validationErrors);
     } finally {
       setSubmittingPayment(false);
     }
   };
-
-  if (!isOpen) return null;
 
   // Render Activity Ring
   const renderProgressCircle = (percentage, colorClass, label, icon) => {
@@ -134,25 +135,20 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
   const getPaymentMethodBadge = (method) => {
     if (!method) return null;
     switch (method.toLowerCase()) {
-      case 'zain_cash': return <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">زين كاش</span>;
+      case 'zain_cash': return <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">Ø²ÙŠÙ† ÙƒØ§Ø´</span>;
       case 'qi_card':
-      case 'q_card': return <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">بطاقة كي</span>;
-      case 'delivery': return <span className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">توصيل</span>;
-      case 'cash': return <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">نقدي</span>;
+      case 'q_card': return <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">Ø¨Ø·Ø§Ù‚Ø© ÙƒÙŠ</span>;
+      case 'delivery': return <span className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">ØªÙˆØµÙŠÙ„</span>;
+      case 'cash': return <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] px-2 py-0.5 rounded font-semibold ml-2 inline-block">Ù†Ù‚Ø¯ÙŠ</span>;
       default: return <span className="bg-gray-100 text-gray-700 text-[10px] px-2 py-0.5 rounded ml-2 inline-block font-semibold">{method}</span>;
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      />
+    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in py-6 px-4">
       
-      {/* Modal Content */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col relative z-[101] animate-scale-up border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* Page Content */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden flex flex-col relative border border-gray-200 dark:border-gray-700">
         
         {/* Header */}
         <div className="flex bg-gradient-to-r from-primary-600 to-primary-800 p-4 sm:p-6 text-white justify-between items-start shrink-0">
@@ -162,10 +158,10 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-                {profileData?.student?.name || 'جاري التحميل...'}
+                {profileData?.student?.name || 'Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØ­Ù…ÙŠÙ„...'}
                 {!loading && profileData?.stats?.commitment_score >= 80 && (
-                  <span className="bg-amber-400 text-amber-900 text-xs px-2 py-0.5 rounded-full font-bold shadow-sm" title="طالب متميز (تقييم التزام مرتفع)">
-                    🌟 متميز
+                  <span className="bg-amber-400 text-amber-900 text-xs px-2 py-0.5 rounded-full font-bold shadow-sm" title="Ø·Ø§Ù„Ø¨ Ù…ØªÙ…ÙŠØ² (ØªÙ‚ÙŠÙŠÙ… Ø§Ù„ØªØ²Ø§Ù… Ù…Ø±ØªÙØ¹)">
+                    ðŸŒŸ Ù…ØªÙ…ÙŠØ²
                   </span>
                 )}
               </h2>
@@ -184,7 +180,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
             </div>
           </div>
           <button 
-            onClick={onClose}
+            onClick={() => navigate(-1)}
             className="p-2 bg-black/10 hover:bg-black/20 rounded-xl transition-colors backdrop-blur-sm"
           >
             <X className="w-5 h-5 text-white" />
@@ -192,18 +188,18 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50/50 dark:bg-gray-900/50">
+        <div className="flex-1 p-4 sm:p-6 bg-gray-50/50 dark:bg-gray-900/50">
           {loading ? (
             <div className="py-20 flex flex-col items-center justify-center gap-4">
               <LoadingSpinner size="lg" />
-              <p className="text-gray-500 font-medium">جاري إعداد السجل الشامل للطالب...</p>
+              <p className="text-gray-500 font-medium">Ø¬Ø§Ø±ÙŠ Ø¥Ø¹Ø¯Ø§Ø¯ Ø§Ù„Ø³Ø¬Ù„ Ø§Ù„Ø´Ø§Ù…Ù„ Ù„Ù„Ø·Ø§Ù„Ø¨...</p>
             </div>
           ) : error ? (
             <div className="py-20 text-center">
               <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
               <p className="text-red-500 font-medium">{error}</p>
               <button onClick={fetchProfileData} className="mt-4 btn-secondary flex items-center gap-2 mx-auto">
-                <RefreshCw className="w-4 h-4" /> إعادة المحاولة
+                <RefreshCw className="w-4 h-4" /> Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©
               </button>
             </div>
           ) : (
@@ -213,31 +209,31 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
               <div>
                 <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
                   <Activity className="w-5 h-5 text-primary-500" />
-                  مؤشرات الالتزام العام
+                  Ù…Ø¤Ø´Ø±Ø§Øª Ø§Ù„Ø§Ù„ØªØ²Ø§Ù… Ø§Ù„Ø¹Ø§Ù…
                 </h3>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {renderProgressCircle(
                     profileData.stats.commitment_score, 
                     profileData.stats.commitment_score >= 70 ? 'text-green-500' : profileData.stats.commitment_score >= 40 ? 'text-amber-500' : 'text-red-500',
-                    'تقييم الالتزام (إجمالي)',
+                    'ØªÙ‚ÙŠÙŠÙ… Ø§Ù„Ø§Ù„ØªØ²Ø§Ù… (Ø¥Ø¬Ù…Ø§Ù„ÙŠ)',
                     <Activity className={`w-5 h-5 ${profileData.stats.commitment_score >= 70 ? 'text-green-500' : 'text-amber-500'}`} />
                   )}
                   {renderProgressCircle(
                     profileData.stats.attendance_rate, 
                     'text-blue-500', 
-                    'نسبة الحضور',
+                    'Ù†Ø³Ø¨Ø© Ø§Ù„Ø­Ø¶ÙˆØ±',
                     <CheckCircle className="w-5 h-5 text-blue-500" />
                   )}
                   {renderProgressCircle(
                     profileData.stats.homework_rate, 
                     'text-purple-500', 
-                    'إنجاز الواجبات',
+                    'Ø¥Ù†Ø¬Ø§Ø² Ø§Ù„ÙˆØ§Ø¬Ø¨Ø§Øª',
                     <BookOpen className="w-5 h-5 text-purple-500" />
                   )}
                   {renderProgressCircle(
                     profileData.stats.engagement_rate, 
                     'text-orange-500', 
-                    'مدى التفاعل',
+                    'Ù…Ø¯Ù‰ Ø§Ù„ØªÙØ§Ø¹Ù„',
                     <User className="w-5 h-5 text-orange-500" />
                   )}
                 </div>
@@ -250,7 +246,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                     <BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">عدد الكورسات</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Ø¹Ø¯Ø¯ Ø§Ù„ÙƒÙˆØ±Ø³Ø§Øª</p>
                     <p className="text-xl font-bold text-gray-800 dark:text-gray-200">{profileData.stats.total_courses}</p>
                   </div>
                 </div>
@@ -262,7 +258,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                         <CreditCard className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">إجمالي المدفوعات</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª</p>
                         <p className="text-xl font-bold text-gray-800 dark:text-gray-200">
                           {formatCurrency(profileData.financials.total_paid)}
                         </p>
@@ -274,7 +270,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                         <AlertCircle className="w-6 h-6 text-rose-600 dark:text-rose-400" />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">إجمالي الديون (المتبقي)</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø¯ÙŠÙˆÙ† (Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ)</p>
                         <p className="text-xl font-bold text-rose-600 dark:text-rose-400">
                           {formatCurrency(profileData.financials.total_remaining)}
                         </p>
@@ -288,12 +284,12 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
               <div>
                 <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
                   <Clock className="w-5 h-5 text-primary-500" />
-                  سجل الكورسات والتاريخ
+                  Ø³Ø¬Ù„ Ø§Ù„ÙƒÙˆØ±Ø³Ø§Øª ÙˆØ§Ù„ØªØ§Ø±ÙŠØ®
                 </h3>
                 
                 {profileData.courses_history.length === 0 ? (
                   <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
-                    <p className="text-gray-500">لا يوجد سجل كورسات لهذا الطالب حتى الآن.</p>
+                    <p className="text-gray-500">Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø³Ø¬Ù„ ÙƒÙˆØ±Ø³Ø§Øª Ù„Ù‡Ø°Ø§ Ø§Ù„Ø·Ø§Ù„Ø¨ Ø­ØªÙ‰ Ø§Ù„Ø¢Ù†.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -313,15 +309,15 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                                 {course.title} {getPaymentMethodBadge(course.payment_method)}
                               </h4>
                               <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                <span className="flex items-center gap-1"><User className="w-3 h-3"/> المدرب: {course.trainer}</span>
-                                <span>•</span>
-                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3"/> {course.start_date || 'غير محدد'}</span>
+                                <span className="flex items-center gap-1"><User className="w-3 h-3"/> Ø§Ù„Ù…Ø¯Ø±Ø¨: {course.trainer}</span>
+                                <span>â€¢</span>
+                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3"/> {course.start_date || 'ØºÙŠØ± Ù…Ø­Ø¯Ø¯'}</span>
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-4 mt-3 sm:mt-0 px-5 sm:px-0">
                             <span className={`text-xs px-2 py-1 rounded-md font-semibold ${course.status === 'active' ? 'bg-green-100 text-green-700' : course.status === 'finished' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
-                              {course.status === 'active' ? 'نشط' : course.status === 'finished' ? 'منتهي' : 'مكتمل'}
+                              {course.status === 'active' ? 'Ù†Ø´Ø·' : course.status === 'finished' ? 'Ù…Ù†ØªÙ‡ÙŠ' : 'Ù…ÙƒØªÙ…Ù„'}
                             </span>
                             {expandedCourse === course.id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                           </div>
@@ -331,22 +327,22 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                           <div className="px-4 pb-4 pt-2 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 animate-fade-in text-sm">
                             <div className={`grid gap-4 mt-2 ${user?.role !== 'trainer' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
                               <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <span className="text-xs text-gray-500 block mb-1">التقدم في المحاضرات</span>
+                                <span className="text-xs text-gray-500 block mb-1">Ø§Ù„ØªÙ‚Ø¯Ù… ÙÙŠ Ø§Ù„Ù…Ø­Ø§Ø¶Ø±Ø§Øª</span>
                                 <span className="font-bold text-gray-700 dark:text-gray-300">{course.completed_lectures} / {course.total_lectures}</span>
                               </div>
                               <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <span className="text-xs text-gray-500 block mb-1">نسبة الحضور</span>
+                                <span className="text-xs text-gray-500 block mb-1">Ù†Ø³Ø¨Ø© Ø§Ù„Ø­Ø¶ÙˆØ±</span>
                                 <span className="font-bold text-primary-600">{course.attendance_rate}%</span>
                               </div>
                               {user?.role !== 'trainer' && (
                                 <>
                                   <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                                    <span className="text-xs text-gray-500 block mb-1">المدفوع لهذا الكورس</span>
+                                    <span className="text-xs text-gray-500 block mb-1">Ø§Ù„Ù…Ø¯ÙÙˆØ¹ Ù„Ù‡Ø°Ø§ Ø§Ù„ÙƒÙˆØ±Ø³</span>
                                     <span className="font-bold text-emerald-600">{formatCurrencyAmount(course.paid_amount || 0)}</span>
                                   </div>
                                   <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col justify-between">
                                     <div>
-                                      <span className="text-xs text-gray-500 block mb-1">المتبقي (ديون)</span>
+                                      <span className="text-xs text-gray-500 block mb-1">Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ (Ø¯ÙŠÙˆÙ†)</span>
                                       <span className="font-bold text-rose-600">{formatCurrencyAmount(course.remaining_amount || 0)}</span>
                                     </div>
                                     <button
@@ -363,7 +359,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                                       }}
                                       className="mt-2 text-[10px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 px-2 py-1 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors w-full flex items-center justify-center gap-1"
                                     >
-                                      <CreditCard className="w-3 h-3" /> تسديد
+                                      <CreditCard className="w-3 h-3" /> ØªØ³Ø¯ÙŠØ¯
                                     </button>
                                   </div>
                                 </>
@@ -373,13 +369,13 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
                             {/* Payments List */}
                             {user?.role !== 'trainer' && course.payments && course.payments.length > 0 && (
                               <div className="mt-3">
-                                <h5 className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">الدفعات المؤكدة:</h5>
+                                <h5 className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">Ø§Ù„Ø¯ÙØ¹Ø§Øª Ø§Ù„Ù…Ø¤ÙƒØ¯Ø©:</h5>
                                 <div className="space-y-1.5">
                                   {course.payments.map((p, idx) => (
                                     <div key={idx} className="flex items-center justify-between text-xs bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
                                       <span className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
                                         <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
-                                        دفعة رقم {idx + 1}
+                                        Ø¯ÙØ¹Ø© Ø±Ù‚Ù… {idx + 1}
                                       </span>
                                       <span className="text-gray-500 flex items-center gap-1">
                                         <Calendar className="w-3.5 h-3.5" />
@@ -405,27 +401,20 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
             </div>
           )}
         </div>
-        
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0 flex justify-end">
-          <button onClick={onClose} className="btn-primary px-8">
-            إغلاق
-          </button>
-        </div>
       </div>
 
       {/* Payment Modal */}
       <Modal
         isOpen={paymentModal.open}
         onClose={() => !submittingPayment && setPaymentModal({ ...paymentModal, open: false })}
-        title="تسديد دفعة متبقية"
+        title="ØªØ³Ø¯ÙŠØ¯ Ø¯ÙØ¹Ø© Ù…ØªØ¨Ù‚ÙŠØ©"
         size="sm"
         zIndex="z-[200]"
       >
         <form onSubmit={handlePaymentSubmit} className="space-y-4">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              المبلغ (د.ع)
+              Ø§Ù„Ù…Ø¨Ù„Øº (Ø¯.Ø¹)
             </label>
             <input
               type="number"
@@ -438,7 +427,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              تاريخ الدفع
+              ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¯ÙØ¹
             </label>
             <input
               type="date"
@@ -451,7 +440,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              طريقة الدفع
+              Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¯ÙØ¹
             </label>
             <select
               value={paymentModal.payment_method}
@@ -459,9 +448,9 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
               className="input-field"
               required
             >
-              <option value="zain_cash">زين كاش</option>
-              <option value="qi_card">بطاقة كي</option>
-              <option value="delivery">توصيل</option>
+              <option value="zain_cash">Ø²ÙŠÙ† ÙƒØ§Ø´</option>
+              <option value="qi_card">Ø¨Ø·Ø§Ù‚Ø© ÙƒÙŠ</option>
+              <option value="delivery">ØªÙˆØµÙŠÙ„</option>
             </select>
           </div>
 
@@ -471,7 +460,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
               disabled={submittingPayment}
               className="btn-primary flex-1 flex justify-center items-center"
             >
-              {submittingPayment ? <LoadingSpinner size="sm" /> : 'تأكيد ودفع'}
+              {submittingPayment ? <LoadingSpinner size="sm" /> : 'ØªØ£ÙƒÙŠØ¯ ÙˆØ¯ÙØ¹'}
             </button>
             <button
               type="button"
@@ -479,7 +468,7 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
               disabled={submittingPayment}
               className="btn-secondary flex-1"
             >
-              إلغاء
+              Ø¥Ù„ØºØ§Ø¡
             </button>
           </div>
         </form>
@@ -488,4 +477,4 @@ const StudentProfileModal = ({ isOpen, onClose, studentId }) => {
   );
 };
 
-export default StudentProfileModal;
+export default StudentProfile;

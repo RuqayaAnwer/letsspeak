@@ -25,7 +25,7 @@ import {
   Check, CreditCard, Activity, Flag, FileText, Upload, Eye, EyeOff, UserCircle
 } from 'lucide-react';
 import PackageBadge from '../../components/PackageBadge';
-import StudentProfileModal from '../../components/StudentProfileModal';
+
 
 /**
  * CourseDetails Component
@@ -123,7 +123,7 @@ const CourseDetails = () => {
   const [editingLectureDateTime, setEditingLectureDateTime] = useState({ date: '', time: '' });
   
   // Selected student for dual courses (to show their attendance data)
-  const [selectedStudentId, setSelectedStudentId] = useState(null);
+  
   
   // Status change confirmation modal
   const [statusChangeModal, setStatusChangeModal] = useState({
@@ -154,7 +154,7 @@ const CourseDetails = () => {
   });
 
   // Profile Modal State
-  const [profileModalStudentId, setProfileModalStudentId] = useState(null);
+  
 
   // تفعيل بدء الكورس الفعلي (للمدرب)
   const [startingCourse, setStartingCourse] = useState(false);
@@ -239,7 +239,7 @@ const CourseDetails = () => {
       
       // Set default selected student for dual courses
       if (response.data.is_dual && response.data.students?.length > 0) {
-        setSelectedStudentId(response.data.students[0]?.id);
+        navigate('/students/' + response.data.students[0]?.id);
       }
       
       // Check for evaluation milestone (for trainers only)
@@ -1370,7 +1370,7 @@ const CourseDetails = () => {
                       <React.Fragment key={s.id}>
                         {idx > 0 && <span className="text-[var(--color-text-muted)] mx-1">و</span>}
                         <button 
-                          onClick={() => setProfileModalStudentId(s.id)} 
+                          onClick={() => navigate('/students/' + s.id)} 
                           className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1 focus:outline-none"
                           title="عرض ملف الطالب"
                         >
@@ -1380,7 +1380,7 @@ const CourseDetails = () => {
                     ))
                   : (
                     <button 
-                      onClick={() => setProfileModalStudentId(course.students?.[0]?.id || course.student_id)} 
+                      onClick={() => navigate('/students/' + course.students?.[0]?.id || course.student_id)} 
                       className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1 focus:outline-none"
                       title="عرض ملف الطالب"
                     >
@@ -1598,7 +1598,7 @@ const CourseDetails = () => {
                 {course.students.map((student, index) => (
                   <button
                     key={student.id}
-                    onClick={() => setSelectedStudentId(student.id)}
+                    onClick={() => navigate('/students/' + student.id)}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all cursor-pointer max-w-full min-w-0 ${
                       selectedStudentId === student.id
                         ? index === 0 
@@ -3141,11 +3141,7 @@ const CourseDetails = () => {
         </div>
       )}
       {/* Student Profile Modal */}
-      <StudentProfileModal 
-        isOpen={!!profileModalStudentId} 
-        onClose={() => setProfileModalStudentId(null)} 
-        studentId={profileModalStudentId} 
-      />
+      
       {/* Extra Lectures Modal */}
       {extraLecturesModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">

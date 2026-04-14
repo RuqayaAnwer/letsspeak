@@ -46,6 +46,7 @@ import Payments from './pages/Accounting/Payments';
 import TrainerPayroll from './pages/Accounting/TrainerPayroll';
 import Courses from './pages/shared/Courses';
 import CourseDetailsShared from './pages/shared/CourseDetails';
+import StudentProfile from './pages/shared/StudentProfile';
 import ActivityLogs from './pages/CustomerService/ActivityLogs';
 import CourseAlerts from './pages/CustomerService/CourseAlerts';
 import CourseDetails from './pages/CustomerService/CourseDetails';
@@ -271,6 +272,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['customer_service', 'trainer', 'finance']}>
             <CourseDetailsShared />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/students/:id"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'customer_service', 'trainer', 'finance']}>
+            <StudentProfile />
           </ProtectedRoute>
         }
       />

@@ -7,6 +7,7 @@ import { formatCurrency } from '../../utils/currencyFormat';
 import { useAuth } from '../../context/AuthContext';
 
 const CourseDetails = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [courses, setCourses] = useState([]);

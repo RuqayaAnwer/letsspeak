@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, HelpCircle, X, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
 import api from '../../api/axios';
 import { formatCurrency } from '../../utils/currencyFormat';
 import PackageBadge from '../../components/PackageBadge';
-import StudentProfileModal from '../../components/StudentProfileModal';
 
 const CourseAlerts = () => {
+  const navigate = useNavigate();
   // Helper function to get package name (handles custom packages)
   const getPackageName = (course) => {
     if (course?.is_custom) return 'مخصص';
@@ -26,8 +27,7 @@ const CourseAlerts = () => {
   const [alertsPage, setAlertsPage] = useState(1); // Pagination for mobile cards
   
   // Profile Modal State
-  const [profileModalStudentId, setProfileModalStudentId] = useState(null);
-
+  
   useEffect(() => {
     fetchCourses();
   }, []);
@@ -260,7 +260,7 @@ const CourseAlerts = () => {
                                   {course.students.map(student => (
                                     <button 
                                       key={student.id} 
-                                      onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(student.id); }}
+                                      onClick={(e) => { e.stopPropagation(); navigate('/students/' + student.id); }}
                                       className="text-[10px] font-bold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline focus:outline-none"
                                     >
                                       {student.name}
@@ -270,7 +270,7 @@ const CourseAlerts = () => {
                               ) : (
                                 <div className="flex items-center justify-center gap-1">
                                   <button 
-                                    onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(getStudentId(course)); }}
+                                    onClick={(e) => { e.stopPropagation(); navigate('/students/' + getStudentId(course)); }}
                                     className="text-[10px] font-bold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline focus:outline-none text-center"
                                   >
                                     {course.student_name || 
@@ -413,7 +413,7 @@ const CourseAlerts = () => {
                       <td className="px-2 py-2 text-center text-gray-800 dark:text-white text-[10px]">
                         <div className="flex items-center justify-center gap-1">
                           <button 
-                            onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(getStudentId(course)); }}
+                            onClick={(e) => { e.stopPropagation(); navigate('/students/' + getStudentId(course)); }}
                             className="font-bold flex items-center justify-center gap-1 hover:text-primary-600 dark:hover:text-primary-400 hover:underline focus:outline-none"
                             title="عرض ملف الطالب"
                           >
@@ -422,7 +422,7 @@ const CourseAlerts = () => {
                                ? course.students.map((s, idx) => (
                                    <React.Fragment key={s.id}>
                                      {idx > 0 && <span className="font-normal mx-0.5 text-gray-400">و</span>}
-                                     <span onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(s.id); }}>{s.name}</span>
+                                     <span onClick={(e) => { e.stopPropagation(); navigate('/students/' + s.id); }}>{s.name}</span>
                                    </React.Fragment>
                                  ))
                                : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-'}
@@ -698,12 +698,7 @@ const CourseAlerts = () => {
       )}
 
       {/* Student Profile Modal */}
-      <StudentProfileModal 
-        isOpen={!!profileModalStudentId} 
-        onClose={() => setProfileModalStudentId(null)} 
-        studentId={profileModalStudentId} 
-      />
-    </div>
+          </div>
   );
 };
 

@@ -12,7 +12,7 @@ import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import { formatCurrency } from '../../utils/currencyFormat';
 import EmptyState from '../../components/EmptyState';
-import StudentProfileModal from '../../components/StudentProfileModal';
+
 import Select from 'react-select';
 
 
@@ -24,6 +24,7 @@ const normalizeAmount = (val) => {
 };
 
 const Payments = () => {
+  const navigate = useNavigate();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -71,7 +72,7 @@ const Payments = () => {
   });
 
   // Profile Modal State
-  const [profileModalStudentId, setProfileModalStudentId] = useState(null);
+  
   const [paymentCompletionModal, setPaymentCompletionModal] = useState({
     open: false,
     studentName: '',
@@ -1375,7 +1376,7 @@ const Payments = () => {
                                     <div className="col-span-2 flex items-center gap-1">
                                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الطالب:</span>
                                       <button
-                                        onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(payment.student_id); }}
+                                        onClick={(e) => { e.stopPropagation(); navigate('/students/' + payment.student_id); }}
                                         className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1 text-right hover:text-primary-600 dark:hover:text-primary-400 hover:underline flex items-center gap-1"
                                       >
                                         {payment.student?.name || '-'}
@@ -1536,7 +1537,7 @@ const Payments = () => {
                                 </button>
                                 <div className="flex flex-col items-center">
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(payment.student_id); }}
+                                    onClick={(e) => { e.stopPropagation(); navigate('/students/' + payment.student_id); }}
                                     className="font-semibold text-xs hover:text-primary-600 dark:hover:text-primary-400 hover:underline flex items-center gap-1"
                                     title="عرض ملف الطالب"
                                   >
@@ -1747,7 +1748,7 @@ const Payments = () => {
                                     <div className="col-span-2 flex items-center gap-1">
                                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">الطالب:</span>
                                       <button 
-                                        onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(row.studentId); }}
+                                        onClick={(e) => { e.stopPropagation(); navigate('/students/' + row.studentId); }}
                                         className="text-sm font-semibold text-gray-800 dark:text-white truncate flex-1 text-right border-none bg-transparent hover:text-primary-600 dark:hover:text-primary-400 hover:underline flex items-center gap-1 focus:outline-none"
                                       >
                                         {row.studentName}
@@ -2737,11 +2738,7 @@ const Payments = () => {
       )}
 
       {/* Student Profile Modal */}
-      <StudentProfileModal 
-        isOpen={!!profileModalStudentId} 
-        onClose={() => setProfileModalStudentId(null)} 
-        studentId={profileModalStudentId} 
-      />
+      
     </div>
   );
 };

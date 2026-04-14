@@ -6,15 +6,14 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { DollarSign, CreditCard, Users, CheckCircle, BookOpen, TrendingUp, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
 import { formatDateSimple } from '../../utils/dateFormat';
 import { formatCurrency } from '../../utils/currencyFormat';
-import StudentProfileModal from '../../components/StudentProfileModal';
 
 const AccountingDashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [paymentStats, setPaymentStats] = useState(null);
   const [recentPayments, setRecentPayments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [profileModalStudentId, setProfileModalStudentId] = useState(null);
-
+  
   useEffect(() => {
     fetchData();
   }, []);
@@ -261,7 +260,7 @@ const AccountingDashboard = () => {
                           <div className="col-span-2 flex items-center gap-1">
                             <span className="text-[9px] font-semibold text-gray-500 dark:text-gray-400">الطالب:</span>
                             <button 
-                              onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(payment.student_id); }}
+                              onClick={(e) => { e.stopPropagation(); navigate('/students/' + payment.student_id); }}
                               className="text-[10px] font-semibold text-gray-800 dark:text-white truncate flex-1 text-right hover:text-primary-600 dark:hover:text-primary-400 hover:underline flex items-center gap-1"
                             >
                               {payment.student?.name || '-'}
@@ -337,7 +336,7 @@ const AccountingDashboard = () => {
                   </td>
                   <td className="font-semibold text-[var(--color-text-primary)] text-xs sm:text-sm">
                     <button 
-                      onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(payment.student_id); }}
+                      onClick={(e) => { e.stopPropagation(); navigate('/students/' + payment.student_id); }}
                       className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline flex items-center gap-1"
                       title="عرض ملف الطالب"
                     >
@@ -388,12 +387,7 @@ const AccountingDashboard = () => {
       </div>
 
       {/* Student Profile Modal */}
-      <StudentProfileModal 
-        isOpen={!!profileModalStudentId} 
-        onClose={() => setProfileModalStudentId(null)} 
-        studentId={profileModalStudentId} 
-      />
-    </div>
+          </div>
   );
 };
 

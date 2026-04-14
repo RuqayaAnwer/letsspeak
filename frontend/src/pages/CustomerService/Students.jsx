@@ -4,9 +4,9 @@ import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { Plus, Search, Edit2, Trash2, Users, Phone, GraduationCap, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
-import StudentProfileModal from '../../components/StudentProfileModal';
 
 const Students = () => {
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -39,8 +39,7 @@ const Students = () => {
   const [studentsPage, setStudentsPage] = useState(1); // Pagination for mobile cards
   const [mobileActionsOpen, setMobileActionsOpen] = useState(null); // Track which card's actions are open
   // Profile Modal State
-  const [profileModalStudentId, setProfileModalStudentId] = useState(null);
-
+  
   useEffect(() => {
     fetchStudents();
     fetchPackages();
@@ -302,7 +301,7 @@ const Students = () => {
                               <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(student.id); }}
+                                  onClick={(e) => { e.stopPropagation(); navigate('/students/' + student.id); }}
                                   className="text-sm font-semibold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1"
                                 >
                                   {student.name}
@@ -499,7 +498,7 @@ const Students = () => {
                               </span>
                             </div>
                             <button 
-                              onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(student.id); }}
+                              onClick={(e) => { e.stopPropagation(); navigate('/students/' + student.id); }}
                               className="font-semibold text-[var(--color-text-primary)] hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1"
                               title="عرض ملف الطالب"
                             >
@@ -565,12 +564,7 @@ const Students = () => {
       )}
 
       {/* Student Profile Modal */}
-      <StudentProfileModal 
-        isOpen={!!profileModalStudentId} 
-        onClose={() => setProfileModalStudentId(null)} 
-        studentId={profileModalStudentId} 
-      />
-
+      
       {/* Add/Edit Modal */}
       <Modal
         isOpen={isModalOpen}

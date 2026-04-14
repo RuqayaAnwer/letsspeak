@@ -5,7 +5,6 @@ import { Plus, PlusCircle, AlertTriangle, Info, X, HelpCircle, ChevronLeft, Chev
 import api from '../../api/axios';
 import { formatCurrency } from '../../utils/currencyFormat';
 import PackageBadge from '../../components/PackageBadge';
-import StudentProfileModal from '../../components/StudentProfileModal';
 
 // Updated: 2025-12-21 - Courses separated by status with smaller fonts
 const Courses = () => {
@@ -34,8 +33,7 @@ const Courses = () => {
     loading: false,
   });
   // Profile Modal State
-  const [profileModalStudentId, setProfileModalStudentId] = useState(null);
-  // Pagination state for each course status section
+    // Pagination state for each course status section
   const [coursesPages, setCoursesPages] = useState({});
 
   useEffect(() => {
@@ -479,13 +477,13 @@ const Courses = () => {
                               ? course.students.map((s, idx) => (
                                   <React.Fragment key={s.id}>
                                     {idx > 0 && <span className="font-normal mx-1 text-gray-400">و</span>}
-                                    <button onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(s.id); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
+                                    <button onClick={(e) => { e.stopPropagation(); navigate('/students/' + s.id); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
                                       {s.name}
                                     </button>
                                   </React.Fragment>
                                 ))
                               : (
-                                <button onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(course.students?.[0]?.id || course.student_id); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
+                                <button onClick={(e) => { e.stopPropagation(); navigate('/students/' + course.students?.[0]?.id || course.student_id); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
                                   {(course.student_name || course.student?.name || course.students?.[0]?.name || '-')}
                                 </button>
                               )}
@@ -644,7 +642,7 @@ const Courses = () => {
                                   <React.Fragment key={s.id}>
                                     {idx > 0 && <span className="font-normal text-gray-400 dark:text-gray-500 mx-0.5">و</span>}
                                     <button 
-                                      onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(s.id); }} 
+                                      onClick={(e) => { e.stopPropagation(); navigate('/students/' + s.id); }} 
                                       className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5"
                                       title="عرض ملف الطالب"
                                     >
@@ -654,7 +652,7 @@ const Courses = () => {
                                 ))
                               : (
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); setProfileModalStudentId(course.students?.[0]?.id || course.student_id); }} 
+                                  onClick={(e) => { e.stopPropagation(); navigate('/students/' + course.students?.[0]?.id || course.student_id); }} 
                                   className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5"
                                   title="عرض ملف الطالب"
                                 >
@@ -1325,12 +1323,7 @@ const Courses = () => {
       )}
 
       {/* Student Profile Modal */}
-      <StudentProfileModal 
-        isOpen={!!profileModalStudentId} 
-        onClose={() => setProfileModalStudentId(null)} 
-        studentId={profileModalStudentId} 
-      />
-    </div>
+          </div>
   );
 };
 
