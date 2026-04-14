@@ -113,25 +113,14 @@ class LectureController extends Controller
 
         $updateData = $request->only(['attendance', 'activity', 'homework', 'notes']);
         
+        $needsCascade = false;
+
         // Allow trainers and customer_service to update date and time
         if (($user->isTrainer() || $user->isCustomerService()) && $request->has('date')) {
             $newDate = $request->date;
             
-            // Check for conflict
-            $conflict = \App\Models\Lecture::where('course_id', $lecture->course_id)
-                ->where('id', '!=', $lecture->id)
-                ->whereDate('date', $newDate)
-                ->whereNotIn('attendance', [
-                    \App\Models\Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
-                    \App\Models\Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
-                    \App\Models\Lecture::ATTENDANCE_POSTPONED_HOLIDAY
-                ])
-                ->exists();
-                
-            if ($conflict) {
-                return response()->json([
-                    'message' => 'لا يمكن تغيير التاريخ. هناك محاضرة أخرى مجدولة لنفس الكورس في هذا اليوم.'
-                ], 422);
+            if ($lecture->date !== $newDate) {
+                $needsCascade = true;
             }
             
             $updateData['date'] = $newDate;
@@ -169,6 +158,11 @@ class LectureController extends Controller
         // Note: is_completed is automatically calculated by Lecture model now
 
         $lecture->update($updateData);
+
+        if ($needsCascade) {
+            $cascadeService = app(\App\Services\LecturePostponementService::class);
+            $cascadeService->cascadeScheduleFrom($lecture);
+        }
 
         // Log the modification (wrapped in try-catch so logging failure never breaks the update)
         try {
