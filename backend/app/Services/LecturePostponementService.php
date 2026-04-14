@@ -344,7 +344,7 @@ class LecturePostponementService
                 Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
                 Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
             ])
-            ->orderBy('lecture_number')
+            ->reorder('lecture_number')
             ->get();
 
         $idx = $ordered->search(fn ($l) => (int) $l->id === (int) $lecture->id);
@@ -608,7 +608,7 @@ class LecturePostponementService
                 Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
                 Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
             ])
-            ->orderBy('lecture_number')
+            ->reorder('lecture_number')
             ->get();
 
         $idx = $ordered->search(fn ($l) => (int) $l->id === (int) $lecture->id);
@@ -786,7 +786,7 @@ class LecturePostponementService
                 Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
                 Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
             ])
-            ->orderBy('lecture_number')
+            ->reorder('lecture_number')
             ->get();
 
         $idx = $ordered->search(fn ($l) => (int) $l->id === (int) $lecture->id);
@@ -887,5 +887,6 @@ class LecturePostponementService
         ];
     }
 }
+
 
 
