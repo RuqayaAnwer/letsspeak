@@ -561,45 +561,7 @@ class LecturePostponementService
                 }
                 
                 if (!empty($courseDays) && $wasCascaded) {
-                    $dayMap = ['sun' => 0, 'mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6];
-                    $dayOrder = array_values(array_map(fn ($k) => $dayMap[$k] ?? 0, $courseDays));
-
-                    // Get all active lectures (not postponed) ordered by date/time
-                    $ordered = $course->lectures()
-                        ->whereNotIn('attendance', [
-                            Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
-                            Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
-                            Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
-                        ])
-                        ->orderBy('date')
-                        ->orderBy('time')
-                        ->orderBy('id')
-                        ->get();
-
-                    $idx = $ordered->search(fn ($l) => (int) $l->id === (int) $lecture->id);
-                    if ($idx !== false) {
-                        $currentDate = Carbon::parse($lecture->date)->startOfDay();
-                        
-                        // Recalculate dates for all subsequent lectures
-                        for ($i = $idx + 1; $i < $ordered->count(); $i++) {
-                            $l = $ordered[$i];
-                            
-                            // Move to next valid course day
-                            $dow = $currentDate->dayOfWeek;
-                            $pos = array_search($dow, $dayOrder, true);
-                            $nextPos = $pos === false ? 0 : (($pos + 1) % count($dayOrder));
-                            $nextDow = $dayOrder[$nextPos];
-                            
-                            $currentDate->addDay();
-                            while ($currentDate->dayOfWeek !== $nextDow) {
-                                $currentDate->addDay();
-                            }
-                            
-                            $l->update([
-                                'date' => $currentDate->format('Y-m-d'),
-                            ]);
-                        }
-                    }
+                    $this->cascadeScheduleFrom($lecture);
                 }
 
                 return $this->successResponse(
@@ -620,6 +582,66 @@ class LecturePostponementService
                 'error',
                 'حدث خطأ أثناء إلغاء التأجيل: ' . $e->getMessage()
             );
+        }
+    }
+
+    /**
+     * Shifts all subsequent pending lectures sequentially after the provided lecture 
+     * according to the course's lecture_days schedule.
+     * 
+     * @param Lecture $lecture The lecture from which the shift begins
+     */
+    public function cascadeScheduleFrom(Lecture $lecture): void
+    {
+        $course = $lecture->course;
+        $courseDays = $this->normalizeLectureDays($course);
+        
+        if (empty($courseDays)) {
+            return;
+        }
+
+        $dayMap = ['sun' => 0, 'mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6];
+        $dayOrder = array_values(array_map(fn ($k) => $dayMap[$k] ?? 0, $courseDays));
+
+        // Get all active lectures (not postponed) ordered by date/time
+        $ordered = $course->lectures()
+            ->whereNotIn('attendance', [
+                Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
+                Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
+                Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
+            ])
+            ->orderBy('date')
+            ->orderBy('time')
+            ->orderBy('id')
+            ->get();
+
+        $idx = $ordered->search(fn ($l) => (int) $l->id === (int) $lecture->id);
+        
+        if ($idx !== false) {
+            $currentDate = Carbon::parse($lecture->date)->startOfDay();
+            
+            // Recalculate dates for all subsequent lectures
+            for ($i = $idx + 1; $i < $ordered->count(); $i++) {
+                $l = $ordered[$i];
+                
+                // Move to next valid course day
+                $dow = $currentDate->dayOfWeek;
+                $pos = array_search($dow, $dayOrder, true);
+                $nextPos = $pos === false ? 0 : (($pos + 1) % count($dayOrder));
+                $nextDow = $dayOrder[$nextPos];
+                
+                $currentDate->addDay();
+                while ($currentDate->dayOfWeek !== $nextDow) {
+                    $currentDate->addDay();
+                }
+                
+                // Only shift if it hasn't been completed to avoid disrupting history
+                if (!$l->is_completed && !in_array($l->attendance, [Lecture::ATTENDANCE_PRESENT, Lecture::ATTENDANCE_ABSENT])) {
+                    $l->update([
+                        'date' => $currentDate->format('Y-m-d'),
+                    ]);
+                }
+            }
         }
     }
 

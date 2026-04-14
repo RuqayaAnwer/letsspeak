@@ -342,8 +342,14 @@ class LectureController extends Controller
 
         // Save old status for payroll recalculation
         $oldTrainerPaymentStatus = $lecture->trainer_payment_status ?? 'unpaid';
+        $oldDate = $lecture->date ? (\Carbon\Carbon::parse($lecture->date)->format('Y-m-d')) : null;
         
         $lecture->update($validated);
+        
+        // If the date was manually changed, cascade all subsequent lectures
+        if (isset($validated['date']) && $validated['date'] !== $oldDate) {
+            $this->postponementService->cascadeScheduleFrom($lecture);
+        }
         
         // Recalculate trainer payroll automatically when payment status changes
         if (isset($validated['trainer_payment_status']) && 
