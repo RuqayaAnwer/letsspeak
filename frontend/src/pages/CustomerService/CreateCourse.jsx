@@ -48,13 +48,14 @@ const CreateCourse = () => {
     lecture_time: '',
     lecture_days: [],
     paid_amount: '', // For single courses
+    discount: '', // For single courses
     remaining_amount: '', // For single courses
     payment_method: '', // Payment method
     is_custom: false, // Custom package flag
     custom_total_amount: '', // Custom total amount
     student_payments: [
-      { paid_amount: '', remaining_amount: '' }, // Student 1
-      { paid_amount: '', remaining_amount: '' }, // Student 2
+      { paid_amount: '', discount: '', remaining_amount: '' }, // Student 1
+      { paid_amount: '', discount: '', remaining_amount: '' }, // Student 2
     ],
   });
 
@@ -201,9 +202,10 @@ const CreateCourse = () => {
       // For dual courses, update remaining amounts for both students
       const updatedStudentPayments = formData.student_payments.map((studentPayment, index) => {
         const paidAmount = parseFloat(parseAmountInput(studentPayment.paid_amount)) || 0;
-        const remainingAmount = packagePrice - paidAmount;
+        const discountAmount = parseFloat(parseAmountInput(studentPayment.discount)) || 0;
+        const remainingAmount = packagePrice - paidAmount - discountAmount;
         return {
-          paid_amount: studentPayment.paid_amount,
+          ...studentPayment,
           remaining_amount: remainingAmount > 0 ? Math.floor(remainingAmount).toString() : '0',
         };
       });
@@ -219,7 +221,8 @@ const CreateCourse = () => {
     } else {
       // For single courses, use the old logic
       const paidAmount = parseFloat(parseAmountInput(formData.paid_amount)) || 0;
-      const remainingAmount = packagePrice - paidAmount;
+      const discountAmount = parseFloat(parseAmountInput(formData.discount)) || 0;
+      const remainingAmount = packagePrice - paidAmount - discountAmount;
       
       setFormData({
         ...formData,
@@ -240,7 +243,8 @@ const CreateCourse = () => {
     if (formData.is_custom) {
       // For custom package, calculate remaining from custom_total_amount
       const totalAmount = parseFloat(parseAmountInput(formData.custom_total_amount)) || 0;
-      const remainingAmount = totalAmount - paidAmount;
+      const discountAmount = parseFloat(parseAmountInput(formData.discount)) || 0;
+      const remainingAmount = totalAmount - paidAmount - discountAmount;
       
       setFormData({
         ...formData,
@@ -269,7 +273,8 @@ const CreateCourse = () => {
       });
     } else {
       // For single courses
-      const remainingAmount = packagePrice - paidAmount;
+      const discountAmount = parseFloat(parseAmountInput(formData.discount)) || 0;
+      const remainingAmount = packagePrice - paidAmount - discountAmount;
       
       setFormData({
         ...formData,
@@ -288,9 +293,10 @@ const CreateCourse = () => {
       // For dual courses, update remaining amounts for both students
       const updatedStudentPayments = formData.student_payments.map((studentPayment, index) => {
         const paidAmount = parseFloat(parseAmountInput(studentPayment.paid_amount)) || 0;
-        const remainingAmount = totalAmount - paidAmount;
+        const discountAmount = parseFloat(parseAmountInput(studentPayment.discount)) || 0;
+        const remainingAmount = totalAmount - paidAmount - discountAmount;
         return {
-          paid_amount: studentPayment.paid_amount,
+          ...studentPayment,
           remaining_amount: remainingAmount > 0 ? Math.floor(remainingAmount).toString() : '0',
         };
       });
@@ -303,7 +309,8 @@ const CreateCourse = () => {
     } else {
       // For single courses
       const paidAmount = parseFloat(parseAmountInput(formData.paid_amount)) || 0;
-      const remainingAmount = totalAmount - paidAmount;
+      const discountAmount = parseFloat(parseAmountInput(formData.discount)) || 0;
+      const remainingAmount = totalAmount - paidAmount - discountAmount;
       
       setFormData({
         ...formData,
@@ -322,10 +329,12 @@ const CreateCourse = () => {
     if (formData.is_custom) {
       // For custom package, calculate remaining from custom_total_amount
       const totalAmount = parseFloat(parseAmountInput(formData.custom_total_amount)) || 0;
-      const remainingAmount = totalAmount - paidAmount;
+      const discountAmount = parseFloat(parseAmountInput(formData.student_payments[studentIndex].discount)) || 0;
+      const remainingAmount = totalAmount - paidAmount - discountAmount;
       
       const updatedStudentPayments = [...formData.student_payments];
       updatedStudentPayments[studentIndex] = {
+        ...updatedStudentPayments[studentIndex],
         paid_amount: parsedValue,
         remaining_amount: remainingAmount > 0 ? Math.floor(remainingAmount).toString() : '0',
       };
@@ -340,14 +349,66 @@ const CreateCourse = () => {
     const selectedPackage = packages.find((p) => p.id.toString() === formData.course_package_id);
     const studentPrice = getStudentPrice(selectedPackage?.name, true); // Always true for dual courses
     
-    const remainingAmount = studentPrice - paidAmount;
+    const discountAmount = parseFloat(parseAmountInput(formData.student_payments[studentIndex].discount)) || 0;
+    const remainingAmount = studentPrice - paidAmount - discountAmount;
     
     const updatedStudentPayments = [...formData.student_payments];
     updatedStudentPayments[studentIndex] = {
+      ...updatedStudentPayments[studentIndex],
       paid_amount: parsedValue,
       remaining_amount: remainingAmount > 0 ? Math.floor(remainingAmount).toString() : '0',
     };
     
+    setFormData({
+      ...formData,
+      student_payments: updatedStudentPayments,
+    });
+  };
+
+  const handleDiscountChange = (value) => {
+    const parsedValue = parseAmountInput(value);
+    const discountAmount = parseFloat(parsedValue) || 0;
+    const paidAmount = parseFloat(parseAmountInput(formData.paid_amount)) || 0;
+    
+    let totalAmount = 0;
+    if (formData.is_custom) {
+      totalAmount = parseFloat(parseAmountInput(formData.custom_total_amount)) || 0;
+    } else {
+      const selectedPackage = packages.find((p) => p.id.toString() === formData.course_package_id);
+      totalAmount = selectedPackage ? getPackagePrice(selectedPackage.price) : 0;
+    }
+
+    const remainingAmount = totalAmount - paidAmount - discountAmount;
+
+    setFormData({
+      ...formData,
+      discount: parsedValue,
+      remaining_amount: remainingAmount > 0 ? Math.floor(remainingAmount).toString() : '0',
+    });
+  };
+
+  const handleStudentDiscountChange = (studentIndex, value) => {
+    const parsedValue = parseAmountInput(value);
+    const discountAmount = parseFloat(parsedValue) || 0;
+    const paidAmount = parseFloat(parseAmountInput(formData.student_payments[studentIndex].paid_amount)) || 0;
+    
+    let totalAmount = 0;
+    if (formData.is_custom) {
+      totalAmount = parseFloat(parseAmountInput(formData.custom_total_amount)) || 0;
+    } else {
+      const selectedPackage = packages.find((p) => p.id.toString() === formData.course_package_id);
+      totalAmount = getStudentPrice(selectedPackage?.name, true);
+    }
+
+    const remainingAmount = totalAmount - paidAmount - discountAmount;
+
+    const updatedStudentPayments = [...formData.student_payments];
+    updatedStudentPayments[studentIndex] = {
+      ...updatedStudentPayments[studentIndex],
+      discount: parsedValue,
+      remaining_amount: remainingAmount > 0 ? Math.floor(remainingAmount).toString() : '0',
+    };
+
     setFormData({
       ...formData,
       student_payments: updatedStudentPayments,
@@ -418,6 +479,7 @@ const CreateCourse = () => {
         // For single courses, use paid_amount
         // For dual courses, we'll create payments separately for each student
         paid_amount: isDual ? 0 : (formData.paid_amount ? parseFloat(formData.paid_amount) : 0),
+        discount: isDual ? 0 : (formData.discount ? parseFloat(formData.discount) : 0),
         remaining_amount: isDual ? 0 : (formData.remaining_amount ? parseFloat(formData.remaining_amount) : 0),
         // For dual courses, include student payments
         student_payments: isDual ? formData.student_payments : null,
@@ -792,7 +854,7 @@ const CreateCourse = () => {
                       <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3">
                         {student ? `${student.name} - ${student.phone}` : `الطالب ${index + 1}`}
                       </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                         <div>
                           <label className="label" htmlFor={`student-${index}-paid-amount`}>المبلغ المدفوع (د.ع)</label>
                           <input
@@ -800,7 +862,6 @@ const CreateCourse = () => {
                             value={formatAmountForInput(studentPayment.paid_amount)}
                             onChange={(e) => {
                               const value = e.target.value;
-                              // Allow only numbers and dots
                               if (value === '' || /^[\d.]+$/.test(value)) {
                                 handleStudentPaidAmountChange(index, value);
                               }
@@ -809,6 +870,24 @@ const CreateCourse = () => {
                             placeholder="0"
                             id={`student-${index}-paid-amount`}
                             name={`student-${index}-paid-amount`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="label" htmlFor={`student-${index}-discount`}>الخصم (د.ع)</label>
+                          <input
+                            type="text"
+                            value={formatAmountForInput(studentPayment.discount)}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === '' || /^[\d.]+$/.test(value)) {
+                                handleStudentDiscountChange(index, value);
+                              }
+                            }}
+                            className="input text-red-500 border-red-200 focus:border-red-500 focus:ring-red-500/20"
+                            placeholder="0"
+                            id={`student-${index}-discount`}
+                            name={`student-${index}-discount`}
                           />
                         </div>
 
@@ -837,7 +916,7 @@ const CreateCourse = () => {
               </div>
             ) : (
               // Single course: Show single payment info
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div>
                   <label className="label" htmlFor="paid-amount">المبلغ المدفوع (د.ع)</label>
                   <input
@@ -845,7 +924,6 @@ const CreateCourse = () => {
                     value={formatAmountForInput(formData.paid_amount)}
                     onChange={(e) => {
                       const value = e.target.value;
-                      // Allow only numbers and dots
                       if (value === '' || /^[\d.]+$/.test(value)) {
                         handlePaidAmountChange(value);
                       }
@@ -854,6 +932,24 @@ const CreateCourse = () => {
                     placeholder="0"
                     id="paid-amount"
                     name="paid-amount"
+                  />
+                </div>
+
+                <div>
+                  <label className="label" htmlFor="discount-amount">الخصم (د.ع)</label>
+                  <input
+                    type="text"
+                    value={formatAmountForInput(formData.discount)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^[\d.]+$/.test(value)) {
+                        handleDiscountChange(value);
+                      }
+                    }}
+                    className="input text-red-500 border-red-200 focus:border-red-500 focus:ring-red-500/20"
+                    placeholder="0"
+                    id="discount-amount"
+                    name="discount-amount"
                   />
                 </div>
 

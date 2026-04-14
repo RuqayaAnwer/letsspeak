@@ -199,6 +199,7 @@ class CourseController extends Controller
             'payment_method' => 'nullable|in:zain_cash,qi_card,delivery',
             'is_custom' => 'sometimes|boolean',
             'custom_total_amount' => $isCustom ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
+            'discount' => 'sometimes|numeric|min:0',
         ]);
 
         // Get lectures count from package or custom
@@ -286,6 +287,22 @@ class CourseController extends Controller
             if ($package && $package->price !== null) {
                 $courseData['total_amount'] = (float) $package->price;
             }
+        }
+        
+        // Apply discount logic
+        $totalDiscount = 0;
+        if ($isDual) {
+            $studentPayments = $request->input('student_payments', []);
+            foreach ($studentPayments as $payment) {
+                $totalDiscount += floatval($payment['discount'] ?? 0);
+            }
+        } else {
+            $totalDiscount = floatval($request->input('discount', 0));
+        }
+        
+        $courseData['discount'] = $totalDiscount;
+        if (isset($courseData['total_amount']) && $courseData['total_amount'] > 0) {
+            $courseData['total_amount'] = max(0, $courseData['total_amount'] - $totalDiscount);
         }
         
         $course = DB::transaction(function () use ($courseData, $studentIds, $isDual, $request) {

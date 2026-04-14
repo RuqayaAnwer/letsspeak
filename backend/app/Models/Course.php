@@ -29,6 +29,7 @@ class Course extends Model
         'amount_updates',
         'total_amount',
         'amount_paid',
+        'discount',
         'notes',
         'finished_at',
         'is_dual',
