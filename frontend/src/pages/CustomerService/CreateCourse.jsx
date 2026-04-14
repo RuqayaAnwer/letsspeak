@@ -572,7 +572,7 @@ const CreateCourse = () => {
 
   const trainerOptions = trainers.map(trainer => ({
     value: trainer.id,
-    label: `${trainer.name || trainer.user?.name} ${trainer.specialty ? `- ${trainer.specialty}` : ''}`
+    label: `${trainer.name || trainer.user?.name || 'مدرب غير محدد'} ${trainer.specialty ? `- ${trainer.specialty}` : ''}`
   }));
 
   // Custom styles for react-select to match our UI

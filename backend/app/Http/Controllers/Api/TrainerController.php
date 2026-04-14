@@ -201,7 +201,7 @@ class TrainerController extends Controller
             ->map(function ($trainer) {
                 return [
                     'id' => $trainer->id,
-                    'name' => $trainer->name ?? $trainer->user->name ?? '',
+                    'name' => $trainer->name ?: ($trainer->user->name ?? 'مدرب غير محدد'),
                     'user' => $trainer->user ? [
                         'id' => $trainer->user->id,
                         'name' => $trainer->user->name,
