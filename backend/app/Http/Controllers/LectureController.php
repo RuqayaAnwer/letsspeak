@@ -100,8 +100,8 @@ class LectureController extends Controller
             'notes' => 'nullable|string',
         ];
 
-        // Trainers and customer_service can update date and time (any lecture, including future)
-        if ($user->isTrainer() || $user->isCustomerService()) {
+        // Trainers, customer_service, and admins can update date and time (any lecture, including future)
+        if ($user->isTrainer() || $user->isCustomerService() || $user->isAdmin()) {
             $rules['date'] = 'sometimes|date_format:Y-m-d';
             $rules['time'] = 'sometimes|nullable|date_format:H:i';
         }
@@ -115,8 +115,8 @@ class LectureController extends Controller
         
         $needsCascade = false;
 
-        // Allow trainers and customer_service to update date and time
-        if (($user->isTrainer() || $user->isCustomerService()) && $request->has('date')) {
+        // Allow trainers, customer_service, and admins to update date and time
+        if (($user->isTrainer() || $user->isCustomerService() || $user->isAdmin()) && $request->has('date')) {
             $newDate = $request->date;
             
             if ($lecture->date !== $newDate) {
@@ -125,7 +125,7 @@ class LectureController extends Controller
             
             $updateData['date'] = $newDate;
         }
-        if (($user->isTrainer() || $user->isCustomerService()) && $request->has('time')) {
+        if (($user->isTrainer() || $user->isCustomerService() || $user->isAdmin()) && $request->has('time')) {
             $updateData['time'] = $request->time;
         }
 
