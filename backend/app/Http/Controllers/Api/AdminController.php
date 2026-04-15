@@ -165,16 +165,10 @@ class AdminController extends Controller
         $user->save();
 
         if ($user->role === 'trainer' && $user->trainer) {
-            if ($request->has('name')) $user->trainer->name = $request->name;
-            if ($request->has('email')) {
-                $user->trainer->email = $request->email;
-                $user->trainer->username = $request->email;
+            if ($request->has('status')) {
+                $user->trainer->status = $request->status;
+                $user->trainer->save();
             }
-            if ($request->has('status')) $user->trainer->status = $request->status;
-            if ($request->has('password') && $request->password) {
-                $user->trainer->password = Hash::make($request->password);
-            }
-            $user->trainer->save();
         }
 
         return response()->json([
@@ -211,11 +205,6 @@ class AdminController extends Controller
 
         $user->password = Hash::make($request->password);
         $user->save();
-
-        if ($user->role === 'trainer' && $user->trainer) {
-            $user->trainer->password = Hash::make($request->password);
-            $user->trainer->save();
-        }
 
         return response()->json([
             'success' => true,
