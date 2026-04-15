@@ -20,7 +20,7 @@ class CourseController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Course::with(['trainer.user', 'students', 'coursePackage']);
+        $query = Course::with(['trainer.user', 'students', 'coursePackage'])->whereHas('trainer.user');
 
         // Filter by trainer for trainer role (if user is authenticated)
         $user = $request->user();

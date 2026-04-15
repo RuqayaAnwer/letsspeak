@@ -264,6 +264,21 @@ class AdminController extends Controller
             return response()->json(['success' => false, 'message' => 'لا يمكنك حذف حسابك الخاص'], 422);
         }
 
+        if ($user->role === 'trainer' && $user->trainer) {
+            $trainer = $user->trainer;
+            // Wipe all courses and their relations so they don't become orphaned
+            foreach ($trainer->courses as $course) {
+                $course->lectures()->delete();
+                $course->payments()->delete();
+                $course->statusHistory()->delete();
+                $course->students()->detach();
+                $course->delete();
+            }
+            $trainer->payrolls()->delete();
+            $trainer->unavailabilities()->delete();
+            $trainer->delete();
+        }
+
         $user->delete();
 
         return response()->json([

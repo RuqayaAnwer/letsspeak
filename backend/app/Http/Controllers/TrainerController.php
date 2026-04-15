@@ -19,7 +19,7 @@ class TrainerController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Trainer::with('user:id,name,email,job_title,base_salary');
+        $query = Trainer::with('user:id,name,email,job_title,base_salary')->has('user');
 
         // Search by name (search in user name)
         if ($request->has('search')) {
