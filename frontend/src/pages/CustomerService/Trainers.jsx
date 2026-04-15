@@ -27,7 +27,13 @@ const Trainers = () => {
   const [trainersPage, setTrainersPage] = useState(1); // Pagination for mobile cards
 
   useEffect(() => {
-    fetchTrainers();
+    const delayDebounceFn = setTimeout(() => {
+      // Only show loading screen on the very first mount or filter changes that we want,
+      // but avoid hiding the search input on every keystroke.
+      fetchTrainers(false);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
   }, [search, weeklyFilter]);
 
   // Reset pagination when trainers change
@@ -35,8 +41,8 @@ const Trainers = () => {
     setTrainersPage(1);
   }, [trainers]);
 
-  const fetchTrainers = async () => {
-    setLoading(true);
+  const fetchTrainers = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const params = {};
       if (search) params.search = search;
@@ -82,11 +88,11 @@ const Trainers = () => {
         };
         if (formData.password) payload.password = formData.password;
         await api.put(`/trainers/${editingTrainer.id}`, payload);
-        fetchTrainers();
+        fetchTrainers(false);
         closeModal();
       } else {
         const res = await api.post('/trainers', formData);
-        fetchTrainers();
+        fetchTrainers(false);
         closeModal();
         // Show login credentials to the user creating the trainer
         const data = res.data;
@@ -109,7 +115,7 @@ const Trainers = () => {
 
     try {
       await api.delete(`/trainers/${id}`);
-      fetchTrainers();
+      fetchTrainers(false);
     } catch (error) {
       console.error('Error deleting trainer:', error);
     }
