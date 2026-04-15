@@ -237,6 +237,7 @@ public function store(Request $request)
     public function list()
     {
         $trainers = Trainer::with('user:id,name,email,job_title,base_salary')
+            ->has('user')
             ->get()
             ->map(function ($trainer) {
                 return [
