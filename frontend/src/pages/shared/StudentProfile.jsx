@@ -264,20 +264,22 @@ const StudentProfile = () => {
               </div>
             </div>
           </div>
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 sm:p-2 bg-black/10 hover:bg-black/20 rounded-xl transition-colors backdrop-blur-sm"
-          >
-            <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          </button>
-        </div>
-        <div className="absolute top-4 sm:top-6 left-14 sm:left-20 flex gap-2">
-           <button 
-            onClick={() => setNoteModal(true)}
-            className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 rounded-lg text-xs sm:text-sm font-bold shadow-sm transition-colors ring-2 ring-yellow-400/30"
-          >
-            <Plus className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">إضافة ملاحظة</span><span className="sm:hidden">ملاحظة</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setNoteModal(true)}
+              className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 rounded-lg text-xs sm:text-sm font-bold shadow-sm transition-colors ring-2 ring-yellow-400/30 whitespace-nowrap"
+            >
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4" /> 
+              <span className="hidden sm:inline">إضافة ملاحظة</span>
+              <span className="sm:hidden">ملاحظة</span>
+            </button>
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 sm:p-2 bg-black/10 hover:bg-black/20 rounded-xl transition-colors backdrop-blur-sm shrink-0"
+            >
+              <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
