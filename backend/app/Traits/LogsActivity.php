@@ -40,6 +40,10 @@ trait LogsActivity
 
         $userId = auth()->id() ?? null;
         
+        if (!self::shouldLogAction($action, $model)) {
+            return;
+        }
+
         // Ensure we only store changed attributes for updates
         $oldValues = [];
         $newValues = [];
@@ -126,5 +130,43 @@ trait LogsActivity
         ];
 
         return $actions[$action] ?? $action;
+    }
+
+    /**
+     * Determine if this specific action and model combination should be logged.
+     * Restricts logging to only critical financial and operational events.
+     */
+    protected static function shouldLogAction(string $action, Model $model): bool
+    {
+        $modelName = class_basename($model);
+
+        // All Payment actions (create, update, delete)
+        if ($modelName === 'Payment') {
+            return true;
+        }
+
+        // Updating Lectures (Time changes, postponements, etc.)
+        if ($modelName === 'Lecture' && $action === 'update') {
+            return true;
+        }
+
+        // Deleting Students or Trainers
+        if (in_array($modelName, ['Student', 'Trainer']) && $action === 'delete') {
+            return true;
+        }
+
+        // Course modifications that are related to money or critical status
+        if ($modelName === 'Course' && $action === 'update') {
+            $changes = $model->getChanges();
+            $paymentRelatedAttributes = ['total_amount', 'discount', 'amount_paid', 'payment_method'];
+            foreach ($paymentRelatedAttributes as $attr) {
+                if (array_key_exists($attr, $changes)) {
+                    return true;
+                }
+            }
+        }
+
+        // Ignore all other events
+        return false;
     }
 }
