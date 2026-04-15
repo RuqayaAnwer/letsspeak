@@ -285,7 +285,17 @@ class CourseController extends Controller
         if (!$isCustom && !empty($request->course_package_id)) {
             $package = CoursePackage::find($request->course_package_id);
             if ($package && $package->price !== null) {
-                $courseData['total_amount'] = (float) $package->price;
+                $price = $package->price;
+                if (is_string($price)) {
+                    $price = str_replace(',', '', $price);
+                }
+                $price = (float) $price;
+                if ($price > 0 && $price < 5000) {
+                    $price *= 1000;
+                }
+                $courseData['total_amount'] = $price;
+            } else {
+                $courseData['total_amount'] = 0;
             }
         }
         
@@ -301,7 +311,10 @@ class CourseController extends Controller
         }
         
         $courseData['discount'] = $totalDiscount;
-        if (isset($courseData['total_amount']) && $courseData['total_amount'] > 0) {
+        if (!isset($courseData['total_amount'])) {
+            $courseData['total_amount'] = 0;
+        }
+        if ($courseData['total_amount'] > 0) {
             $courseData['total_amount'] = max(0, $courseData['total_amount'] - $totalDiscount);
         }
         

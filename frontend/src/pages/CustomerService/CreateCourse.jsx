@@ -160,6 +160,12 @@ const CreateCourse = () => {
       return 225000;
     }
     
+    // Fallback: Default to half the package price for any other package
+    const packageObj = packages.find(p => p.name === packageName);
+    if (packageObj) {
+      return getPackagePrice(packageObj.price) / 2;
+    }
+    
     return 0;
   };
 
@@ -916,7 +922,46 @@ const CreateCourse = () => {
               </div>
             ) : (
               // Single course: Show single payment info
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+                {(() => {
+                   const pkg = packages.find(p => p.id.toString() === formData.course_package_id);
+                   const basePrice = formData.is_custom 
+                     ? (parseFloat(parseAmountInput(formData.custom_total_amount)) || 0)
+                     : (pkg ? getPackagePrice(pkg.price) : 0);
+                   const discount = parseFloat(parseAmountInput(formData.discount)) || 0;
+                   const netPrice = Math.max(0, basePrice - discount);
+                   
+                   return (
+                     <>
+                        <div>
+                          <label className="label">المبلغ الأصلي (د.ع)</label>
+                          <input type="text" value={formatAmountForInput(basePrice)} className="input bg-[var(--color-bg-secondary)] cursor-not-allowed font-semibold text-gray-500 line-through" readOnly disabled />
+                        </div>
+                        <div>
+                          <label className="label" htmlFor="discount-amount">الخصم (د.ع)</label>
+                          <input
+                            type="text"
+                            value={formatAmountForInput(formData.discount)}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === '' || /^[\d.]+$/.test(value)) {
+                                handleDiscountChange(value);
+                              }
+                            }}
+                            className="input text-red-500 border-red-200 focus:border-red-500 focus:ring-red-500/20"
+                            placeholder="0"
+                            id="discount-amount"
+                            name="discount-amount"
+                          />
+                        </div>
+                        <div>
+                          <label className="label text-green-700 dark:text-green-400">الإجمالي بعد الخصم</label>
+                          <input type="text" value={formatAmountForInput(netPrice)} className="input bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 cursor-not-allowed font-bold" readOnly disabled />
+                        </div>
+                     </>
+                   );
+                })()}
+
                 <div>
                   <label className="label" htmlFor="paid-amount">المبلغ المدفوع (د.ع)</label>
                   <input
@@ -932,24 +977,6 @@ const CreateCourse = () => {
                     placeholder="0"
                     id="paid-amount"
                     name="paid-amount"
-                  />
-                </div>
-
-                <div>
-                  <label className="label" htmlFor="discount-amount">الخصم (د.ع)</label>
-                  <input
-                    type="text"
-                    value={formatAmountForInput(formData.discount)}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '' || /^[\d.]+$/.test(value)) {
-                        handleDiscountChange(value);
-                      }
-                    }}
-                    className="input text-red-500 border-red-200 focus:border-red-500 focus:ring-red-500/20"
-                    placeholder="0"
-                    id="discount-amount"
-                    name="discount-amount"
                   />
                 </div>
 
