@@ -1636,7 +1636,7 @@ const CourseDetails = () => {
               <PackageBadge course={course} className="font-normal text-[var(--color-text-primary)]" />
             </div>
 
-            {course.is_dual && (
+            {!!course.is_dual && (
               <div className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-lg">
                 <span className="badge badge-purple text-[10px]">كورس ثنائي</span>
               </div>
@@ -1766,7 +1766,7 @@ const CourseDetails = () => {
                       <span className={`text-xs font-bold ${isPostponedOrig ? 'text-gray-400 line-through' : 'text-gray-800 dark:text-white'}`}>
                         {Number(lecture.lecture_number)}
                       </span>
-                      {lecture.is_extra && (
+                      {!!lecture.is_extra && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-bold whitespace-nowrap" title="محاضرة إضافية">
                           إضافية
                         </span>
@@ -1776,7 +1776,7 @@ const CourseDetails = () => {
                           مؤجلة
                         </span>
                       )}
-                      {isMakeup && (
+                      {!!isMakeup && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-bold whitespace-nowrap" title="محاضرة تعويضية">
                           تعويضية
                         </span>
@@ -2201,7 +2201,7 @@ const CourseDetails = () => {
                         <span className={isPostponedOrig ? 'text-gray-400 line-through' : ''}>
                           {Number(lecture.lecture_number)}
                         </span>
-                        {lecture.is_extra && (
+                        {!!lecture.is_extra && (
                           <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-bold whitespace-nowrap" title="محاضرة إضافية">
                             إضافية
                           </span>
@@ -2211,7 +2211,7 @@ const CourseDetails = () => {
                             مؤجلة
                           </span>
                         )}
-                        {isMakeup && (
+                        {!!isMakeup && (
                           <span className="text-[9px] px-1 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 font-bold whitespace-nowrap" title="محاضرة تعويضية">
                             تعويضية
                           </span>
