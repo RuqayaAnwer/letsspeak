@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   X, User, Phone, GraduationCap, Calendar, 
   BookOpen, Clock, Activity, CheckCircle, 
-  AlertCircle, CreditCard, ChevronDown, ChevronUp, RefreshCw, FileText, Plus
+  AlertCircle, CreditCard, ChevronDown, ChevronUp, RefreshCw, FileText, Plus, Trash2
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -162,6 +162,18 @@ const StudentProfile = () => {
     }
   };
 
+  const handleDeleteNote = async (noteId) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذه الملاحظة؟')) return;
+    
+    try {
+      await api.delete(`/students/notes/${noteId}`);
+      await fetchProfileData();
+    } catch (err) {
+      console.error('Error deleting note:', err);
+      alert('فشل حذف الملاحظة');
+    }
+  };
+
   // Render Activity Ring
   const renderProgressCircle = (percentage, colorClass, label, icon) => {
     const radius = 30;
@@ -254,17 +266,17 @@ const StudentProfile = () => {
           </div>
           <button 
             onClick={() => navigate(-1)}
-            className="p-2 bg-black/10 hover:bg-black/20 rounded-xl transition-colors backdrop-blur-sm"
+            className="p-2 sm:p-2 bg-black/10 hover:bg-black/20 rounded-xl transition-colors backdrop-blur-sm"
           >
-            <X className="w-5 h-5 text-white" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </button>
         </div>
-        <div className="absolute top-6 left-16 sm:left-20 flex gap-2">
+        <div className="absolute top-4 sm:top-6 left-14 sm:left-20 flex gap-2">
            <button 
             onClick={() => setNoteModal(true)}
-            className="flex items-center gap-1 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 rounded-lg text-sm font-bold shadow-sm transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 rounded-lg text-xs sm:text-sm font-bold shadow-sm transition-colors ring-2 ring-yellow-400/30"
           >
-            <Plus className="w-4 h-4" /> إضافة ملاحظة
+            <Plus className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">إضافة ملاحظة</span><span className="sm:hidden">ملاحظة</span>
           </button>
         </div>
 
@@ -392,7 +404,18 @@ const StudentProfile = () => {
                               <FileText className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
                             </div>
                             <div className="bg-gradient-to-l from-yellow-50/50 to-white dark:from-yellow-900/20 dark:to-gray-800 rounded-xl p-4 border border-yellow-100 dark:border-yellow-900/50 relative shadow-sm hover:shadow-md transition-all">
-                              <h5 className="text-sm font-bold text-yellow-800 dark:text-yellow-400 mb-2 flex items-center gap-1.5"><FileText className="w-4 h-4"/> ملاحظة إدارية</h5>
+                              <div className="flex justify-between items-start mb-2">
+                                <h5 className="text-sm font-bold text-yellow-800 dark:text-yellow-400 flex items-center gap-1.5">
+                                  <FileText className="w-4 h-4"/> ملاحظة إدارية
+                                </h5>
+                                <button 
+                                  onClick={() => handleDeleteNote(event.data.id)}
+                                  className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 opacity-0 group-hover:opacity-100"
+                                  title="حذف الملاحظة"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                               <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap text-sm leading-relaxed">{event.data.text}</p>
                               <div className="mt-3 pt-3 border-t border-yellow-100/50 dark:border-yellow-900/30 flex items-center gap-3 text-xs text-yellow-700 dark:text-yellow-500/80 font-medium opacity-80 group-hover:opacity-100 transition-opacity">
                                 <span className="flex items-center gap-1"><User className="w-3 h-3" /> الكاتب: {event.data.user}</span>

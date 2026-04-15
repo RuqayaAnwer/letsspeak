@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
+use App\Models\StudentNote;
 use Illuminate\Http\Request;
 
 
@@ -116,28 +117,13 @@ class StudentController extends Controller
             'note' => $note
         ], 201);
     }
+
+    /**
+     * Delete an administrative note.
+     */
+    public function deleteNote(StudentNote $note)
+    {
+        $note->delete();
+        return response()->json(['success' => true, 'message' => 'Note deleted successfully']);
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
