@@ -21,14 +21,11 @@ class TrainerController extends Controller
     {
         $query = Trainer::with('user:id,name,email,job_title,base_salary');
 
-        // Search by name (search in both trainer name and user name)
+        // Search by name (search in user name)
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhereHas('user', function ($uq) use ($search) {
-                      $uq->where('name', 'like', "%{$search}%");
-                  });
+            $query->whereHas('user', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
             });
         }
 
