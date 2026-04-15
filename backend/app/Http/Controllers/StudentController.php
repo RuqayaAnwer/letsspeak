@@ -88,11 +88,33 @@ class StudentController extends Controller
     /**
      * Get student profile history and analytics.
      */
-    public function profile(Student $student, StudentAnalyticsService $analyticsService)
+    public function profile(Student $student, \App\Services\StudentAnalyticsService $analyticsService)
     {
         $data = $analyticsService->getStudentProfileData($student);
 
         return response()->json($data);
+    }
+
+    /**
+     * Add a note to the student's profile.
+     */
+    public function addNote(Request $request, Student $student)
+    {
+        $request->validate([
+            'note' => 'required|string',
+        ]);
+
+        $note = $student->notes()->create([
+            'user_id' => auth()->id(),
+            'note' => $request->note,
+        ]);
+
+        $note->load('user:id,name');
+
+        return response()->json([
+            'message' => 'تم إضافة الملاحظة بنجاح',
+            'note' => $note
+        ], 201);
     }
 }
 

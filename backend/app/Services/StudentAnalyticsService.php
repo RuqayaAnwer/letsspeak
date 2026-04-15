@@ -17,7 +17,7 @@ class StudentAnalyticsService
         // Load relationships if not loaded
         $student->loadMissing(['courses' => function ($query) {
             $query->orderBy('created_at', 'desc');
-        }, 'courses.trainer.user', 'courses.coursePackage', 'courses.lectures.students', 'payments']);
+        }, 'courses.trainer.user', 'courses.coursePackage', 'courses.lectures.students', 'payments', 'notes.user:id,name']);
 
         $courses = $student->courses;
         $payments = $student->payments;
@@ -173,6 +173,24 @@ class StudentAnalyticsService
                 'total_remaining' => $totalDebt,
             ],
             'courses_history' => $coursesHistory,
+            'notes' => $student->notes->map(function ($note) {
+                return [
+                    'id' => $note->id,
+                    'text' => $note->note,
+                    'created_at' => $note->created_at->format('Y-m-d H:i'),
+                    'user' => $note->user ? $note->user->name : 'النظام',
+                ];
+            })->sortByDesc('created_at')->values()->toArray(),
+            'all_payments' => $payments->map(function ($payment) {
+                return [
+                    'id' => $payment->id,
+                    'amount' => (float)$payment->amount,
+                    'payment_method' => $payment->payment_method,
+                    'status' => $payment->status,
+                    'date' => $payment->payment_date ? \Carbon\Carbon::parse($payment->payment_date)->format('Y-m-d') : ($payment->created_at ? $payment->created_at->format('Y-m-d') : date('Y-m-d')),
+                    'course_id' => $payment->course_id,
+                ];
+            })->sortByDesc('date')->values()->toArray(),
         ];
     }
 }
