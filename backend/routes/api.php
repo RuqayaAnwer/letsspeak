@@ -43,6 +43,16 @@ Route::get('/debug-logs', function () {
     return response()->json(['logs' => implode('', $lastLines)]);
 });
 
+// TEMPORARY MIGRATE ROUTE
+Route::get('/sys-migrate', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        return response()->json(['success' => true, 'output' => \Illuminate\Support\Facades\Artisan::output()]);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'error' => $e->getMessage()]);
+    }
+});
+
 // Global API Routes (Protected)
 Route::middleware('auth:sanctum')->group(function () {
     // Dashboard Stats
