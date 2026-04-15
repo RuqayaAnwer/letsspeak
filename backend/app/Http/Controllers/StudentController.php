@@ -104,7 +104,7 @@ class StudentController extends Controller
             'note' => 'required|string',
         ]);
 
-        $note = $student->notes()->create([
+        $note = $student->studentNotes()->create([
             'user_id' => auth()->id(),
             'note' => $request->note,
         ]);

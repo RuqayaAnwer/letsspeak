@@ -36,7 +36,11 @@ class Student extends Model
         return $this->hasMany(Payment::class);
     }
 
-    public function notes(): HasMany
+    /**
+     * Get the student's administrative notes.
+     * Renamed to studentNotes to avoid conflict with the existing `notes` column on the students table.
+     */
+    public function studentNotes(): HasMany
     {
         return $this->hasMany(StudentNote::class);
     }

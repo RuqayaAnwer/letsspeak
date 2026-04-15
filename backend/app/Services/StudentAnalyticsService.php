@@ -17,7 +17,7 @@ class StudentAnalyticsService
         // Load relationships if not loaded
         $student->loadMissing(['courses' => function ($query) {
             $query->orderBy('created_at', 'desc');
-        }, 'courses.trainer.user', 'courses.coursePackage', 'courses.lectures.students', 'payments', 'notes.user:id,name']);
+        }, 'courses.trainer.user', 'courses.coursePackage', 'courses.lectures.students', 'payments', 'studentNotes.user:id,name']);
 
         $courses = $student->courses;
         $payments = $student->payments;
@@ -173,7 +173,7 @@ class StudentAnalyticsService
                 'total_remaining' => $totalDebt,
             ],
             'courses_history' => $coursesHistory,
-            'notes' => $student->notes->map(function ($note) {
+            'notes' => $student->studentNotes->map(function ($note) {
                 return [
                     'id' => $note->id,
                     'text' => $note->note,
