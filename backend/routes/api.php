@@ -30,6 +30,19 @@ Route::post('/auth/logout', [AuthController::class, 'logout']);
 Route::post('/auth/profile', [AuthController::class, 'updateProfile'])->middleware('auth:sanctum');
 Route::post('/auth/change-password', [AuthController::class, 'changePassword'])->middleware('auth:sanctum');
 
+// TEMPORARY DEBUG ROUTE
+Route::get('/debug-logs', function () {
+    $logPath = storage_path('logs/laravel.log');
+    if (!file_exists($logPath)) {
+        return response()->json(['error' => 'Log file not found']);
+    }
+    
+    // Read the last 100 lines using pure PHP
+    $file = file($logPath);
+    $lastLines = array_slice($file, -100);
+    return response()->json(['logs' => implode('', $lastLines)]);
+});
+
 // Global API Routes (Protected)
 Route::middleware('auth:sanctum')->group(function () {
     // Dashboard Stats
