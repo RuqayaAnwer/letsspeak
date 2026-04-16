@@ -531,6 +531,12 @@ class TrainerController extends Controller
                 $query->where('trainer_id', $trainer->id);
             })
             ->whereBetween('date', [$startDate, $endDate])
+            ->whereNotIn('attendance', [
+                Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
+                Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
+                Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
+                'cancelled'
+            ])
             ->count();
 
             $isCurrentMonth = ($month == $today->month && $year == $today->year);
