@@ -253,32 +253,35 @@ class LecturePostponementService
      * @param Course $course
      * @param string $date
      * @param string|null $time
-     * @param int|null $excludeLectureId Lecture to exclude from check (the one being postponed)
+     * @param array|int|null $excludeLectureIds Lecture(s) to exclude from check (the ones being postponed/shifted)
      * @return array ['has_conflict' => bool, 'message' => string, 'conflicts' => array]
      */
     public function checkTimeConflicts(
         Course $course,
         string $date,
         ?string $time,
-        ?int $excludeLectureId = null
+        $excludeLectureIds = null
     ): array {
         $trainerId = $course->trainer_id;
         $conflicts = [];
+
+        // Normalize exclusions to array
+        $excludeIdsArray = is_array($excludeLectureIds) ? $excludeLectureIds : ($excludeLectureIds ? [$excludeLectureIds] : []);
 
         // Log the conflict check parameters
         Log::info('Checking time conflicts', [
             'trainer_id' => $trainerId,
             'date' => $date,
             'time' => $time,
-            'exclude_lecture_id' => $excludeLectureId,
+            'exclude_lecture_ids' => $excludeIdsArray,
         ]);
 
         // Check trainer conflicts
         $query = Lecture::forTrainer($trainerId)
             ->atDateTime($date, $time)
             ->active()
-            ->when($excludeLectureId, function ($query) use ($excludeLectureId) {
-                $query->where('id', '!=', $excludeLectureId);
+            ->when(!empty($excludeIdsArray), function ($query) use ($excludeIdsArray) {
+                $query->whereNotIn('id', $excludeIdsArray);
             })
             ->with('course');
 
@@ -344,7 +347,7 @@ class LecturePostponementService
                 Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
                 Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
             ])
-            ->reorder('lecture_number')
+            ->reorder('date')->orderBy('time')->orderBy('id')
             ->get();
 
         $idx = $ordered->search(fn ($l) => (int) $l->id === (int) $lecture->id);
@@ -354,6 +357,14 @@ class LecturePostponementService
 
         $time = $newTime ?? $lecture->time ?? $course->lecture_time ?? '09:00';
         $currentDate = Carbon::parse($newDate)->startOfDay();
+
+        // Get all lecture IDs that will be shifted
+        $shiftedLectureIds = [];
+        foreach ($ordered as $i => $l) {
+            if ($i >= $idx) {
+                $shiftedLectureIds[] = $l->id;
+            }
+        }
 
         $allConflicts = [];
         foreach ($ordered as $i => $l) {
@@ -365,7 +376,7 @@ class LecturePostponementService
             $checkDate = $currentDate->format('Y-m-d');
             $checkTime = $isMakeupSlot ? $time : ($l->time ?? $course->lecture_time ?? '09:00');
 
-            $singleConflictCheck = $this->checkTimeConflicts($course, $checkDate, $checkTime, $lecture->id);
+            $singleConflictCheck = $this->checkTimeConflicts($course, $checkDate, $checkTime, $shiftedLectureIds);
             if ($singleConflictCheck['has_conflict']) {
                 $allConflicts = array_merge($allConflicts, $singleConflictCheck['conflicts']);
             }
@@ -608,7 +619,7 @@ class LecturePostponementService
                 Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
                 Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
             ])
-            ->reorder('lecture_number')
+            ->reorder('date')->orderBy('time')->orderBy('id')
             ->get();
 
         $idx = $ordered->search(fn ($l) => (int) $l->id === (int) $lecture->id);
@@ -786,7 +797,7 @@ class LecturePostponementService
                 Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
                 Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
             ])
-            ->reorder('lecture_number')
+            ->reorder('date')->orderBy('time')->orderBy('id')
             ->get();
 
         $idx = $ordered->search(fn ($l) => (int) $l->id === (int) $lecture->id);
