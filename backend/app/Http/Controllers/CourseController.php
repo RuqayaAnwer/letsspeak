@@ -526,7 +526,6 @@ class CourseController extends Controller
             $currentDate = \Carbon\Carbon::parse($date);
             
             $pendingLectures = $course->lectures()
-                ->where('is_completed', false)
                 ->whereNotIn('attendance', ['present', 'absent', 'partially', 'postponed_by_student', 'postponed_by_trainer', 'postponed_holiday'])
                 ->orderBy('lecture_number')
                 ->get();

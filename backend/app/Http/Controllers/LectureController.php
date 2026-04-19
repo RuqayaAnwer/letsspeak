@@ -209,7 +209,7 @@ class LectureController extends Controller
             }
 
             // Check if lecture can be modified
-            $canModify = $this->canModifyLecture($lecture);
+            $canModify = $lecture->canBeModifiedArray();
             if (!$canModify['canModify']) {
                 $skippedLectures[] = [
                     'id' => $lecture->id,
@@ -289,7 +289,7 @@ class LectureController extends Controller
      */
     public function checkModifiable(Lecture $lecture)
     {
-        $status = $this->canModifyLecture($lecture);
+        $status = $lecture->canBeModifiedArray();
         
         return response()->json([
             'lecture_id' => $lecture->id,

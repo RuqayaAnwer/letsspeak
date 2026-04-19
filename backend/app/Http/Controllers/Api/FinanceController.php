@@ -151,8 +151,7 @@ class FinanceController extends Controller
             ->join('courses', 'lectures.course_id', '=', 'courses.id')
             ->whereBetween('lectures.date', [$startDate, $endDate])
             ->where(function ($query) {
-                $query->where('lectures.is_completed', true)
-                      ->orWhereIn('lectures.attendance', ['present', 'partially', 'absent']);
+                $query->whereIn('lectures.attendance', ['present', 'partially', 'absent']);
             })
             ->groupBy('courses.trainer_id')
             ->pluck('count', 'trainer_id')

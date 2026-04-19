@@ -66,6 +66,12 @@ class LecturePostponementService
     ): array {
         // Step 1: Validate the lecture can be postponed
         if (!$lecture->canBePostponed()) {
+            \Illuminate\Support\Facades\Log::warning('Postpone blocked by canBePostponed', [
+                'lecture_id' => $lecture->id,
+                'attendance' => $lecture->attendance,
+                'is_completed' => $lecture->isCompleted(),
+                'is_postponed' => $lecture->isPostponed(),
+            ]);
             return $this->errorResponse(
                 self::RESULT_ERROR_CANNOT_POSTPONE,
                 'هذه المحاضرة لا يمكن تأجيلها. قد تكون مكتملة أو مؤجلة مسبقاً.'
