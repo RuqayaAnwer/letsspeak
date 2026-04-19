@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, UserCheck, UserX, Shield, Users, DollarSign, GraduationCap, Lock, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -314,7 +315,9 @@ const AdminUsers = () => {
                           <span className="text-white text-[10px] font-bold">{u.name?.charAt(0)}</span>
                         </div>
                       )}
-                      <span className="font-semibold text-sm text-[var(--color-text-primary)]">{u.name}</span>
+                      <Link to={`/staff-profile/user/${u.id}`} className="font-semibold text-sm text-blue-600 dark:text-blue-400 hover:underline" onClick={(e) => e.stopPropagation()}>
+                        {u.name}
+                      </Link>
                     </div>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${roleInfo.color}`}>
                       <RoleIcon className="w-3 h-3" />
@@ -396,7 +399,9 @@ const AdminUsers = () => {
                               <span className="text-white text-xs font-bold">{u.name?.charAt(0)}</span>
                             </div>
                           )}
-                          <span className="font-semibold text-sm text-[var(--color-text-primary)]">{u.name}</span>
+                          <Link to={`/staff-profile/user/${u.id}`} className="font-semibold text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                            {u.name}
+                          </Link>
                         </div>
                       </td>
                       <td className="text-sm" dir="ltr">{u.email}</td>

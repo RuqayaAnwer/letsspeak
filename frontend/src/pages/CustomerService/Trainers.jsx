@@ -4,6 +4,7 @@ import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { Plus, Search, Edit2, Trash2, GraduationCap, Phone, Filter, MessageSquare, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Trainers = () => {
   const [trainers, setTrainers] = useState([]);
@@ -229,9 +230,9 @@ const Trainers = () => {
                               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">اسم المدرب</span>
                               <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
-                                <span className="text-sm font-semibold text-gray-800 dark:text-white">
+                                <Link to={`/staff-profile/trainer/${trainer.id}`} className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline" onClick={(e) => e.stopPropagation()}>
                                   {trainer.user?.name || trainer.name}
-                                </span>
+                                </Link>
                               </div>
                             </div>
 
@@ -368,9 +369,9 @@ const Trainers = () => {
                               {(trainer.user?.name || trainer.name)?.charAt(0).toUpperCase()}
                             </span>
                           </div>
-                          <span className="font-medium text-[11px] text-[var(--color-text-primary)] whitespace-nowrap">
+                          <Link to={`/staff-profile/trainer/${trainer.id}`} className="font-medium text-[11px] text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
                             {trainer.user?.name || trainer.name}
-                          </span>
+                          </Link>
                         </div>
                       </td>
                       <td className="py-2 px-2 text-center">

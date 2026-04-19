@@ -47,6 +47,7 @@ import TrainerPayroll from './pages/Accounting/TrainerPayroll';
 import Courses from './pages/shared/Courses';
 import CourseDetailsShared from './pages/shared/CourseDetails';
 import StudentProfile from './pages/shared/StudentProfile';
+import StaffProfile from './pages/shared/StaffProfile';
 import ActivityLogs from './pages/CustomerService/ActivityLogs';
 import CourseAlerts from './pages/CustomerService/CourseAlerts';
 import CourseDetails from './pages/CustomerService/CourseDetails';
@@ -280,6 +281,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['admin', 'customer_service', 'trainer', 'finance']}>
             <StudentProfile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff-profile/:type/:id"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'customer_service', 'finance']}>
+            <StaffProfile />
           </ProtectedRoute>
         }
       />

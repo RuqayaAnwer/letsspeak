@@ -77,6 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/trainers/{trainer}', [TrainerController::class, 'show']);
     Route::put('/trainers/{trainer}', [TrainerController::class, 'update']);
     Route::delete('/trainers/{trainer}', [TrainerController::class, 'destroy']);
+    Route::get('/staff-profile/{type}/{id}', [\App\Http\Controllers\Api\StaffProfileController::class, 'getProfile']);
     Route::get('/trainers/{trainer}/available-times', [TrainerController::class, 'availableTimes']);
     Route::post('/trainers/available', [TrainerController::class, 'available']);
     Route::post('/trainers/available-monthly', [TrainerController::class, 'availableMonthly']);
