@@ -95,6 +95,7 @@ const Layout = ({ children }) => {
           { path: '/customer-service/alerts', label: 'التنبيهات', icon: '⚠️', badge: alertsCount > 0 ? alertsCount : null },
           { path: '/customer-service/packages', label: 'الباقات', icon: '📦' },
           { path: '/customer-service/find-time', label: 'أوقات التدريب', icon: '🕐' },
+          { path: '/customer-service/pipeline', label: 'مسار العملاء', icon: '🎯' },
           { path: '/customer-service/activity-logs', label: 'سجل التعديلات', icon: '📝' },
         ];
       case 'trainer':

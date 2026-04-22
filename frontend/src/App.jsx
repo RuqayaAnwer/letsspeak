@@ -37,6 +37,7 @@ import Login from './pages/Login';
 import CustomerServiceDashboard from './pages/CustomerService/Dashboard';
 import Students from './pages/CustomerService/Students';
 import Trainers from './pages/CustomerService/Trainers';
+import Pipeline from './pages/CustomerService/Pipeline';
 import CreateCourse from './pages/CustomerService/CreateCourse';
 import CoursePackages from './pages/shared/CoursePackages';
 import FindTrainingTime from './pages/CustomerService/FindTrainingTime';
@@ -153,6 +154,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['customer_service']}>
             <Trainers />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer-service/pipeline"
+        element={
+          <ProtectedRoute allowedRoles={['customer_service', 'admin']}>
+            <Pipeline />
           </ProtectedRoute>
         }
       />

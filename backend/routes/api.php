@@ -133,6 +133,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // Find Available Training Times
     Route::post('/find-training-time', [CustomerServiceController::class, 'findTrainingTime']);
 
+    // Customer Journey Pipeline (Leads)
+    Route::get('/leads', [\App\Http\Controllers\Api\LeadController::class, 'index']);
+    Route::post('/leads', [\App\Http\Controllers\Api\LeadController::class, 'store']);
+    Route::put('/leads/{lead}', [\App\Http\Controllers\Api\LeadController::class, 'update']);
+    Route::patch('/leads/{lead}/status', [\App\Http\Controllers\Api\LeadController::class, 'updateStatus']);
+    Route::delete('/leads/{lead}', [\App\Http\Controllers\Api\LeadController::class, 'destroy']);
+
     // Activity Logs
     Route::get('/activity-logs', [ActivityLogController::class, 'index']);
 });
@@ -157,3 +164,9 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::patch('/users/{id}/toggle-status', [AdminController::class, 'toggleStatus']);
     Route::delete('/users/{id}', [AdminController::class, 'destroy']);
 });
+
+// External Public Webhooks
+Route::prefix('external')->group(function () {
+    Route::post('/leads', [\App\Http\Controllers\Api\PublicWebhooksController::class, 'storeLead']);
+});
+
