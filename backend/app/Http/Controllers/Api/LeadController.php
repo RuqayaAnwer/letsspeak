@@ -8,10 +8,28 @@ use Illuminate\Http\Request;
 
 class LeadController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $leads = Lead::orderBy('created_at', 'desc')->get();
-        return response()->json($leads);
+        $query = Lead::orderBy('created_at', 'desc');
+
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // Return statistical counts as well alongside the paginated results
+        $counts = [
+            'all' => Lead::count(),
+            'new' => Lead::where('status', 'new')->count(),
+            'attended_intro' => Lead::where('status', 'attended_intro')->count(),
+            'confirmed' => Lead::where('status', 'confirmed')->count(),
+        ];
+
+        $leads = $query->paginate(30);
+
+        return response()->json([
+            'leads' => $leads,
+            'counts' => $counts
+        ]);
     }
 
     public function store(Request $request)

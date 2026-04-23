@@ -1,44 +1,48 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { Search, Plus, Calendar, Phone, Trash2 } from 'lucide-react';
+import { Search, Plus, Calendar, Phone, Trash2, ChevronRight, ChevronLeft, MoreVertical, Edit2 } from 'lucide-react';
 import Modal from '../../components/Modal';
 
-// Temporary fallback simple board if dnd is not installed
 const columns = {
-  new: { name: 'المسجلين الجدد', color: 'border-blue-500 bg-blue-50 dark:bg-blue-900/10' },
-  contacted: { name: 'تم التواصل', color: 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/10' },
-  waiting_intro: { name: 'بانتظار المحاضرة', color: 'border-amber-500 bg-amber-50 dark:bg-amber-900/10' },
-  attended_intro: { name: 'حضر المحاضرة', color: 'border-teal-500 bg-teal-50 dark:bg-teal-900/10' },
-  confirmed: { name: 'اعتمد التسجيل', color: 'border-green-500 bg-green-50 dark:bg-green-900/10' },
-  rejected: { name: 'مرفوض/غير مهتم', color: 'border-red-500 bg-red-50 dark:bg-red-900/10' }
+  all: { name: 'الكل', color: 'bg-teal-600/20 text-teal-400 border-teal-500/30' },
+  new: { name: 'المسجلين الجدد', color: 'bg-blue-600/20 text-blue-400 border-blue-500/30' },
+  contacted: { name: 'تم التواصل', color: 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30' },
+  waiting_intro: { name: 'بانتظار المحاضرة', color: 'bg-amber-600/20 text-amber-400 border-amber-500/30' },
+  attended_intro: { name: 'وصل التعريفية', color: 'bg-purple-600/20 text-purple-400 border-purple-500/30' },
+  confirmed: { name: 'مؤكدون', color: 'bg-green-600/20 text-green-400 border-green-500/30' },
+  rejected: { name: 'مرفوض', color: 'bg-red-600/20 text-red-400 border-red-500/30' }
 };
 
 const Pipeline = () => {
   const [leads, setLeads] = useState([]);
+  const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
+  const [counts, setCounts] = useState({ all: 0, new: 0, attended_intro: 0, confirmed: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    phone_whatsapp: '',
-    status: 'new',
-    notes: '',
-    intro_date: '',
-    package_selected: '',
-    governorate: ''
+    name: '', phone_whatsapp: '', status: 'new', notes: '', intro_date: '', package_selected: '', governorate: ''
   });
 
   useEffect(() => {
-    fetchLeads();
-  }, []);
+    fetchLeads(1, activeTab);
+  }, [activeTab]);
 
-  const fetchLeads = async () => {
+  const fetchLeads = async (page = 1, status = 'all') => {
+    setLoading(true);
     try {
-      const res = await api.get('/leads');
-      setLeads(res.data);
+      const res = await api.get(`/leads?page=${page}&status=${status === 'all' ? 'all' : status}`);
+      setLeads(res.data.leads.data);
+      setPagination({
+        current_page: res.data.leads.current_page,
+        last_page: res.data.leads.last_page,
+        total: res.data.leads.total
+      });
+      setCounts(res.data.counts || { all: 0, new: 0, attended_intro: 0, confirmed: 0 });
     } catch (err) {
       console.error('Error fetching leads', err);
     } finally {
@@ -46,50 +50,13 @@ const Pipeline = () => {
     }
   };
 
-  const handleDragStart = (e, lead) => {
-    e.dataTransfer.setData('leadId', lead.id);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = async (e, newStatus) => {
-    e.preventDefault();
-    const leadId = e.dataTransfer.getData('leadId');
-    if (!leadId) return;
-
-    // Optimistically update
-    const leadIdNum = parseInt(leadId);
-    setLeads(prev => prev.map(l => l.id === leadIdNum ? { ...l, status: newStatus } : l));
-
-    try {
-      await api.patch(`/leads/${leadId}/status`, { status: newStatus });
-    } catch (err) {
-      console.error('Error updating status', err);
-      // Revert if error
-      fetchLeads();
-    }
-  };
-
-  const getLeadsByStatus = (status) => {
-    return leads.filter(l => 
-      l.status === status && 
-      (l.name.includes(search) || l.phone_whatsapp.includes(search))
-    );
-  };
-
   const openModal = (lead = null) => {
     setEditingLead(lead);
     if (lead) {
       setFormData({
-        name: lead.name,
-        phone_whatsapp: lead.phone_whatsapp,
-        status: lead.status,
-        notes: lead.notes || '',
-        intro_date: lead.intro_date ? lead.intro_date.split('T')[0] : '',
-        package_selected: lead.package_selected || '',
-        governorate: lead.governorate || ''
+        name: lead.name, phone_whatsapp: lead.phone_whatsapp, status: lead.status,
+        notes: lead.notes || '', intro_date: lead.intro_date ? lead.intro_date.split('T')[0] : '',
+        package_selected: lead.package_selected || '', governorate: lead.governorate || ''
       });
     } else {
       setFormData({ name: '', phone_whatsapp: '', status: 'new', notes: '', intro_date: '', package_selected: '', governorate: '' });
@@ -106,7 +73,7 @@ const Pipeline = () => {
         await api.post('/leads', formData);
       }
       setIsModalOpen(false);
-      fetchLeads();
+      fetchLeads(pagination.current_page, activeTab);
     } catch (err) {
       alert('حدث خطأ أثناء الحفظ');
     }
@@ -116,97 +83,189 @@ const Pipeline = () => {
     if(!confirm('تأكيد الحذف؟')) return;
     try {
       await api.delete(`/leads/${id}`);
-      fetchLeads();
+      fetchLeads(pagination.current_page, activeTab);
+      setIsModalOpen(false);
     } catch(err) {
       alert('خطأ بالحذف');
     }
   };
 
-  if (loading) return <LoadingSpinner size="lg" />;
+  const updateLeadStatus = async (id, newStatus) => {
+    try {
+      await api.patch(`/leads/${id}/status`, { status: newStatus });
+      fetchLeads(pagination.current_page, activeTab);
+    } catch (err) {
+      console.error('Error updating status', err);
+    }
+  };
 
   return (
-    <div className="space-y-6 animate-fade-in relative z-0">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="page-title">تتبع رحلة العميل (Pipeline)</h1>
-          <p className="page-subtitle">مسار العملاء من التسجيل إلى الاعتماد</p>
+    <div className="space-y-6 animate-fade-in relative z-0 min-h-screen font-sans text-right" dir="rtl">
+      
+      {/* Top Header & Search */}
+      <div className="flex flex-col xl:flex-row items-center justify-between gap-4 mb-2">
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => setActiveTab('all')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'all' ? 'bg-teal-600/20 text-teal-400 border-teal-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
+            الكل ({counts.all})
+          </button>
+          <button onClick={() => setActiveTab('confirmed')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'confirmed' ? 'bg-green-600/20 text-green-400 border-green-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
+            مؤكدون ({counts.confirmed})
+          </button>
+          <button onClick={() => setActiveTab('attended_intro')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'attended_intro' ? 'bg-purple-600/20 text-purple-400 border-purple-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
+            وصل التعريفية ({counts.attended_intro})
+          </button>
+          <button onClick={() => setActiveTab('new')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'new' ? 'bg-blue-600/20 text-blue-400 border-blue-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
+            لم يصل للتعريفية ({counts.new})
+          </button>
         </div>
-        <button onClick={() => openModal()} className="btn-primary flex items-center gap-2">
-          <Plus className="w-5 h-5" /> عميل جديد
-        </button>
+        
+        <div className="flex items-center gap-3 w-full xl:w-auto">
+          <div className="relative flex-1">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="بحث بالاسم أو الرقم..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="bg-[#0f172a] border border-[#1e293b] text-slate-200 text-sm rounded-lg pr-10 pl-3 py-2 w-full xl:w-64 focus:ring-1 focus:ring-teal-500 outline-none"
+            />
+          </div>
+          <button onClick={() => openModal()} className="bg-teal-600 hover:bg-teal-500 text-white rounded-lg p-2 transition-colors" title="إضافة عميل">
+            <Plus className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
-      <div className="card p-3 w-full sm:max-w-md">
-        <div className="relative">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="بحث عن طريق الاسم أو الرقم..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="input pr-10"
-          />
-        </div>
-      </div>
+      {/* Main Table Card */}
+      <div className="bg-[#0f172a] border border-[#1e293b] rounded-2xl overflow-hidden shadow-xl ring-1 ring-white/5">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-right text-slate-300">
+            <thead className="text-xs text-teal-400/90 whitespace-nowrap uppercase bg-[#0b1221] border-b border-[#1e293b]">
+              <tr>
+                <th className="px-4 py-4 w-12 text-center border-l border-[#1e293b]">#</th>
+                <th className="px-4 py-4 border-l border-[#1e293b]">الاسم</th>
+                <th className="px-4 py-4 text-center border-l border-[#1e293b]">الحزمة / المستوى</th>
+                <th className="px-4 py-4 text-center border-l border-[#1e293b]">جهة الاتصال</th>
+                <th className="px-4 py-4 text-center border-l border-[#1e293b]">المرحلة الحالية</th>
+                <th className="px-4 py-4 border-l border-[#1e293b]">التسجيل</th>
+                <th className="px-4 py-4 border-l border-[#1e293b]">التعريفية & التفاصيل</th>
+                <th className="px-4 py-4 text-center"><MoreVertical className="w-4 h-4 inline-block opacity-50" /></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1e293b]">
+              {loading ? (
+                <tr><td colSpan="8" className="py-20 text-center"><LoadingSpinner size="lg" /></td></tr>
+              ) : leads.filter(l => l.name.includes(search) || l.phone_whatsapp.includes(search)).length === 0 ? (
+                <tr><td colSpan="8" className="py-20 text-center text-slate-500">لا يوجد بيانات مطابقة</td></tr>
+              ) : (
+                leads.filter(l => l.name.includes(search) || l.phone_whatsapp.includes(search)).map((lead, index) => (
+                  <tr key={lead.id} className="hover:bg-[#1e293b]/40 transition-colors group">
+                    <td className="px-4 py-4 text-center text-slate-500 font-mono border-l border-[#1e293b]">
+                      {((pagination.current_page - 1) * 30) + index + 1}
+                    </td>
+                    
+                    <td className="px-4 py-4 border-l border-[#1e293b]">
+                      <div className="font-bold text-slate-100 text-[14px] mb-1">{lead.name}</div>
+                      <div className="text-[11px] text-slate-400 font-medium opacity-80">
+                        {lead.governorate ? lead.governorate : 'بدون محافظة'} • {lead.created_at.split('T')[0]}
+                      </div>
+                    </td>
 
-      {/* Kanban Board */}
-      <div className="flex gap-4 overflow-x-auto pb-6 h-[calc(100vh-250px)] min-h-[500px]">
-        {Object.entries(columns).map(([statusKey, col]) => (
-          <div 
-            key={statusKey} 
-            className={`flex-shrink-0 w-72 rounded-xl flex flex-col border-t-4 shadow-sm ${col.color}`}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, statusKey)}
-          >
-            <div className="p-3 font-bold text-[var(--color-text-primary)] border-b border-gray-200 dark:border-gray-700/50 flex justify-between items-center">
-              <span>{col.name}</span>
-              <span className="bg-white dark:bg-gray-800 text-xs px-2 py-1 rounded-full shadow-sm text-gray-600 dark:text-gray-300 font-mono">
-                {getLeadsByStatus(statusKey).length}
-              </span>
-            </div>
-            <div className="p-2 flex-1 overflow-y-auto space-y-3 custom-scrollbar">
-              {getLeadsByStatus(statusKey).map(lead => (
-                <div 
-                  key={lead.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, lead)}
-                  onClick={() => openModal(lead)}
-                  className="bg-white dark:bg-[var(--color-bg-primary)] p-3 rounded-lg shadow-sm border border-gray-100 dark:border-gray-800 cursor-grab active:cursor-grabbing hover:border-blue-300 dark:hover:border-blue-500/50 transition-colors"
-                >
-                  <div className="font-semibold text-sm text-[var(--color-text-primary)] mb-1">
-                    {lead.name}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-gray-500 font-mono mb-2" dir="ltr">
-                    <Phone className="w-3 h-3" />
-                    {lead.phone_whatsapp}
-                  </div>
-                  
-                  {lead.package_selected && (
-                    <div className="mt-2 flex">
-                      <span className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 px-1.5 py-0.5 rounded">
-                        {lead.package_selected}
-                      </span>
-                    </div>
-                  )}
+                    <td className="px-4 py-4 text-center border-l border-[#1e293b]">
+                      {lead.package_selected ? (
+                        <span className="inline-block border border-[#334155] bg-[#1e293b]/50 text-slate-300 text-[11px] px-3 py-1 rounded-full">
+                          {lead.package_selected}
+                        </span>
+                      ) : <span className="text-slate-600">-</span>}
+                    </td>
 
-                  {lead.intro_date && (
-                    <div className="mt-2 flex items-center gap-1 text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-0.5 rounded w-fit pb-1">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(lead.intro_date).toLocaleDateString('ar-IQ')}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {getLeadsByStatus(statusKey).length === 0 && (
-                <div className="text-center text-xs text-gray-400 py-10 opacity-60 pointer-events-none">اسحب وأفلت هنا</div>
+                    <td className="px-4 py-4 text-center border-l border-[#1e293b]">
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 text-teal-400 font-mono text-xs" dir="ltr">
+                          <Phone className="w-3.5 h-3.5 opacity-80" /> {lead.phone_whatsapp}
+                        </div>
+                        {lead.email && <div className="text-[10px] text-slate-500">{lead.email}</div>}
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-4 text-center border-l border-[#1e293b]">
+                      <select 
+                        value={lead.status}
+                        onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
+                        className={`text-[11px] font-bold px-3 py-1.5 rounded border appearance-none outline-none cursor-pointer text-center ${columns[lead.status]?.color || columns['new'].color}`}
+                      >
+                        {Object.entries(columns).filter(([k]) => k !== 'all').map(([k, v]) => (
+                          <option key={k} value={k} className="bg-[#0f172a] text-slate-200">{v.name}</option>
+                        ))}
+                      </select>
+                    </td>
+
+                    <td className="px-4 py-4 border-l border-[#1e293b]">
+                      <div className="flex items-center justify-end gap-2 text-xs text-slate-400 mb-1.5">
+                        <Calendar className="w-3.5 h-3.5 opacity-60" />
+                        <span className="font-mono text-[11px]">{new Date(lead.created_at).toLocaleDateString('en-CA')}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500/80 max-w-[150px] truncate leading-relaxed" title={lead.notes}>
+                        {lead.notes || 'لا يوجد ملاحظات تسجيل'}
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-4 border-l border-[#1e293b]">
+                      {lead.intro_date ? (
+                        <div className="flex flex-col gap-1.5">
+                          <div className="text-[11px] text-amber-500/90 font-medium flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            مجدولة: <span className="font-mono">{lead.intro_date.split('T')[0]}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-slate-600 text-xs">- غير مجدولة -</span>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-4 text-center">
+                      <button onClick={() => openModal(lead)} className="text-slate-500 hover:text-teal-400 transition-colors p-2 bg-[#1e293b]/50 hover:bg-[#1e293b] rounded-lg" title="تعديل أو عرض التفاصيل">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Controls */}
+        {!loading && pagination.last_page > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-[#1e293b] bg-[#0b1221]">
+            <span className="text-sm text-slate-500">
+              إجمالي السجلات: <span className="font-semibold text-teal-400">{pagination.total}</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => fetchLeads(pagination.current_page - 1, activeTab)}
+                disabled={pagination.current_page === 1}
+                className="p-1.5 rounded bg-[#1e293b] text-slate-400 hover:text-teal-400 hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-[#1e293b] transition-all"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <div className="text-xs font-mono bg-[#1e293b]/50 border border-[#1e293b] text-slate-300 px-4 py-1.5 rounded">
+                الصفحة <span className="font-bold text-teal-400 mx-1">{pagination.current_page}</span> من {pagination.last_page}
+              </div>
+              <button 
+                onClick={() => fetchLeads(pagination.current_page + 1, activeTab)}
+                disabled={pagination.current_page === pagination.last_page}
+                className="p-1.5 rounded bg-[#1e293b] text-slate-400 hover:text-teal-400 hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-[#1e293b] transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
             </div>
           </div>
-        ))}
+        )}
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingLead ? "بيانات العميل" : "إضافة عميل جديد"}>
-         <form onSubmit={handleSubmit} className="space-y-4">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingLead ? "تعديل و عرض البيانات" : "إضافة عميل جديد"}>
+         <form onSubmit={handleSubmit} className="space-y-4 text-right">
            <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">الاسم</label>
@@ -215,7 +274,7 @@ const Pipeline = () => {
             <div>
                <label className="label">حالة العميل (المسار)</label>
                <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="select w-full">
-                 {Object.entries(columns).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}
+                 {Object.entries(columns).filter(([k]) => k !== 'all').map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}
                </select>
             </div>
            </div>

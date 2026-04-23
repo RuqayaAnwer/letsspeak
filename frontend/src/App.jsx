@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { Component, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -32,34 +32,35 @@ class DiagnosticErrorBoundary extends Component {
   }
 }
 
-// Pages
-import Login from './pages/Login';
-import CustomerServiceDashboard from './pages/CustomerService/Dashboard';
-import Students from './pages/CustomerService/Students';
-import Trainers from './pages/CustomerService/Trainers';
-import Pipeline from './pages/CustomerService/Pipeline';
-import CreateCourse from './pages/CustomerService/CreateCourse';
-import CoursePackages from './pages/shared/CoursePackages';
-import FindTrainingTime from './pages/CustomerService/FindTrainingTime';
-import TrainerDashboard from './pages/Trainer/Dashboard';
-import FinanceDashboard from './pages/Accounting/Dashboard';
-import Payments from './pages/Accounting/Payments';
-import TrainerPayroll from './pages/Accounting/TrainerPayroll';
-import Courses from './pages/shared/Courses';
-import CourseDetailsShared from './pages/shared/CourseDetails';
-import StudentProfile from './pages/shared/StudentProfile';
-import StaffProfile from './pages/shared/StaffProfile';
-import ActivityLogs from './pages/CustomerService/ActivityLogs';
-import CourseAlerts from './pages/CustomerService/CourseAlerts';
-import CourseDetails from './pages/CustomerService/CourseDetails';
-import MyTimes from './pages/Trainer/MyTimes';
-import Achievements from './pages/Trainer/Achievements';
-import AdminDashboard from './pages/Admin/Dashboard';
-import AdminUsers from './pages/Admin/Users';
-import ChangePassword from './pages/shared/ChangePassword';
-
 // Components
 import Layout from './components/Layout';
+import LoadingSpinner from './components/LoadingSpinner';
+
+// Lazy Loaded Pages
+const Login = lazy(() => import('./pages/Login'));
+const CustomerServiceDashboard = lazy(() => import('./pages/CustomerService/Dashboard'));
+const Students = lazy(() => import('./pages/CustomerService/Students'));
+const Trainers = lazy(() => import('./pages/CustomerService/Trainers'));
+const Pipeline = lazy(() => import('./pages/CustomerService/Pipeline'));
+const CreateCourse = lazy(() => import('./pages/CustomerService/CreateCourse'));
+const CoursePackages = lazy(() => import('./pages/shared/CoursePackages'));
+const FindTrainingTime = lazy(() => import('./pages/CustomerService/FindTrainingTime'));
+const TrainerDashboard = lazy(() => import('./pages/Trainer/Dashboard'));
+const FinanceDashboard = lazy(() => import('./pages/Accounting/Dashboard'));
+const Payments = lazy(() => import('./pages/Accounting/Payments'));
+const TrainerPayroll = lazy(() => import('./pages/Accounting/TrainerPayroll'));
+const Courses = lazy(() => import('./pages/shared/Courses'));
+const CourseDetailsShared = lazy(() => import('./pages/shared/CourseDetails'));
+const StudentProfile = lazy(() => import('./pages/shared/StudentProfile'));
+const StaffProfile = lazy(() => import('./pages/shared/StaffProfile'));
+const ActivityLogs = lazy(() => import('./pages/CustomerService/ActivityLogs'));
+const CourseAlerts = lazy(() => import('./pages/CustomerService/CourseAlerts'));
+const CourseDetails = lazy(() => import('./pages/CustomerService/CourseDetails'));
+const MyTimes = lazy(() => import('./pages/Trainer/MyTimes'));
+const Achievements = lazy(() => import('./pages/Trainer/Achievements'));
+const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'));
+const AdminUsers = lazy(() => import('./pages/Admin/Users'));
+const ChangePassword = lazy(() => import('./pages/shared/ChangePassword'));
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -327,7 +328,9 @@ function App() {
             v7_relativeSplatPath: true,
           }}
         >
-          <AppRoutes />
+          <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"><LoadingSpinner size="lg" /></div>}>
+            <AppRoutes />
+          </Suspense>
         </Router>
       </AuthProvider>
     </ThemeProvider>
