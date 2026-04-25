@@ -20,10 +20,10 @@ class PublicWebhooksController extends Controller
             return response()->json(['error' => 'Unauthorized Access'], 401);
         }
 
-        // We accept dynamic data and default missing things to null or basic values
-        $lead = new Lead();
+        // Prevent duplicates: find by phone or create new
+        $phone = $request->input('phone_whatsapp', 'بدون رقم');
+        $lead = Lead::firstOrNew(['phone_whatsapp' => $phone]);
         $lead->name = $request->input('name', 'عميل جديد');
-        $lead->phone_whatsapp = $request->input('phone_whatsapp', 'بدون رقم');
         $lead->email = $request->input('email');
         $lead->telegram_id = $request->input('telegram_id');
         $lead->governorate = $request->input('governorate');
@@ -39,8 +39,10 @@ class PublicWebhooksController extends Controller
         // Define source
         $lead->source = $request->input('source', 'External Webhook');
         
-        // Always set status to new for incoming webhook leads
-        $lead->status = 'new';
+        // Only set status to 'new' if this is a brand new lead, to avoid resetting old ones
+        if (!$lead->exists || empty($lead->status)) {
+            $lead->status = 'new';
+        }
         
         $lead->save();
 
