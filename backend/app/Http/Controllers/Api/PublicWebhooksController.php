@@ -17,8 +17,11 @@ class PublicWebhooksController extends Controller
         $providedToken = $request->header('X-Webhook-Token') ?? $request->input('api_token');
 
         if ($providedToken !== $expectedToken) {
+            \Illuminate\Support\Facades\Log::warning('Webhook unauthorized attempt', ['ip' => $request->ip()]);
             return response()->json(['error' => 'Unauthorized Access'], 401);
         }
+
+        \Illuminate\Support\Facades\Log::info('Webhook Payload Received', $request->all());
 
         // Prevent duplicates: find by phone or create new
         $phone = $request->input('phone_whatsapp', 'بدون رقم');
