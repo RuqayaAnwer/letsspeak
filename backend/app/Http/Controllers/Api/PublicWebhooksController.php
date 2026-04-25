@@ -32,6 +32,9 @@ class PublicWebhooksController extends Controller
         $lead->package_selected = $request->input('package_selected');
         $lead->preferred_time = $request->input('preferred_time');
         $lead->current_level = $request->input('current_level');
+        $lead->intro_date = $request->input('intro_date');
+        $lead->trainer_name = $request->input('trainer_name');
+        $lead->intro_time = $request->input('intro_time');
         
         // Define source
         $lead->source = $request->input('source', 'External Webhook');

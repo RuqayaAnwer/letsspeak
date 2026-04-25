@@ -22,6 +22,8 @@ class Lead extends Model
         'current_level',
         'source',
         'intro_date',
+        'trainer_name',
+        'intro_time',
         'attendance_status',
         'intro_evaluation',
         'assigned_level',
