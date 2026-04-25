@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { Search, Plus, Calendar, Phone, Trash2, ChevronRight, ChevronLeft, MoreVertical, Edit2 } from 'lucide-react';
+import { Search, Plus, Calendar, Phone, Trash2, ChevronRight, ChevronLeft, MoreVertical, Edit2, UserPlus } from 'lucide-react';
 import Modal from '../../components/Modal';
 
 const columns = {
@@ -25,7 +25,7 @@ const Pipeline = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [formData, setFormData] = useState({
-    name: '', phone_whatsapp: '', status: 'new', notes: '', intro_date: '', package_selected: '', governorate: ''
+    name: '', phone_whatsapp: '', status: 'new', notes: '', intro_date: '', intro_time: '', trainer_name: '', package_selected: '', governorate: ''
   });
 
   useEffect(() => {
@@ -56,10 +56,11 @@ const Pipeline = () => {
       setFormData({
         name: lead.name, phone_whatsapp: lead.phone_whatsapp, status: lead.status,
         notes: lead.notes || '', intro_date: lead.intro_date ? lead.intro_date.split('T')[0] : '',
+        intro_time: lead.intro_time || '', trainer_name: lead.trainer_name || '',
         package_selected: lead.package_selected || '', governorate: lead.governorate || ''
       });
     } else {
-      setFormData({ name: '', phone_whatsapp: '', status: 'new', notes: '', intro_date: '', package_selected: '', governorate: '' });
+      setFormData({ name: '', phone_whatsapp: '', status: 'new', notes: '', intro_date: '', intro_time: '', trainer_name: '', package_selected: '', governorate: '' });
     }
     setIsModalOpen(true);
   };
@@ -96,6 +97,17 @@ const Pipeline = () => {
       fetchLeads(pagination.current_page, activeTab);
     } catch (err) {
       console.error('Error updating status', err);
+    }
+  };
+
+  const convertLeadToStudent = async (lead) => {
+    if(!confirm(`هل أنت متأكد من تحويل "${lead.name}" إلى طالب رسمي؟`)) return;
+    try {
+      await api.post(`/leads/${lead.id}/convert`);
+      fetchLeads(pagination.current_page, activeTab);
+      alert('تمت إضافة الطالب بنجاح إلى قسم الطلاب!');
+    } catch(err) {
+      alert('خطأ أثناء تحويل العميل');
     }
   };
 
@@ -167,7 +179,10 @@ const Pipeline = () => {
                     <td className="px-4 py-4 border-l border-[#1e293b]">
                       <div className="font-bold text-slate-100 text-[14px] mb-1">{lead.name}</div>
                       <div className="text-[11px] text-slate-400 font-medium opacity-80">
-                        {lead.governorate ? lead.governorate : 'بدون محافظة'} • {lead.created_at.split('T')[0]}
+                        {lead.governorate ? lead.governorate : 'بدون محافظة'} 
+                        {lead.age ? ` • ${lead.age} سنة` : ''}
+                        {lead.gender ? ` • ${lead.gender}` : ''}
+                        <br /> {lead.created_at.split('T')[0]}
                       </div>
                     </td>
 
@@ -184,10 +199,9 @@ const Pipeline = () => {
                         <div className="flex items-center gap-1.5 text-teal-400 font-mono text-xs" dir="ltr">
                           <Phone className="w-3.5 h-3.5 opacity-80" /> {lead.phone_whatsapp}
                         </div>
-                        {lead.telegram_id && <div className="text-[10px] text-blue-400">@{lead.telegram_id}</div>}
-                        {lead.source && lead.source.includes('الانستغرام') && <div className="text-[10px] text-pink-400">{lead.source}</div>}
-                        {lead.source && !lead.source.includes('الانستغرام') && <div className="text-[10px] text-slate-500">{lead.source}</div>}
-                        {lead.email && <div className="text-[10px] text-slate-500">{lead.email}</div>}
+                        {lead.telegram_id && <div className="text-[10px] text-blue-400 font-mono" dir="ltr">@{lead.telegram_id.replace('@', '')}</div>}
+                        {lead.source && <div className={`text-[10px] font-bold ${lead.source.includes('انستا') || lead.source.includes('الانستغرام') ? 'text-pink-400' : 'text-slate-400'}`}>{lead.source}</div>}
+                        {lead.email && <div className="text-[10px] text-indigo-300 truncate max-w-[120px]" title={lead.email}>{lead.email}</div>}
                       </div>
                     </td>
 
@@ -208,8 +222,13 @@ const Pipeline = () => {
                         <Calendar className="w-3.5 h-3.5 opacity-60" />
                         <span className="font-mono text-[11px]">{new Date(lead.created_at).toLocaleDateString('en-CA')}</span>
                       </div>
+                      {lead.preferred_time && (
+                        <div className="text-[10px] text-teal-400/90 font-medium mb-1 truncate max-w-[150px]" title={lead.preferred_time}>
+                           تفضيل الوقت: {lead.preferred_time}
+                        </div>
+                      )}
                       <div className="text-[11px] text-slate-500/80 max-w-[150px] truncate leading-relaxed" title={lead.notes}>
-                        {lead.notes || 'لا يوجد ملاحظات تسجيل'}
+                        {lead.notes || 'لا يوجد ملاحظات'}
                       </div>
                     </td>
 
@@ -227,7 +246,13 @@ const Pipeline = () => {
                           </div>
                           {lead.intro_time && (
                             <div className="text-[10px] text-amber-500/70 font-mono">
-                              الوقت: {lead.intro_time}
+                              الوقت: {(() => {
+                                try {
+                                  const [h, m] = lead.intro_time.split(':');
+                                  const d = new Date(); d.setHours(h, m);
+                                  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                                } catch { return lead.intro_time; }
+                              })()}
                             </div>
                           )}
                         </div>
@@ -237,9 +262,14 @@ const Pipeline = () => {
                     </td>
 
                     <td className="px-4 py-4 text-center">
-                      <button onClick={() => openModal(lead)} className="text-slate-500 hover:text-teal-400 transition-colors p-2 bg-[#1e293b]/50 hover:bg-[#1e293b] rounded-lg" title="تعديل أو عرض التفاصيل">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex justify-center items-center gap-2">
+                        <button onClick={() => convertLeadToStudent(lead)} className="text-slate-500 hover:text-blue-400 transition-colors p-2 bg-[#1e293b]/50 hover:bg-[#1e293b] rounded-lg" title="تحويل إلى طالب رسمي">
+                          <UserPlus className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => openModal(lead)} className="text-slate-500 hover:text-teal-400 transition-colors p-2 bg-[#1e293b]/50 hover:bg-[#1e293b] rounded-lg" title="تعديل أو عرض التفاصيل">
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -310,8 +340,19 @@ const Pipeline = () => {
             </div>
             <div>
               <label className="label">موعد المحاضرة (إن وُجد)</label>
-              <input type="date" value={formData.intro_date} onChange={e => setFormData({...formData, intro_date: e.target.value})} className="input" />
+              <div className="flex gap-2">
+                <input type="date" value={formData.intro_date} onChange={e => setFormData({...formData, intro_date: e.target.value})} className="input flex-[2]" />
+                <input type="time" value={formData.intro_time} onChange={e => setFormData({...formData, intro_time: e.target.value})} className="input flex-[1]" title="وقت المحاضرة" />
+              </div>
             </div>
+           </div>
+
+           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">اسم المدرب</label>
+              <input type="text" value={formData.trainer_name} onChange={e => setFormData({...formData, trainer_name: e.target.value})} className="input" placeholder="اسم المدرب أو المعرف..." />
+            </div>
+            <div></div>
            </div>
 
            <div>

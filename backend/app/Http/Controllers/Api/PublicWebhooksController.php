@@ -39,6 +39,10 @@ class PublicWebhooksController extends Controller
         // Define source
         $lead->source = $request->input('source', 'External Webhook');
         
+        if ($request->has('notes')) {
+            $lead->notes = $request->input('notes');
+        }
+        
         // Only set status to 'new' if this is a brand new lead, to avoid resetting old ones
         if (!$lead->exists || empty($lead->status)) {
             $lead->status = 'new';

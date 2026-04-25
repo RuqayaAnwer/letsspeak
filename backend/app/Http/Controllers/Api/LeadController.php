@@ -68,4 +68,19 @@ class LeadController extends Controller
         $lead->delete();
         return response()->json(['message' => 'Lead deleted successfully']);
     }
+
+    public function convertToStudent(Lead $lead)
+    {
+        $student = \App\Models\Student::create([
+            'name' => $lead->name,
+            'phone' => $lead->phone_whatsapp,
+            'level' => mb_substr($lead->package_selected ?: 'L1', 0, 10),
+            'notes' => $lead->notes . "\n(تم التحويل من مسار العملاء)",
+        ]);
+
+        $lead->status = 'confirmed';
+        $lead->save();
+
+        return response()->json(['message' => 'تم تحويل العميل إلى طالب بنجاح!', 'student' => $student]);
+    }
 }

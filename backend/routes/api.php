@@ -139,6 +139,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/leads/{lead}', [\App\Http\Controllers\Api\LeadController::class, 'update']);
     Route::patch('/leads/{lead}/status', [\App\Http\Controllers\Api\LeadController::class, 'updateStatus']);
     Route::delete('/leads/{lead}', [\App\Http\Controllers\Api\LeadController::class, 'destroy']);
+    Route::post('/leads/{lead}/convert', [\App\Http\Controllers\Api\LeadController::class, 'convertToStudent']);
 
     // Activity Logs
     Route::get('/activity-logs', [ActivityLogController::class, 'index']);
