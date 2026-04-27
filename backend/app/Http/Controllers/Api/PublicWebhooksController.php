@@ -31,7 +31,15 @@ class PublicWebhooksController extends Controller
         $lead->telegram_id = $request->input('telegram_id');
         $lead->governorate = $request->input('governorate');
         $lead->age = $request->input('age');
-        $lead->gender = $request->input('gender');
+        $genderInput = mb_strtolower(trim($request->input('gender') ?? ''), 'UTF-8');
+        if (in_array($genderInput, ['ذكر', 'مذكر', 'ولد', 'male', 'm'])) {
+            $lead->gender = 'male';
+        } elseif (in_array($genderInput, ['أنثى', 'انثى', 'مؤنث', 'بنت', 'female', 'f'])) {
+            $lead->gender = 'female';
+        } else {
+            $lead->gender = null;
+        }
+
         $lead->package_selected = $request->input('package_selected');
         $lead->preferred_time = $request->input('preferred_time');
         $lead->current_level = $request->input('current_level');
