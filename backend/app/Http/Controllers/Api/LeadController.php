@@ -19,9 +19,12 @@ class LeadController extends Controller
         // Return statistical counts as well alongside the paginated results
         $counts = [
             'all' => Lead::count(),
-            'new' => Lead::where('status', 'new')->count(),
+            'new' => Lead::where('status', 'new')->orWhereNull('status')->count(),
+            'contacted' => Lead::where('status', 'contacted')->count(),
+            'waiting_intro' => Lead::where('status', 'waiting_intro')->count(),
             'attended_intro' => Lead::where('status', 'attended_intro')->count(),
             'confirmed' => Lead::where('status', 'confirmed')->count(),
+            'rejected' => Lead::where('status', 'rejected')->count(),
         ];
 
         $leads = $query->paginate(30);

@@ -25,7 +25,8 @@ const Pipeline = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [formData, setFormData] = useState({
-    name: '', phone_whatsapp: '', status: 'new', notes: '', intro_date: '', intro_time: '', trainer_name: '', package_selected: '', governorate: ''
+    name: '', phone_whatsapp: '', status: 'new', notes: '', intro_date: '', intro_time: '', trainer_name: '', package_selected: '', governorate: '',
+    email: '', telegram_id: '', age: '', gender: '', preferred_time: '', current_level: '', source: ''
   });
 
   useEffect(() => {
@@ -54,13 +55,20 @@ const Pipeline = () => {
     setEditingLead(lead);
     if (lead) {
       setFormData({
-        name: lead.name, phone_whatsapp: lead.phone_whatsapp, status: lead.status,
+        name: lead.name || '', phone_whatsapp: lead.phone_whatsapp || '', status: lead.status || 'new',
         notes: lead.notes || '', intro_date: lead.intro_date ? lead.intro_date.split('T')[0] : '',
         intro_time: lead.intro_time || '', trainer_name: lead.trainer_name || '',
-        package_selected: lead.package_selected || '', governorate: lead.governorate || ''
+        package_selected: lead.package_selected || '', governorate: lead.governorate || '',
+        email: lead.email || '', telegram_id: lead.telegram_id || '', age: lead.age || '',
+        gender: lead.gender || '', preferred_time: lead.preferred_time || '',
+        current_level: lead.current_level || '', source: lead.source || ''
       });
     } else {
-      setFormData({ name: '', phone_whatsapp: '', status: 'new', notes: '', intro_date: '', intro_time: '', trainer_name: '', package_selected: '', governorate: '' });
+      setFormData({ 
+        name: '', phone_whatsapp: '', status: 'new', notes: '', intro_date: '', intro_time: '', 
+        trainer_name: '', package_selected: '', governorate: '', email: '', telegram_id: '', 
+        age: '', gender: '', preferred_time: '', current_level: '', source: '' 
+      });
     }
     setIsModalOpen(true);
   };
@@ -120,14 +128,23 @@ const Pipeline = () => {
           <button onClick={() => setActiveTab('all')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'all' ? 'bg-teal-600/20 text-teal-400 border-teal-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
             الكل ({counts.all})
           </button>
-          <button onClick={() => setActiveTab('confirmed')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'confirmed' ? 'bg-green-600/20 text-green-400 border-green-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
-            مؤكدون ({counts.confirmed})
+          <button onClick={() => setActiveTab('new')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'new' ? 'bg-blue-600/20 text-blue-400 border-blue-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
+            المسجلين الجدد ({counts.new})
+          </button>
+          <button onClick={() => setActiveTab('contacted')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'contacted' ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
+            تم التواصل ({counts.contacted || 0})
+          </button>
+          <button onClick={() => setActiveTab('waiting_intro')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'waiting_intro' ? 'bg-amber-600/20 text-amber-400 border-amber-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
+            بانتظار المحاضرة ({counts.waiting_intro || 0})
           </button>
           <button onClick={() => setActiveTab('attended_intro')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'attended_intro' ? 'bg-purple-600/20 text-purple-400 border-purple-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
             وصل التعريفية ({counts.attended_intro})
           </button>
-          <button onClick={() => setActiveTab('new')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'new' ? 'bg-blue-600/20 text-blue-400 border-blue-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
-            لم يصل للتعريفية ({counts.new})
+          <button onClick={() => setActiveTab('confirmed')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'confirmed' ? 'bg-green-600/20 text-green-400 border-green-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
+            مؤكدون ({counts.confirmed})
+          </button>
+          <button onClick={() => setActiveTab('rejected')} className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'rejected' ? 'bg-red-600/20 text-red-400 border-red-500/50' : 'bg-[#0f172a] text-slate-300 border-[#1e293b] hover:bg-[#1e293b]'} transition-all`}>
+            مرفوض ({counts.rejected || 0})
           </button>
         </div>
         
@@ -352,7 +369,44 @@ const Pipeline = () => {
               <label className="label">اسم المدرب</label>
               <input type="text" value={formData.trainer_name} onChange={e => setFormData({...formData, trainer_name: e.target.value})} className="input" placeholder="اسم المدرب أو المعرف..." />
             </div>
-            <div></div>
+            <div>
+              <label className="label">المستوى الحالي</label>
+              <input type="text" value={formData.current_level} onChange={e => setFormData({...formData, current_level: e.target.value})} className="input" placeholder="مستوى الطالب الحالي..." />
+            </div>
+           </div>
+
+           <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="label">البريد الإلكتروني</label>
+              <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="input" dir="ltr" placeholder="example@email.com" />
+            </div>
+            <div>
+              <label className="label">معرف التليجرام</label>
+              <input type="text" value={formData.telegram_id} onChange={e => setFormData({...formData, telegram_id: e.target.value})} className="input" dir="ltr" placeholder="@username" />
+            </div>
+            <div>
+              <label className="label">المصدر (Source)</label>
+              <input type="text" value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})} className="input" placeholder="كيف عرف عنا؟" />
+            </div>
+           </div>
+
+           <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="label">العمر</label>
+              <input type="number" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} className="input" placeholder="سنة" />
+            </div>
+            <div>
+              <label className="label">الجنس</label>
+              <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="select w-full">
+                <option value="">غير محدد</option>
+                <option value="male">ذكر</option>
+                <option value="female">أنثى</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">الوقت المفضل</label>
+              <input type="text" value={formData.preferred_time} onChange={e => setFormData({...formData, preferred_time: e.target.value})} className="input" placeholder="صباحي، مسائي..." />
+            </div>
            </div>
 
            <div>

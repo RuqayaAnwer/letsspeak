@@ -210,7 +210,8 @@ class FinanceController extends Controller
             $completedLectures = $trainerId && isset($completedLecturesCounts[$trainerId]) ? $completedLecturesCounts[$trainerId] : 0;
 
             // Employer Base constraints
-            $employeeBaseSalary = $user ? (float) $user->base_salary : 0;
+            $cleanBaseSalary = $user ? str_replace([',', ' '], '', $user->base_salary ?? '0') : 0;
+            $employeeBaseSalary = (float) $cleanBaseSalary;
             $trainerBasePay = $completedLectures * $lectureRate;
             $basePay = $employeeBaseSalary + $trainerBasePay; // Combines both for simple calculation
 

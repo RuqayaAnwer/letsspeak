@@ -638,7 +638,8 @@ class TrainerController extends Controller
             $basePay = $completedLectures * $lectureRate;
             
             // Get Dual-Role Employee / Admin Salary
-            $administrativeSalary = (float) ($user->base_salary ?? 0);
+            $cleanBaseSalary = str_replace([',', ' '], '', $user->base_salary ?? '0');
+            $administrativeSalary = (float) $cleanBaseSalary;
             $jobTitle = $user->job_title ?? null;
             
             // Calculate renewal bonus (tiered system)

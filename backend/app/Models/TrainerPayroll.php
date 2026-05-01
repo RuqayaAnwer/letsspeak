@@ -122,8 +122,9 @@ class TrainerPayroll extends Model
         // Add dual-role administrative salary if the user has one
         if ($this->user_id) {
             $user = User::find($this->user_id);
-            if ($user && $user->base_salary > 0) {
-                $total += (float) $user->base_salary;
+            if ($user && $user->base_salary) {
+                $cleanBaseSalary = str_replace([',', ' '], '', $user->base_salary);
+                $total += (float) $cleanBaseSalary;
             }
         }
         
