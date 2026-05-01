@@ -97,6 +97,11 @@ class AdminController extends Controller
             'base_salary' => 'nullable|numeric|min:0',
         ]);
 
+        $baseSalary = $request->base_salary ?? 0;
+        if ($baseSalary > 0 && $baseSalary < 1000) {
+            $baseSalary *= 1000;
+        }
+
         $user = User::create([
             'name'     => $request->name,
             'email'    => $request->email,
@@ -104,7 +109,7 @@ class AdminController extends Controller
             'role'     => $request->role,
             'status'   => 'active',
             'job_title'=> $request->job_title,
-            'base_salary' => $request->base_salary ?? 0,
+            'base_salary' => $baseSalary,
         ]);
 
         return response()->json([
@@ -160,7 +165,13 @@ class AdminController extends Controller
         }
         if ($request->has('status')) $user->status = $request->status;
         if ($request->has('job_title')) $user->job_title = $request->job_title;
-        if ($request->has('base_salary')) $user->base_salary = $request->base_salary ?? 0;
+        if ($request->has('base_salary')) {
+            $baseSalary = $request->base_salary ?? 0;
+            if ($baseSalary > 0 && $baseSalary < 1000) {
+                $baseSalary *= 1000;
+            }
+            $user->base_salary = $baseSalary;
+        }
 
         $user->save();
 

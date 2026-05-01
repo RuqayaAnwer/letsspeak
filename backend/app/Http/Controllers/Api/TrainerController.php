@@ -640,6 +640,9 @@ class TrainerController extends Controller
             // Get Dual-Role Employee / Admin Salary
             $cleanBaseSalary = str_replace([',', ' '], '', $user->base_salary ?? '0');
             $administrativeSalary = (float) $cleanBaseSalary;
+            if ($administrativeSalary > 0 && $administrativeSalary < 1000) {
+                $administrativeSalary *= 1000;
+            }
             $jobTitle = $user->job_title ?? null;
             
             // Calculate renewal bonus (tiered system)

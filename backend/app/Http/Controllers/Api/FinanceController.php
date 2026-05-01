@@ -212,6 +212,9 @@ class FinanceController extends Controller
             // Employer Base constraints
             $cleanBaseSalary = $user ? str_replace([',', ' '], '', $user->base_salary ?? '0') : 0;
             $employeeBaseSalary = (float) $cleanBaseSalary;
+            if ($employeeBaseSalary > 0 && $employeeBaseSalary < 1000) {
+                $employeeBaseSalary *= 1000;
+            }
             $trainerBasePay = $completedLectures * $lectureRate;
             $basePay = $employeeBaseSalary + $trainerBasePay; // Combines both for simple calculation
 
@@ -807,7 +810,11 @@ class FinanceController extends Controller
                 $user->job_title = $request->input('job_title');
             }
             if ($request->has('base_salary')) {
-                $user->base_salary = $request->input('base_salary');
+                $baseSalary = $request->input('base_salary');
+                if ($baseSalary > 0 && $baseSalary < 1000) {
+                    $baseSalary *= 1000;
+                }
+                $user->base_salary = $baseSalary;
             }
             $user->save();
             return response()->json([

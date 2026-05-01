@@ -124,7 +124,11 @@ class TrainerPayroll extends Model
             $user = User::find($this->user_id);
             if ($user && $user->base_salary) {
                 $cleanBaseSalary = str_replace([',', ' '], '', $user->base_salary);
-                $total += (float) $cleanBaseSalary;
+                $adminSalary = (float) $cleanBaseSalary;
+                if ($adminSalary > 0 && $adminSalary < 1000) {
+                    $adminSalary *= 1000;
+                }
+                $total += $adminSalary;
             }
         }
         
