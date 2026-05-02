@@ -27,6 +27,11 @@ class StudentController extends Controller
             });
         }
 
+        if ($request->has('all') && $request->all == 'true') {
+            $students = $query->latest()->get();
+            return response()->json(['data' => $students]);
+        }
+
         $students = $query->withCount('courses')->latest()->paginate(15);
 
         return response()->json($students);

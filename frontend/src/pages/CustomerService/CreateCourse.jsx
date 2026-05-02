@@ -89,7 +89,7 @@ const CreateCourse = () => {
         setLoading(true);
       }
       const [studentsRes, trainersRes, packagesRes] = await Promise.all([
-        api.get('/students'),
+        api.get('/students?all=true'),
         api.get('/trainers-list'),
         api.get('/course-packages', { params: { _t: Date.now() } }), // Add timestamp to prevent caching
       ]);
@@ -548,7 +548,7 @@ const CreateCourse = () => {
         setNewStudentData({ name: '', phone: '', level: '', gender: 'male' });
         
         // Quietly refresh the full list from server in the background
-        api.get('/students').then(res => {
+        api.get('/students?all=true').then(res => {
           const studentsList = res.data?.data || res.data || [];
           if (Array.isArray(studentsList)) {
             setStudents(prev => {
