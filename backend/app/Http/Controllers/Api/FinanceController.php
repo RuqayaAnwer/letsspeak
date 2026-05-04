@@ -146,16 +146,34 @@ class FinanceController extends Controller
         $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->format('Y-m-d');
         $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d');
 
-        // OPTIMIZATION: 1. Fetch all completed lectures counts grouped by trainer
-        $completedLecturesCounts = \App\Models\Lecture::select('courses.trainer_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+        // OPTIMIZATION: 1. Fetch all completed lectures counts grouped by trainer and package
+        $completedLecturesRates = \App\Models\Lecture::select(
+            'courses.trainer_id', 
+            'courses.course_package_id',
+            'course_packages.name as package_name',
+            \Illuminate\Support\Facades\DB::raw('count(*) as count')
+        )
             ->join('courses', 'lectures.course_id', '=', 'courses.id')
+            ->leftJoin('course_packages', 'courses.course_package_id', '=', 'course_packages.id')
             ->whereBetween('lectures.date', [$startDate, $endDate])
             ->where(function ($query) {
                 $query->whereIn('lectures.attendance', ['present', 'partially', 'absent']);
             })
-            ->groupBy('courses.trainer_id')
-            ->pluck('count', 'trainer_id')
-            ->toArray();
+            ->groupBy('courses.trainer_id', 'courses.course_package_id', 'course_packages.name')
+            ->get();
+
+        $completedLecturesCounts = [];
+        $trainerBasePays = [];
+        foreach ($completedLecturesRates as $rateRow) {
+            $tId = $rateRow->trainer_id;
+            $pkgName = $rateRow->package_name ?? '';
+            $rate = 4000; // Default rate
+            if (mb_strpos($pkgName, 'باقة اطفال توازن') !== false || mb_strpos($pkgName, 'باقة اطفال سرعة') !== false) {
+                $rate = 6000;
+            }
+            $trainerBasePays[$tId] = ($trainerBasePays[$tId] ?? 0) + ($rateRow->count * $rate);
+            $completedLecturesCounts[$tId] = ($completedLecturesCounts[$tId] ?? 0) + $rateRow->count;
+        }
 
         // OPTIMIZATION: 2. Calculate renewals for the month in memory
         $renewalsCountsByTrainer = [];
@@ -215,7 +233,7 @@ class FinanceController extends Controller
             if ($employeeBaseSalary > 0 && $employeeBaseSalary < 1000) {
                 $employeeBaseSalary *= 1000;
             }
-            $trainerBasePay = $completedLectures * $lectureRate;
+            $trainerBasePay = $trainerId && isset($trainerBasePays[$trainerId]) ? $trainerBasePays[$trainerId] : 0;
             $basePay = $employeeBaseSalary + $trainerBasePay; // Combines both for simple calculation
 
             // Get renewals count from pre-calculated optimizations
@@ -1365,6 +1383,20 @@ class FinanceController extends Controller
         $payroll->paid_at = now();
         $payroll->save();
 
+        // Sync lecture payment statuses to 'paid'
+        $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->format('Y-m-d');
+        $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d');
+        
+        \App\Models\Lecture::whereHas('course', function ($query) use ($trainerId) {
+            $query->where('trainer_id', $trainerId);
+        })
+        ->whereBetween('date', [$startDate, $endDate])
+        ->where(function ($query) {
+            $query->whereIn('attendance', ['present', 'partially', 'absent'])
+                  ->orWhere('is_completed', true);
+        })
+        ->update(['trainer_payment_status' => 'paid']);
+
         // Log the change in ActivityLog
         try {
             $trainer = Trainer::find($trainerId);
@@ -1432,6 +1464,21 @@ class FinanceController extends Controller
         $payroll->status = 'draft';
         $payroll->paid_at = null;
         $payroll->save();
+
+        // Sync lecture payment statuses to 'unpaid'
+        $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->format('Y-m-d');
+        $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d');
+        
+        \App\Models\Lecture::whereHas('course', function ($query) use ($trainerId) {
+            $query->where('trainer_id', $trainerId);
+        })
+        ->whereBetween('date', [$startDate, $endDate])
+        ->where('trainer_payment_status', 'paid')
+        ->where(function ($query) {
+            $query->whereIn('attendance', ['present', 'partially', 'absent'])
+                  ->orWhere('is_completed', true);
+        })
+        ->update(['trainer_payment_status' => 'unpaid']);
 
         // Log the change in ActivityLog
         try {

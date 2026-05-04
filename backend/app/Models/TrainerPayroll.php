@@ -140,7 +140,9 @@ class TrainerPayroll extends Model
      */
     public function recalculate(): void
     {
-        $this->base_pay = $this->completed_lectures * $this->lecture_rate;
+        // Base pay is now calculated dynamically in controllers based on course packages
+        // and should not be blindly overwritten here.
+        // $this->base_pay = $this->completed_lectures * $this->lecture_rate;
         
         // Calculate renewal bonus using tiered system
         // 5 renewals = 50,000 د.ع, 7 renewals = 100,000 د.ع

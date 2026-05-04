@@ -518,13 +518,25 @@ class TrainerController extends Controller
             };
 
             // المحاضرات المكتملة في الشهر (حاضر/غائب أو is_completed) — للعداد والاستحقاق
-            $completedLectures = Lecture::whereHas('course', function ($query) use ($trainer) {
+            $completedLecturesList = Lecture::with('course.coursePackage')
+            ->whereHas('course', function ($query) use ($trainer) {
                 $query->where('trainer_id', $trainer->id);
             })
             ->whereBetween('date', [$startDate, $endDate])
             ->get()
-            ->filter($isCompletedLecture)
-            ->count();
+            ->filter($isCompletedLecture);
+
+            $completedLectures = $completedLecturesList->count();
+            
+            $basePay = 0;
+            foreach ($completedLecturesList as $lecture) {
+                $rate = 4000;
+                $pkgName = $lecture->course->coursePackage->name ?? '';
+                if (mb_strpos($pkgName, 'باقة اطفال توازن') !== false || mb_strpos($pkgName, 'باقة اطفال سرعة') !== false) {
+                    $rate = 6000;
+                }
+                $basePay += $rate;
+            }
 
             // إجمالي المحاضرات المجدولة في الشهر (من 1 إلى آخر يوم)
             $totalLectures = Lecture::whereHas('course', function ($query) use ($trainer) {
@@ -635,7 +647,7 @@ class TrainerController extends Controller
 
             // Calculate monthly earnings (استحقاق المدرب)
             $lectureRate = 4000;
-            $basePay = $completedLectures * $lectureRate;
+            // $basePay is already calculated above
             
             // Get Dual-Role Employee / Admin Salary
             $cleanBaseSalary = str_replace([',', ' '], '', $user->base_salary ?? '0');

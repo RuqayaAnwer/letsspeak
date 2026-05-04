@@ -136,7 +136,7 @@ const Achievements = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">أجور المحاضرات المكتملة</p>
                     <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                      {achievements.completed_lectures || 0} محاضرة × {formatCurrency(achievements.earnings.lecture_rate || 4000)}
+                      {achievements.completed_lectures || 0} محاضرة
                     </p>
                   </div>
                 </div>

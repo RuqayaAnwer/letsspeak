@@ -367,7 +367,7 @@ class LectureController extends Controller
                     $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();
                     
                     // Calculate completed paid lectures
-                    $completedLectures = Lecture::whereHas('course', function ($query) use ($course) {
+                    $completedLecturesList = Lecture::with('course.coursePackage')->whereHas('course', function ($query) use ($course) {
                             $query->where('trainer_id', $course->trainer_id);
                         })
                         ->whereBetween('date', [$startDate, $endDate])
@@ -385,12 +385,21 @@ class LectureController extends Controller
                                 }
                             }
                             return $l->is_completed || in_array($l->attendance, ['present', 'partially', 'absent']);
-                        })
-                        ->count();
+                        });
+                    
+                    $completedLectures = $completedLecturesList->count();
                     
                     // Find or create payroll record
                     $lectureRate = 4000;
-                    $basePay = $completedLectures * $lectureRate;
+                    $basePay = 0;
+                    foreach ($completedLecturesList as $lecture) {
+                        $rate = 4000;
+                        $pkgName = $lecture->course->coursePackage->name ?? '';
+                        if (mb_strpos($pkgName, 'باقة اطفال توازن') !== false || mb_strpos($pkgName, 'باقة اطفال سرعة') !== false) {
+                            $rate = 6000;
+                        }
+                        $basePay += $rate;
+                    }
                     
                     $payroll = \App\Models\TrainerPayroll::firstOrCreate(
                         [

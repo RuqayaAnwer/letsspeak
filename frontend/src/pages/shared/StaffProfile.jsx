@@ -452,14 +452,14 @@ const StaffProfile = () => {
                                     </div>
                                     <div className="space-y-3 mt-4 text-sm max-w-full">
                                         <div className="flex justify-between items-center text-gray-600 dark:text-gray-400">
-                                            <span>الراتب الثابت والتخصيص</span>
-                                            <span className="font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(pr.base_pay || 0)}</span>
+                                            <span>الراتب الأساسي (إداري/تخصيص)</span>
+                                            <span className="font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(pr.user?.base_salary || 0)}</span>
                                         </div>
                                         {isTrainer && (
                                             <>
                                                 <div className="flex justify-between items-center text-gray-600 dark:text-gray-400">
                                                     <span>محاضرات مسجلة ({pr.completed_lectures})</span>
-                                                    <span className="font-semibold text-gray-800 dark:text-gray-200">{formatCurrency((pr.completed_lectures || 0) * (pr.lecture_rate || 4000))}</span>
+                                                    <span className="font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(pr.base_pay || 0)}</span>
                                                 </div>
                                                 {(pr.renewal_total > 0 || pr.competition_bonus > 0 || pr.selected_volume_bonus > 0 || pr.volume_bonus > 0) && (
                                                     <div className="flex justify-between items-center text-primary-600 dark:text-primary-400 mt-2">
