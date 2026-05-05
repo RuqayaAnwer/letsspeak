@@ -1436,9 +1436,9 @@ class FinanceController extends Controller
             \Illuminate\Support\Facades\Log::error('markTrainerPaid Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ غير متوقع',
+                'message' => 'حدث خطأ: ' . $e->getMessage(),
                 'error' => $e->getMessage()
-            ], 500);
+            ], 200);
         }
     }
 
