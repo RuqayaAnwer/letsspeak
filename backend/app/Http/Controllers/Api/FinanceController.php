@@ -1447,82 +1447,92 @@ class FinanceController extends Controller
      */
     public function markTrainerUnpaid(Request $request): JsonResponse
     {
-        if (!$this->isAuthorized($request)) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
-        }
+        try {
+            if (!$this->isAuthorized($request)) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            }
 
-        $request->validate([
-            'trainer_id' => 'required|exists:trainers,id',
-            'month' => 'required|integer|min:1|max:12',
-            'year' => 'required|integer|min:2020',
-        ]);
+            $request->validate([
+                'trainer_id' => 'required|exists:trainers,id',
+                'month' => 'required|integer|min:1|max:12',
+                'year' => 'required|integer|min:2020',
+            ]);
 
-        $trainerId = $request->input('trainer_id');
-        $month = $request->input('month');
-        $year = $request->input('year');
+            $trainerId = $request->input('trainer_id');
+            $month = $request->input('month');
+            $year = $request->input('year');
 
-        // Find payroll record
-        $payroll = TrainerPayroll::where('trainer_id', $trainerId)
-            ->where('month', $month)
-            ->where('year', $year)
-            ->first();
+            // Find payroll record
+            $payroll = TrainerPayroll::where('trainer_id', $trainerId)
+                ->where('month', $month)
+                ->where('year', $year)
+                ->first();
 
-        if (!$payroll) {
+            if (!$payroll) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لم يتم العثور على سجل الراتب',
+                ], 404);
+            }
+
+            // Save old status for logging
+            $oldStatus = $payroll->status ?? 'draft';
+            $oldPaidAt = $payroll->paid_at ? $payroll->paid_at->format('Y-m-d H:i:s') : null;
+            
+            // Update status to draft (unpaid)
+            $payroll->status = 'draft';
+            $payroll->paid_at = null;
+            $payroll->save();
+
+            // Sync lecture payment statuses to 'unpaid'
+            $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->format('Y-m-d');
+            $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d');
+            
+            \App\Models\Lecture::whereHas('course', function ($query) use ($trainerId) {
+                $query->where('trainer_id', $trainerId);
+            })
+            ->whereBetween('date', [$startDate, $endDate])
+            ->where('trainer_payment_status', 'paid')
+            ->where(function ($query) {
+                $query->whereIn('attendance', ['present', 'partially', 'absent'])
+                      ->orWhere('is_completed', true);
+            })
+            ->update(['trainer_payment_status' => 'unpaid']);
+
+            // Log the change in ActivityLog
+            try {
+                $trainer = Trainer::find($trainerId);
+                $monthName = $this->getMonthName($month);
+                $trainerName = $trainer ? $trainer->name : 'غير محدد';
+                
+                ActivityLog::create([
+                    'user_id' => auth()->id() ?? $request->user()?->id,
+                    'action' => 'trainer_payroll_status_changed',
+                    'model_type' => 'TrainerPayroll',
+                    'model_id' => $payroll->id,
+                    'old_values' => ['status' => $oldStatus, 'paid_at' => $oldPaidAt],
+                    'new_values' => ['status' => 'draft', 'paid_at' => null],
+                    'description' => "تم تحديث حالة راتب المدرب {$trainerName} لشهر {$monthName} {$year} من '{$oldStatus}' إلى 'draft'",
+                    'ip_address' => $request->ip(),
+                ]);
+            } catch (\Throwable $e) {
+                // Log error but don't fail the request
+                \Illuminate\Support\Facades\Log::warning('Failed to log payroll status change: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تحديث حالة الراتب بنجاح',
+                'data' => $payroll,
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('markTrainerUnpaid Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return response()->json([
                 'success' => false,
-                'message' => 'لم يتم العثور على سجل الراتب',
-            ], 404);
+                'message' => 'حدث خطأ: ' . $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 200); // 200 to bypass Axios interceptor
         }
-
-        // Save old status for logging
-        $oldStatus = $payroll->status ?? 'draft';
-        $oldPaidAt = $payroll->paid_at ? $payroll->paid_at->format('Y-m-d H:i:s') : null;
-        
-        // Update status to draft (unpaid)
-        $payroll->status = 'draft';
-        $payroll->paid_at = null;
-        $payroll->save();
-
-        // Sync lecture payment statuses to 'unpaid'
-        $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->format('Y-m-d');
-        $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d');
-        
-        \App\Models\Lecture::whereHas('course', function ($query) use ($trainerId) {
-            $query->where('trainer_id', $trainerId);
-        })
-        ->whereBetween('date', [$startDate, $endDate])
-        ->where('trainer_payment_status', 'paid')
-        ->where(function ($query) {
-            $query->whereIn('attendance', ['present', 'partially', 'absent'])
-                  ->orWhere('is_completed', true);
-        })
-        ->update(['trainer_payment_status' => 'unpaid']);
-
-        // Log the change in ActivityLog
-        try {
-            $trainer = Trainer::find($trainerId);
-            $monthName = $this->getMonthName($month);
-            
-            ActivityLog::create([
-                'user_id' => auth()->id() ?? $request->user()?->id,
-                'action' => 'trainer_payroll_status_changed',
-                'model_type' => 'TrainerPayroll',
-                'model_id' => $payroll->id,
-                'old_values' => ['status' => $oldStatus, 'paid_at' => $oldPaidAt],
-                'new_values' => ['status' => 'draft', 'paid_at' => null],
-                'description' => "تم تحديث حالة راتب المدرب {$trainer->name} لشهر {$monthName} {$year} من '{$oldStatus}' إلى 'draft'",
-                'ip_address' => $request->ip(),
-            ]);
-        } catch (\Exception $e) {
-            // Log error but don't fail the request
-            \Log::warning('Failed to log payroll status change: ' . $e->getMessage());
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'تم تحديث حالة الراتب بنجاح',
-            'data' => $payroll,
-        ]);
     }
 
     /**
