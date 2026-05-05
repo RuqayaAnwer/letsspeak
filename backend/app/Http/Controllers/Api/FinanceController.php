@@ -1394,13 +1394,11 @@ class FinanceController extends Controller
             $payroll->save();
 
             // Sync lecture payment statuses to 'paid'
-            $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->format('Y-m-d');
-            $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d');
-            
             \App\Models\Lecture::whereHas('course', function ($query) use ($trainerId) {
                 $query->where('trainer_id', $trainerId);
             })
-            ->whereBetween('date', [$startDate, $endDate])
+            ->whereMonth('date', $month)
+            ->whereYear('date', $year)
             ->where(function ($query) {
                 $query->whereIn('attendance', ['present', 'partially', 'absent'])
                       ->orWhere('is_completed', true);
@@ -1485,13 +1483,11 @@ class FinanceController extends Controller
             $payroll->save();
 
             // Sync lecture payment statuses to 'unpaid'
-            $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->format('Y-m-d');
-            $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d');
-            
             \App\Models\Lecture::whereHas('course', function ($query) use ($trainerId) {
                 $query->where('trainer_id', $trainerId);
             })
-            ->whereBetween('date', [$startDate, $endDate])
+            ->whereMonth('date', $month)
+            ->whereYear('date', $year)
             ->where('trainer_payment_status', 'paid')
             ->where(function ($query) {
                 $query->whereIn('attendance', ['present', 'partially', 'absent'])
