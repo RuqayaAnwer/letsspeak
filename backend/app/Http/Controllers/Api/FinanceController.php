@@ -1413,7 +1413,7 @@ class FinanceController extends Controller
                     'description' => "تم تحديث حالة راتب المدرب {$trainer->name} لشهر {$monthName} {$year} من '{$oldStatus}' إلى 'paid'",
                     'ip_address' => $request->ip(),
                 ]);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 // Log error but don't fail the request
                 \Illuminate\Support\Facades\Log::warning('Failed to log payroll status change: ' . $e->getMessage());
             }
@@ -1423,7 +1423,7 @@ class FinanceController extends Controller
                 'message' => 'تم تحديث حالة الراتب بنجاح',
                 'data' => $payroll,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('markTrainerPaid Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return response()->json([
                 'success' => false,
@@ -1431,6 +1431,20 @@ class FinanceController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Get Arabic month name
+     */
+    private function getMonthName($month): string
+    {
+        $months = [
+            1 => 'يناير', 2 => 'فبراير', 3 => 'مارس', 4 => 'أبريل',
+            5 => 'مايو', 6 => 'يونيو', 7 => 'يوليو', 8 => 'أغسطس',
+            9 => 'سبتمبر', 10 => 'أكتوبر', 11 => 'نوفمبر', 12 => 'ديسمبر'
+        ];
+        
+        return $months[(int)$month] ?? (string)$month;
     }
 
     /**
