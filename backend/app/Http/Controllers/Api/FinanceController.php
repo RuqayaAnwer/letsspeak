@@ -75,12 +75,13 @@ class FinanceController extends Controller
      */
     public function trainerPayroll(Request $request): JsonResponse
     {
-        if (!$this->isAuthorized($request)) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
-        }
+        try {
+            if (!$this->isAuthorized($request)) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            }
 
-        $month = (int) $request->input('month', date('m'));
-        $year = (int) $request->input('year', date('Y'));
+            $month = (int) $request->input('month', date('m'));
+            $year = (int) $request->input('year', date('Y'));
 
         // Financial rates
         $lectureRate = 4000; // د.ع per completed lecture
@@ -99,10 +100,10 @@ class FinanceController extends Controller
 
         // Get ALL users who are active, plus any legacy trainers
         $users = \App\Models\User::where('status', 'active')->with('trainer')->get();
-        $activeUserNames = $users->pluck('name')->map(function($n) { return trim(strtolower($n)); })->toArray();
+        $activeUserNames = $users->pluck('name')->map(function($n) { return trim(strtolower($n ?? '')); })->toArray();
         
         $legacyTrainers = Trainer::whereNull('user_id')->get()->reject(function($trainer) use ($activeUserNames) {
-            return in_array(trim(strtolower($trainer->name)), $activeUserNames);
+            return in_array(trim(strtolower($trainer->name ?? '')), $activeUserNames);
         });
 
         $allStaff = collect();
@@ -501,21 +502,29 @@ class FinanceController extends Controller
             'total_payout' => array_sum(array_column($payrolls, 'total_pay')),
         ];
 
-        \Log::info('Payroll calculation complete', [
-            'payrolls_count' => count($payrolls),
-            'summary' => $summary,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'month' => $month,
-                'year' => $year,
-                'payrolls' => $payrolls,
-                'competition_winners' => $competitionWinners,
+            \Log::info('Payroll calculation complete', [
+                'payrolls_count' => count($payrolls),
                 'summary' => $summary,
-            ],
-        ]);
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'month' => $month,
+                    'year' => $year,
+                    'payrolls' => $payrolls,
+                    'competition_winners' => $competitionWinners,
+                    'summary' => $summary,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('trainerPayroll Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ في تحميل الرواتب',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -1431,20 +1440,6 @@ class FinanceController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Get Arabic month name
-     */
-    private function getMonthName($month): string
-    {
-        $months = [
-            1 => 'يناير', 2 => 'فبراير', 3 => 'مارس', 4 => 'أبريل',
-            5 => 'مايو', 6 => 'يونيو', 7 => 'يوليو', 8 => 'أغسطس',
-            9 => 'سبتمبر', 10 => 'أكتوبر', 11 => 'نوفمبر', 12 => 'ديسمبر'
-        ];
-        
-        return $months[(int)$month] ?? (string)$month;
     }
 
     /**
