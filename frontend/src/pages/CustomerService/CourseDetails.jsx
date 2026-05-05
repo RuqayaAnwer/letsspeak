@@ -6,6 +6,8 @@ import EmptyState from '../../components/EmptyState';
 import { formatDateSimple } from '../../utils/dateFormat';
 import { formatCurrency } from '../../utils/currencyFormat';
 import { useAuth } from '../../context/AuthContext';
+import { Brain } from 'lucide-react';
+import StudentAssessmentModal from '../../components/StudentAssessmentModal';
 
 const CourseDetails = () => {
   const navigate = useNavigate();
@@ -22,6 +24,12 @@ const CourseDetails = () => {
   const [editValue, setEditValue] = useState(''); // Value being edited
   const [notesModal, setNotesModal] = useState({ open: false, courseId: null, notes: '' });
   const [postponementModal, setPostponementModal] = useState({ open: false, courseId: null, student: '', trainer: '' });
+  const [assessmentModal, setAssessmentModal] = useState({ open: false, studentId: null, studentName: '' });
+
+  const openAssessmentModal = (studentId, studentName) => {
+    if (!studentId) return;
+    setAssessmentModal({ open: true, studentId, studentName });
+  };
 
   const openPostponementModal = (course) => {
     if (!isAdmin) return;
@@ -166,6 +174,7 @@ const CourseDetails = () => {
             
             return {
               ...fullCourse,
+              student_id: fullCourse.student_id || (fullCourse.students && fullCourse.students[0] ? fullCourse.students[0].id : null),
               student_name: studentName,
               second_student_name: secondStudentName,
               trainer_name: trainerName,
@@ -547,9 +556,23 @@ const CourseDetails = () => {
                     title={course.student_name}
                     onClick={() => setSelectedRow(course.id)}
                   >
-                    {course.student_name}
+                    <div className="flex items-center justify-center gap-1">
+                      {course.student_name}
+                      {course.student_id && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openAssessmentModal(course.student_id, course.student_name);
+                          }}
+                          className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                          title="السجل التقييمي للطالب"
+                        >
+                          <Brain className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                     {course.extra_lectures_count > 0 && (
-                      <span className="inline-block mr-1 px-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 rounded font-bold" title={`يحتوي على ${course.extra_lectures_count} محاضرات إضافية`}>
+                      <span className="inline-block mt-0.5 px-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 rounded font-bold" title={`يحتوي على ${course.extra_lectures_count} محاضرات إضافية`}>
                         +{course.extra_lectures_count}
                       </span>
                     )}
@@ -917,6 +940,14 @@ const CourseDetails = () => {
           </div>
         </div>
       )}
+
+      {/* Assessment Modal */}
+      <StudentAssessmentModal 
+        isOpen={assessmentModal.open}
+        onClose={() => setAssessmentModal({ open: false, studentId: null, studentName: '' })}
+        studentId={assessmentModal.studentId}
+        studentName={assessmentModal.studentName}
+      />
     </div>
   );
 };

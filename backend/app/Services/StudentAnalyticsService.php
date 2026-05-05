@@ -177,6 +177,7 @@ class StudentAnalyticsService
                 return [
                     'id' => $note->id,
                     'text' => $note->note,
+                    'type' => $note->type ?? 'general',
                     'created_at' => $note->created_at->format('Y-m-d H:i'),
                     'user' => $note->user ? $note->user->name : 'النظام',
                 ];

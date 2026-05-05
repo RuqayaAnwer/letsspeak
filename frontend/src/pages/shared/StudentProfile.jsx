@@ -5,9 +5,11 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   X, User, Phone, GraduationCap, Calendar, 
   BookOpen, Clock, Activity, CheckCircle, 
-  AlertCircle, CreditCard, ChevronDown, ChevronUp, RefreshCw, FileText, Plus, Trash2
+  AlertCircle, CreditCard, ChevronDown, ChevronUp, RefreshCw, FileText, Plus, Trash2,
+  Sparkles, Target, Brain, MessageSquare
 } from 'lucide-react';
 import Modal from '../../components/Modal';
+import StudentAssessmentModal from '../../components/StudentAssessmentModal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { useParams, useNavigate } from 'react-router-dom';
 
@@ -31,10 +33,8 @@ const StudentProfile = () => {
   });
   const [submittingPayment, setSubmittingPayment] = useState(false);
 
-  // Note Modal State
-  const [noteModal, setNoteModal] = useState(false);
-  const [newNote, setNewNote] = useState('');
-  const [submittingNote, setSubmittingNote] = useState(false);
+  // Assessment Modal State
+  const [assessmentModal, setAssessmentModal] = useState({ open: false, studentId: null, studentName: '' });
 
   // Generate timeline events
   const getTimelineEvents = () => {
@@ -55,7 +55,7 @@ const StudentProfile = () => {
     }
     
     // Add payments
-    if (profileData.all_payments) {
+    if (profileData.all_payments && user?.role !== 'trainer') {
       profileData.all_payments.forEach(payment => {
         const relatedCourse = profileData.courses_history?.find(c => c.id === payment.course_id);
         events.push({
@@ -144,35 +144,7 @@ const StudentProfile = () => {
     }
   };
 
-  const handleNoteSubmit = async (e) => {
-    e.preventDefault();
-    if (!newNote.trim()) return;
-    
-    setSubmittingNote(true);
-    try {
-      await api.post(`/students/${studentId}/notes`, { note: newNote });
-      await fetchProfileData();
-      setNoteModal(false);
-      setNewNote('');
-    } catch (err) {
-      console.error('Error adding note:', err);
-      alert('فشل إضافة الملاحظة');
-    } finally {
-      setSubmittingNote(false);
-    }
-  };
 
-  const handleDeleteNote = async (noteId) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذه الملاحظة؟')) return;
-    
-    try {
-      await api.delete(`/students/notes/${noteId}`);
-      await fetchProfileData();
-    } catch (err) {
-      console.error('Error deleting note:', err);
-      alert('فشل حذف الملاحظة');
-    }
-  };
 
   // Render Activity Ring
   const renderProgressCircle = (percentage, colorClass, label, icon) => {
@@ -266,12 +238,12 @@ const StudentProfile = () => {
           </div>
           <div className="flex items-center gap-2">
             <button 
-              onClick={() => setNoteModal(true)}
+              onClick={() => setAssessmentModal({ open: true, studentId, studentName: profileData?.student?.name })}
               className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 rounded-lg text-xs sm:text-sm font-bold shadow-sm transition-colors ring-2 ring-yellow-400/30 whitespace-nowrap"
             >
-              <Plus className="w-3 h-3 sm:w-4 sm:h-4" /> 
-              <span className="hidden sm:inline">إضافة ملاحظة</span>
-              <span className="sm:hidden">ملاحظة</span>
+              <Brain className="w-3 h-3 sm:w-4 sm:h-4" /> 
+              <span className="hidden sm:inline">السجل التقييمي</span>
+              <span className="sm:hidden">تقييم</span>
             </button>
             <button 
               onClick={() => navigate(-1)}
@@ -383,10 +355,10 @@ const StudentProfile = () => {
                     السجل الزمني للأحداث
                   </h3>
                   <button 
-                    onClick={() => setNoteModal(true)}
+                    onClick={() => setAssessmentModal({ open: true, studentId, studentName: profileData?.student?.name })}
                     className="text-xs flex items-center gap-1 bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-900/50 text-yellow-800 dark:text-yellow-400 px-2.5 py-1.5 rounded-md font-semibold transition-colors"
                   >
-                    <Plus className="w-3 h-3" /> تدوين ملاحظة
+                    <Plus className="w-3 h-3" /> تدوين تقييم جديد
                   </button>
                 </div>
                 
@@ -400,28 +372,30 @@ const StudentProfile = () => {
                       
                       // NOTE ITEM
                       if (event.type === 'note') {
+                        const noteType = event.data.type || 'general';
+                        const typeConfig = {
+                          general: { bg: 'yellow', icon: MessageSquare, label: 'ملاحظة عامة' },
+                          strength: { bg: 'green', icon: Sparkles, label: 'نقطة قوة' },
+                          weakness: { bg: 'orange', icon: Target, label: 'مجال تحسين' },
+                          interest: { bg: 'blue', icon: Brain, label: 'اهتمام' }
+                        }[noteType];
+                        const NoteIcon = typeConfig.icon;
+
                         return (
                           <div key={event.id} className="relative group">
-                            <div className="absolute -right-9 mt-1.5 w-6 h-6 rounded-full bg-yellow-100 dark:bg-yellow-900 border-2 border-white dark:border-gray-800 flex items-center justify-center shadow-sm">
-                              <FileText className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
+                            <div className={`absolute -right-9 mt-1.5 w-6 h-6 rounded-full bg-${typeConfig.bg}-100 dark:bg-${typeConfig.bg}-900 border-2 border-white dark:border-gray-800 flex items-center justify-center shadow-sm`}>
+                              <NoteIcon className={`w-3 h-3 text-${typeConfig.bg}-600 dark:text-${typeConfig.bg}-400`} />
                             </div>
-                            <div className="bg-gradient-to-l from-yellow-50/50 to-white dark:from-yellow-900/20 dark:to-gray-800 rounded-xl p-4 border border-yellow-100 dark:border-yellow-900/50 relative shadow-sm hover:shadow-md transition-all">
+                            <div className={`bg-gradient-to-l from-${typeConfig.bg}-50/50 to-white dark:from-${typeConfig.bg}-900/20 dark:to-gray-800 rounded-xl p-4 border border-${typeConfig.bg}-100 dark:border-${typeConfig.bg}-900/50 relative shadow-sm hover:shadow-md transition-all`}>
                               <div className="flex justify-between items-start mb-2">
-                                <h5 className="text-sm font-bold text-yellow-800 dark:text-yellow-400 flex items-center gap-1.5">
-                                  <FileText className="w-4 h-4"/> ملاحظة إدارية
+                                <h5 className={`text-sm font-bold text-${typeConfig.bg}-800 dark:text-${typeConfig.bg}-400 flex items-center gap-1.5`}>
+                                  <NoteIcon className="w-4 h-4"/> {typeConfig.label}
                                 </h5>
-                                <button 
-                                  onClick={() => handleDeleteNote(event.data.id)}
-                                  className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 opacity-0 group-hover:opacity-100"
-                                  title="حذف الملاحظة"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
                               </div>
                               <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap text-sm leading-relaxed">{event.data.text}</p>
-                              <div className="mt-3 pt-3 border-t border-yellow-100/50 dark:border-yellow-900/30 flex items-center gap-3 text-xs text-yellow-700 dark:text-yellow-500/80 font-medium opacity-80 group-hover:opacity-100 transition-opacity">
-                                <span className="flex items-center gap-1"><User className="w-3 h-3" /> الكاتب: {event.data.user}</span>
-                                <span className="w-1 h-1 rounded-full bg-yellow-300"></span>
+                              <div className={`mt-3 pt-3 border-t border-${typeConfig.bg}-100/50 dark:border-${typeConfig.bg}-900/30 flex items-center gap-3 text-xs text-${typeConfig.bg}-700 dark:text-${typeConfig.bg}-500/80 font-medium opacity-80 group-hover:opacity-100 transition-opacity`}>
+                                <span className="flex items-center gap-1"><User className="w-3 h-3" /> بواسطة: {event.data.user}</span>
+                                <span className={`w-1 h-1 rounded-full bg-${typeConfig.bg}-300`}></span>
                                 <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {event.full_date || event.date}</span>
                               </div>
                             </div>
@@ -624,51 +598,16 @@ const StudentProfile = () => {
         </form>
       </Modal>
 
-      {/* Note Modal */}
-      <Modal
-        isOpen={noteModal}
-        onClose={() => !submittingNote && setNoteModal(false)}
-        title="إضافة ملاحظة للطالب"
-        size="md"
-        zIndex="z-[200]"
-      >
-        <form onSubmit={handleNoteSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              نص الملاحظة
-            </label>
-            <textarea
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              className="w-full relative z-[100] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 font-sans dark:bg-gray-700 dark:text-white min-h-[120px]"
-              rows="4"
-              placeholder="اكتب ملاحظتك هنا... (مثال: الطالب يحتاج متابعة إضافية في المحادثة)"
-              required
-            ></textarea>
-            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-              <FileText className="w-3 h-3" />
-              سيتم تثبيت الملاحظة برقمك وتاريخ اليوم.
-            </p>
-          </div>
-          <div className="flex gap-3 mt-6">
-            <button
-              type="submit"
-              disabled={submittingNote || !newNote.trim()}
-              className="btn flex-1 flex justify-center items-center bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-lg shadow-sm"
-            >
-              {submittingNote ? <LoadingSpinner size="sm" /> : 'حفظ الملاحظة'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setNoteModal(false)}
-              disabled={submittingNote}
-              className="btn-secondary flex-1 border border-gray-200"
-            >
-              إلغاء
-            </button>
-          </div>
-        </form>
-      </Modal>
+      {/* Assessment Modal Component */}
+      <StudentAssessmentModal 
+        isOpen={assessmentModal.open}
+        onClose={() => {
+          setAssessmentModal({ open: false, studentId: null, studentName: '' });
+          fetchProfileData(); // Refresh to show new notes in timeline
+        }}
+        studentId={assessmentModal.studentId}
+        studentName={assessmentModal.studentName}
+      />
 
     </div>
   );

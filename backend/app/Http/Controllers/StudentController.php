@@ -108,10 +108,12 @@ class StudentController extends Controller
     {
         $request->validate([
             'note' => 'required|string',
+            'type' => 'nullable|string|in:general,strength,weakness,interest',
         ]);
 
         $note = $student->studentNotes()->create([
             'user_id' => auth()->id(),
+            'type' => $request->type ?? 'general',
             'note' => $request->note,
         ]);
 
