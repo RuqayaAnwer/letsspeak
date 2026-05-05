@@ -2,38 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Student;
-use App\Models\StudentNote;
 use Illuminate\Http\Request;
-
-
-use App\Services\StudentAnalyticsService;
+use App\Models\Student;
+use App\Models\Course;
+use App\Models\Payment;
+use App\Models\StudentNote;
+use Illuminate\Support\Facades\Log;
 
 class StudentController extends Controller
 {
     /**
-     * Display a listing of students.
+     * Get all students with their courses count and status.
      */
-    public function index(Request $request)
+    public function index()
     {
-        $query = Student::query();
-
-        // Search by name or phone
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->has('all') && $request->all == 'true') {
-            $students = $query->latest()->get();
-            return response()->json(['data' => $students]);
-        }
-
-        $students = $query->withCount('courses')->latest()->paginate(15);
-
+        $students = Student::withCount('courses')
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
         return response()->json($students);
     }
 
@@ -45,13 +31,17 @@ class StudentController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
-            'level' => 'nullable|string|max:10',
+            'level' => 'nullable|string|max:50',
+            'status' => 'required|in:active,inactive',
             'notes' => 'nullable|string',
         ]);
 
-        $student = Student::create($request->only(['name', 'phone', 'level', 'notes']));
+        $student = Student::create($request->all());
 
-        return response()->json($student, 201);
+        return response()->json([
+            'message' => 'تم إضافة الطالب بنجاح',
+            'student' => $student
+        ], 201);
     }
 
     /**
@@ -59,8 +49,6 @@ class StudentController extends Controller
      */
     public function show(Student $student)
     {
-        $student->load(['courses.trainer.user', 'courses.lectures', 'payments']);
-        
         return response()->json($student);
     }
 
@@ -70,15 +58,19 @@ class StudentController extends Controller
     public function update(Request $request, Student $student)
     {
         $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'phone' => 'sometimes|required|string|max:20',
-            'level' => 'nullable|string|max:10',
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'level' => 'nullable|string|max:50',
+            'status' => 'required|in:active,inactive',
             'notes' => 'nullable|string',
         ]);
 
-        $student->update($request->only(['name', 'phone', 'level', 'notes']));
+        $student->update($request->all());
 
-        return response()->json($student);
+        return response()->json([
+            'message' => 'تم تحديث بيانات الطالب بنجاح',
+            'student' => $student
+        ]);
     }
 
     /**
@@ -88,16 +80,18 @@ class StudentController extends Controller
     {
         $student->delete();
 
-        return response()->json(null, 204);
+        return response()->json([
+            'message' => 'تم حذف الطالب بنجاح'
+        ]);
     }
 
     /**
-     * Get student profile history and analytics.
+     * Get student profile including courses and payments.
      */
-    public function profile(Student $student, \App\Services\StudentAnalyticsService $analyticsService)
+    public function profile(Student $student, \App\Services\StudentAnalyticsService $analytics)
     {
-        $data = $analyticsService->getStudentProfileData($student);
-
+        $data = $analytics->getStudentProfile($student);
+        
         return response()->json($data);
     }
 
@@ -106,23 +100,36 @@ class StudentController extends Controller
      */
     public function addNote(Request $request, Student $student)
     {
-        $request->validate([
-            'note' => 'required|string',
-            'type' => 'nullable|string|in:general,strength,weakness,interest',
-        ]);
+        try {
+            $request->validate([
+                'note' => 'required|string',
+                'type' => 'nullable|string|in:general,strength,weakness,interest',
+            ]);
 
-        $note = $student->studentNotes()->create([
-            'user_id' => auth()->id(),
-            'type' => $request->type ?? 'general',
-            'note' => $request->note,
-        ]);
+            $note = $student->studentNotes()->create([
+                'user_id' => auth()->id(),
+                'type' => $request->type ?? 'general',
+                'note' => $request->note,
+            ]);
 
-        $note->load('user:id,name');
+            $note->load('user:id,name');
 
-        return response()->json([
-            'message' => 'تم إضافة الملاحظة بنجاح',
-            'note' => $note
-        ], 201);
+            return response()->json([
+                'message' => 'تم إضافة الملاحظة بنجاح',
+                'note' => $note
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Error adding student note: ' . $e->getMessage(), [
+                'student_id' => $student->id,
+                'request' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'message' => 'حدث خطأ أثناء إضافة الملاحظة', 
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
