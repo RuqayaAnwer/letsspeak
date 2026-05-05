@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Sparkles, Brain, Target, MessageSquare, Trash2 } from 'lucide-react';
 import api from '../api/axios';
-import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -62,11 +61,14 @@ const StudentAssessmentModal = ({ isOpen, onClose, studentId, studentName }) => 
       });
       
       // Prepend new note to the list
+      const now = new Date();
+      const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      
       const addedNote = {
         id: response.data.note?.id || Date.now(),
         text: newNote,
         type: noteType,
-        created_at: format(new Date(), 'yyyy-MM-dd HH:mm'),
+        created_at: formattedDate,
         user: currentUser?.name || 'أنا'
       };
       
