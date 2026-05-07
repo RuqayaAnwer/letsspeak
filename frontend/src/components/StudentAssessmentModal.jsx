@@ -11,6 +11,24 @@ const NOTE_TYPES = {
   interest: { label: 'الاهتمامات', icon: Brain, color: 'blue' }
 };
 
+const STRENGTH_OPTIONS = [
+  { id: 'clear_pronunciation', title: 'النطق الواضح', desc: 'القدرة على النطق الواضح وإيصال الرسالة بوضوح' },
+  { id: 'fluent_speaking', title: 'التحدث بطلاقة', desc: 'القدرة على التحدث بشكل طبيعي وبدون توقف مفرط' },
+  { id: 'vocabulary_usage', title: 'استخدام المفردات', desc: 'تنوع وغنى في استخدام المفردات' },
+  { id: 'expressing_ideas', title: 'التعبير عن الأفكار', desc: 'القدرة على التعبير عن الأفكار والآراء بشكل واضح ومفهوم' },
+  { id: 'listening_response', title: 'الاستماع والاستجابة', desc: 'القدرة على الاستماع الجيد والرد بشكل فعال على المحادثات' },
+  { id: 'grammar_compliance', title: 'الامتثال للقواعد اللغوية', desc: 'القدرة على استخدام القواعد اللغوية بشكل صحيح ودقيق' }
+];
+
+const WEAKNESS_OPTIONS = [
+  { id: 'general_pronunciation', title: 'النطق العام', desc: 'صعوبة في النطق السليم أو العام' },
+  { id: 'weak_vocabulary', title: 'ضعف المفردات', desc: 'المفردات محدودة وتحتاج إلى تنويع' },
+  { id: 'difficulty_expressing', title: 'صعوبة التعبير عن الأفكار', desc: 'صعوبة في التعبير عن الأفكار بوضوح أو بطء في الرد' },
+  { id: 'stuttering', title: 'التلعثم في الحديث', desc: 'الانقطاع أو التعثر عند التحدث' },
+  { id: 'poor_focus', title: 'التركيز الضعيف', desc: 'صعوبة في المحافظة على التركيز أثناء المحادثات الطويلة' },
+  { id: 'lack_of_variety', title: 'قلة التنوع في الجمل', desc: 'استخدام متكرر لبنية الجمل والتعبير' }
+];
+
 const StudentAssessmentModal = ({ isOpen, onClose, studentId, studentName }) => {
   const { user: currentUser } = useAuth();
   const [notes, setNotes] = useState([]);
@@ -21,6 +39,8 @@ const StudentAssessmentModal = ({ isOpen, onClose, studentId, studentName }) => 
 
   // Form State
   const [newNote, setNewNote] = useState('');
+  const [selectedOptions, setSelectedOptions] = useState([]);
+  const [additionalNote, setAdditionalNote] = useState('');
   const [noteType, setNoteType] = useState('strength');
   const [showForm, setShowForm] = useState(false);
 
@@ -29,6 +49,8 @@ const StudentAssessmentModal = ({ isOpen, onClose, studentId, studentName }) => 
       fetchNotes();
       setShowForm(false);
       setNewNote('');
+      setSelectedOptions([]);
+      setAdditionalNote('');
     }
   }, [isOpen, studentId]);
 
@@ -49,14 +71,39 @@ const StudentAssessmentModal = ({ isOpen, onClose, studentId, studentName }) => 
     }
   };
 
+  useEffect(() => {
+    setSelectedOptions([]);
+    setAdditionalNote('');
+    setNewNote('');
+  }, [noteType]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!newNote.trim()) return;
+    
+    let finalNoteText = '';
+    
+    if (noteType === 'strength' || noteType === 'weakness') {
+      const options = noteType === 'strength' ? STRENGTH_OPTIONS : WEAKNESS_OPTIONS;
+      const selectedTitles = options.filter(opt => selectedOptions.includes(opt.id)).map(opt => `• ${opt.title} (${opt.desc})`);
+      
+      if (selectedTitles.length === 0 && !additionalNote.trim()) return;
+      
+      if (selectedTitles.length > 0) {
+        finalNoteText = selectedTitles.join('\n');
+      }
+      
+      if (additionalNote.trim()) {
+        finalNoteText += finalNoteText ? `\n\nملاحظات إضافية:\n${additionalNote}` : additionalNote;
+      }
+    } else {
+      if (!newNote.trim()) return;
+      finalNoteText = newNote;
+    }
 
     setSubmitting(true);
     try {
       const response = await api.post(`/students/${studentId}/notes`, {
-        note: newNote,
+        note: finalNoteText,
         type: noteType
       });
       
@@ -66,7 +113,7 @@ const StudentAssessmentModal = ({ isOpen, onClose, studentId, studentName }) => 
       
       const addedNote = {
         id: response.data.note?.id || Date.now(),
-        text: newNote,
+        text: finalNoteText,
         type: noteType,
         created_at: formattedDate,
         user: currentUser?.name || 'أنا'
@@ -74,6 +121,8 @@ const StudentAssessmentModal = ({ isOpen, onClose, studentId, studentName }) => 
       
       setNotes([addedNote, ...notes]);
       setNewNote('');
+      setSelectedOptions([]);
+      setAdditionalNote('');
       setShowForm(false);
     } catch (err) {
       console.error('Error adding note:', err);
@@ -212,19 +261,60 @@ const StudentAssessmentModal = ({ isOpen, onClose, studentId, studentName }) => 
                         ))}
                       </div>
                     </div>
-                    <div>
-                      <textarea
-                        required
-                        placeholder="اكتب ملاحظاتك هنا (مثال: يتميز في الاستماع، يحتاج للتركيز على القواعد...)"
-                        className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 min-h-[100px]"
-                        value={newNote}
-                        onChange={(e) => setNewNote(e.target.value)}
-                      ></textarea>
-                    </div>
+                    {(noteType === 'strength' || noteType === 'weakness') ? (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">اختر من القائمة:</label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {(noteType === 'strength' ? STRENGTH_OPTIONS : WEAKNESS_OPTIONS).map(option => (
+                              <label key={option.id} className={`flex items-start p-3 rounded-lg border cursor-pointer transition-colors ${selectedOptions.includes(option.id) ? (noteType === 'strength' ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : 'bg-orange-50 border-orange-500 dark:bg-orange-900/20') : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                                <div className="flex items-center h-5 mt-0.5">
+                                  <input 
+                                    type="checkbox" 
+                                    className={`w-4 h-4 rounded border-gray-300 ${noteType === 'strength' ? 'text-green-600 focus:ring-green-500' : 'text-orange-600 focus:ring-orange-500'}`}
+                                    checked={selectedOptions.includes(option.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedOptions([...selectedOptions, option.id]);
+                                      } else {
+                                        setSelectedOptions(selectedOptions.filter(id => id !== option.id));
+                                      }
+                                    }}
+                                  />
+                                </div>
+                                <div className="mr-3">
+                                  <span className={`block text-sm font-bold ${selectedOptions.includes(option.id) ? (noteType === 'strength' ? 'text-green-700 dark:text-green-400' : 'text-orange-700 dark:text-orange-400') : 'text-gray-700 dark:text-gray-300'}`}>{option.title}</span>
+                                  <span className="block text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">{option.desc}</span>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">ملاحظات إضافية (اختياري)</label>
+                          <textarea
+                            placeholder="اكتب أي ملاحظات إضافية هنا..."
+                            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 min-h-[80px]"
+                            value={additionalNote}
+                            onChange={(e) => setAdditionalNote(e.target.value)}
+                          ></textarea>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <textarea
+                          required
+                          placeholder="اكتب ملاحظاتك هنا (مثال: يتميز في الاستماع، يحتاج للتركيز على القواعد...)"
+                          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 min-h-[100px]"
+                          value={newNote}
+                          onChange={(e) => setNewNote(e.target.value)}
+                        ></textarea>
+                      </div>
+                    )}
                     <div className="flex justify-end">
                       <button 
                         type="submit" 
-                        disabled={submitting || !newNote.trim()}
+                        disabled={submitting || (noteType === 'strength' || noteType === 'weakness' ? (selectedOptions.length === 0 && !additionalNote.trim()) : !newNote.trim())}
                         className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
                         {submitting ? <LoadingSpinner size="sm" /> : 'حفظ التقييم'}
