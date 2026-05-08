@@ -78,7 +78,8 @@ class Lecture extends Model
     ];
 
     protected $appends = [
-        'is_completed'
+        'is_completed',
+        'student_attendance'
     ];
 
     /**
@@ -140,6 +141,27 @@ class Lecture extends Model
             self::ATTENDANCE_PARTIALLY,
             self::ATTENDANCE_ABSENT
         ]);
+    }
+
+    /**
+     * Get student attendance data from pivot table.
+     */
+    public function getStudentAttendanceAttribute()
+    {
+        if (!$this->relationLoaded('students')) {
+            return null;
+        }
+
+        $attendance = [];
+        foreach ($this->students as $student) {
+            $attendance[$student->id] = [
+                'attendance' => $student->pivot->attendance ?? 'pending',
+                'activity' => $student->pivot->activity ?? '',
+                'homework' => $student->pivot->homework ?? '',
+                'notes' => $student->pivot->notes ?? '',
+            ];
+        }
+        return $attendance;
     }
 
     /**

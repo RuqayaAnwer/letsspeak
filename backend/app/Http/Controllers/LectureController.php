@@ -230,6 +230,33 @@ class LectureController extends Controller
                 'is_completed' => $lectureData['is_completed'] ?? null,
             ], fn($v) => $v !== null);
 
+            // Handle dual course individual student attendance
+            if (isset($lectureData['student_attendance']) && is_array($lectureData['student_attendance'])) {
+                $syncData = [];
+                foreach ($lectureData['student_attendance'] as $studentId => $studentAttData) {
+                    $pivotData = [];
+                    if (isset($studentAttData['attendance'])) {
+                        $pivotData['attendance'] = $studentAttData['attendance'];
+                    }
+                    if (isset($studentAttData['activity'])) {
+                        $pivotData['activity'] = $studentAttData['activity'];
+                    }
+                    if (isset($studentAttData['homework'])) {
+                        $pivotData['homework'] = $studentAttData['homework'];
+                    }
+                    if (isset($studentAttData['notes'])) {
+                        $pivotData['notes'] = $studentAttData['notes'];
+                    }
+                    if (!empty($pivotData)) {
+                        $syncData[$studentId] = $pivotData;
+                    }
+                }
+                if (!empty($syncData)) {
+                    $lecture->students()->syncWithoutDetaching($syncData);
+                    $updatedCount++;
+                }
+            }
+
             // Auto-postpone if absent and has limit
             if (isset($lectureData['attendance']) && $lectureData['attendance'] === 'absent') {
                 $lecture->load('course.coursePackage');

@@ -7,6 +7,7 @@ import { formatDate } from '../../utils/dateFormat';
 import { formatCurrencyAmount } from '../../utils/currencyFormat';
 import { ArrowRight, BookOpen, Calendar, Users, User, UserPlus, CreditCard } from 'lucide-react';
 import Select from 'react-select';
+import AsyncSelect from 'react-select/async';
 
 const CreateCourse = () => {
   const navigate = useNavigate();
@@ -21,12 +22,23 @@ const CreateCourse = () => {
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [addingStudent, setAddingStudent] = useState(false);
   const [addStudentTarget, setAddStudentTarget] = useState(0); // 0 for Student 1, 1 for Student 2
-  const [newStudentData, setNewStudentData] = useState({
-    name: '',
-    phone: '',
-    level: '',
-    gender: 'male',
-  });
+  const [selectedLeadId, setSelectedLeadId] = useState(null);
+
+  const loadLeads = async (inputValue) => {
+    if (!inputValue || inputValue.length < 2) return [];
+    try {
+      const response = await api.get(`/leads?search=${inputValue}`);
+      const leadsData = response.data?.leads?.data || [];
+      return leadsData.map(lead => ({
+        value: lead.id,
+        label: `${lead.name} - ${lead.phone_whatsapp} (${lead.status === 'confirmed' ? 'مؤكد' : 'غير مؤكد'})`,
+        lead: lead
+      }));
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+      return [];
+    }
+  };
 
   const levels = [
     { value: 'L1', label: 'المستوى 1' },
@@ -520,17 +532,21 @@ const CreateCourse = () => {
   const handleAddStudentSubmit = async (e) => {
     e.preventDefault();
     if (addingStudent) return; // Prevent double submission
+    if (!selectedLeadId) {
+      alert('يرجى اختيار عميل أولاً');
+      return;
+    }
     
     setAddingStudent(true);
     
     try {
-      const response = await api.post('/students', newStudentData);
+      const response = await api.post(`/leads/${selectedLeadId}/convert`);
       
       // StudentController returns the student object directly
-      const createdStudent = response.data.data || response.data;
+      const createdStudent = response.data.data || response.data.student;
       
       if (createdStudent && createdStudent.id) {
-        alert('تم إضافة الطالب بنجاح');
+        alert('تم تحويل العميل إلى طالب بنجاح');
         
         // Force add the new student to our local state IMMEDIATELY so the dropdown can find them
         setStudents(prev => {
@@ -545,7 +561,7 @@ const CreateCourse = () => {
         
         // Close modal and reset
         setIsAddStudentModalOpen(false);
-        setNewStudentData({ name: '', phone: '', level: '', gender: 'male' });
+        setSelectedLeadId(null);
         
         // Quietly refresh the full list from server in the background
         api.get('/students?all=true').then(res => {
@@ -1136,56 +1152,22 @@ const CreateCourse = () => {
             
             <form onSubmit={handleAddStudentSubmit} className="p-4 space-y-4">
               <div>
-                <label className="label text-sm mb-1">اسم الطالب رباعي *</label>
-                <input
-                  type="text"
-                  value={newStudentData.name}
-                  onChange={(e) => setNewStudentData({ ...newStudentData, name: e.target.value })}
-                  className="input py-2"
-                  placeholder="مثال: علي محمد حسن عباس"
-                  required
+                <label className="label text-sm mb-1">ابحث عن العميل في مسار العملاء *</label>
+                <AsyncSelect
+                  cacheOptions
+                  defaultOptions
+                  loadOptions={loadLeads}
+                  onChange={(selected) => setSelectedLeadId(selected ? selected.value : null)}
+                  placeholder="اكتب اسم العميل أو رقمه للبحث..."
+                  noOptionsMessage={({ inputValue }) => !inputValue ? "اكتب للبحث..." : "لا يوجد عملاء مطابقين للبحث"}
+                  loadingMessage={() => "جاري البحث..."}
+                  styles={selectStyles}
+                  className="text-sm"
+                  isClearable
                 />
-              </div>
-              
-              <div>
-                <label className="label text-sm mb-1">رقم الهاتف *</label>
-                <input
-                  type="tel"
-                  value={newStudentData.phone}
-                  onChange={(e) => setNewStudentData({ ...newStudentData, phone: e.target.value })}
-                  className="input py-2"
-                  placeholder="07XX XXX XXXX"
-                  dir="ltr"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label text-sm mb-1">الجنس</label>
-                  <select
-                    value={newStudentData.gender}
-                    onChange={(e) => setNewStudentData({ ...newStudentData, gender: e.target.value })}
-                    className="select py-2"
-                  >
-                    <option value="male">ذكر</option>
-                    <option value="female">أنثى</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="label text-sm mb-1">المستوى</label>
-                  <select
-                    value={newStudentData.level}
-                    onChange={(e) => setNewStudentData({ ...newStudentData, level: e.target.value })}
-                    className="select py-2"
-                  >
-                    <option value="">غير محدد</option>
-                    {levels.map(l => (
-                      <option key={l.value} value={l.value}>{l.label}</option>
-                    ))}
-                  </select>
-                </div>
+                <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                  يجب أن يكون الطالب مسجلاً مسبقاً في مسار العملاء (Leads) قبل إضافته للكورس.
+                </p>
               </div>
 
               <div className="flex gap-2 pt-4">
@@ -1200,9 +1182,9 @@ const CreateCourse = () => {
                 <button
                   type="submit"
                   className="btn-primary flex-1"
-                  disabled={addingStudent}
+                  disabled={addingStudent || !selectedLeadId}
                 >
-                  {addingStudent ? 'جاري الإضافة...' : 'حفظ وإضافة'}
+                  {addingStudent ? 'جاري التحويل...' : 'تحويل وإضافة للكورس'}
                 </button>
               </div>
             </form>

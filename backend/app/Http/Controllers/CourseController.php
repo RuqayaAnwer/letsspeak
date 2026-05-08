@@ -67,7 +67,7 @@ class CourseController extends Controller
         // For trainers, get all courses (no pagination limit)
         // For other roles, use pagination
         if ($user && method_exists($user, 'isTrainer') && $user->isTrainer()) {
-            $courses = $query->with(['lectures', 'coursePackage'])
+            $courses = $query->with(['lectures.students', 'coursePackage'])
                             ->withCount('lectures')
                             ->orderBy('id', 'asc')
                             ->get()
@@ -103,7 +103,7 @@ class CourseController extends Controller
             ]);
         }
 
-        $courses = $query->with(['lectures', 'coursePackage'])
+        $courses = $query->with(['lectures.students', 'coursePackage'])
                         ->withCount('lectures')
                         ->orderBy('id', 'asc')
                         ->paginate(15);
@@ -399,7 +399,7 @@ class CourseController extends Controller
             return $course;
         });
 
-        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);
+        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures.students']);
         
         // Make coursePackage visible and ensure it's serialized as course_package
         $course->makeVisible('coursePackage');
@@ -427,7 +427,7 @@ class CourseController extends Controller
             }
         }
 
-        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures', 'payments']);
+        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures.students', 'payments']);
         
         // Make coursePackage visible and ensure it's serialized as course_package
         $course->makeVisible('coursePackage');

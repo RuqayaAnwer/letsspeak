@@ -12,8 +12,21 @@ class LeadController extends Controller
     {
         $query = Lead::orderBy('created_at', 'desc');
 
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('phone_whatsapp', 'like', "%{$search}%");
+            });
+        }
+
         if ($request->has('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
+        }
+
+        if ($request->has('all') && $request->all == 'true') {
+            $leads = $query->limit(500)->get(); // Limit to 500 to prevent freezing
+            return response()->json(['data' => $leads]);
         }
 
         // Return statistical counts as well alongside the paginated results
@@ -79,11 +92,12 @@ class LeadController extends Controller
             'phone' => $lead->phone_whatsapp,
             'level' => mb_substr($lead->package_selected ?: 'L1', 0, 10),
             'notes' => $lead->notes . "\n(تم التحويل من مسار العملاء)",
+            'lead_id' => $lead->id,
         ]);
 
         $lead->status = 'confirmed';
         $lead->save();
 
-        return response()->json(['message' => 'تم تحويل العميل إلى طالب بنجاح!', 'student' => $student]);
+        return response()->json(['message' => 'تم تحويل العميل إلى طالب بنجاح!', 'data' => $student]);
     }
 }

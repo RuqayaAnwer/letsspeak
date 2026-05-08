@@ -5,6 +5,7 @@ import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { Plus, Search, Edit2, Trash2, Users, Phone, GraduationCap, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
+import AsyncSelect from 'react-select/async';
 
 const Students = () => {
   const navigate = useNavigate();
@@ -25,6 +26,23 @@ const Students = () => {
     remaining_amount: '',
     payment_method: 'zain_cash',
   });
+  const [selectedLeadId, setSelectedLeadId] = useState(null);
+
+  const loadLeads = async (inputValue) => {
+    if (!inputValue || inputValue.length < 2) return [];
+    try {
+      const response = await api.get(`/leads?search=${inputValue}`);
+      const leadsData = response.data?.leads?.data || [];
+      return leadsData.map(lead => ({
+        value: lead.id,
+        label: `${lead.name} - ${lead.phone_whatsapp} (${lead.status === 'confirmed' ? 'مؤكد' : 'غير مؤكد'})`,
+        lead: lead
+      }));
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+      return [];
+    }
+  };
 
   const levels = [
     { value: 'L1', label: 'المستوى 1' },
@@ -127,7 +145,12 @@ const Students = () => {
       if (editingStudent) {
         await api.put(`/students/${editingStudent.id}`, formData);
       } else {
-        await api.post('/students', formData);
+        if (!selectedLeadId) {
+          alert('يرجى اختيار عميل أولاً');
+          setSubmitting(false);
+          return;
+        }
+        await api.post(`/leads/${selectedLeadId}/convert`);
       }
       fetchStudents();
       closeModal();
@@ -204,6 +227,7 @@ const Students = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingStudent(null);
+    setSelectedLeadId(null);
     setFormData({ 
       name: '', 
       phone: '', 
@@ -573,59 +597,78 @@ const Students = () => {
         title={editingStudent ? 'تعديل بيانات الطالب' : 'إضافة طالب جديد'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="label">اسم الطالب *</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="input"
-              placeholder="أدخل اسم الطالب"
-              required
-            />
-          </div>
+          {!editingStudent ? (
+            <div>
+              <label className="label text-sm mb-1">ابحث عن العميل في مسار العملاء *</label>
+              <AsyncSelect
+                cacheOptions
+                defaultOptions
+                loadOptions={loadLeads}
+                onChange={(selected) => setSelectedLeadId(selected ? selected.value : null)}
+                placeholder="اكتب اسم العميل أو رقمه للبحث..."
+                noOptionsMessage={({ inputValue }) => !inputValue ? "اكتب للبحث..." : "لا يوجد عملاء مطابقين للبحث"}
+                loadingMessage={() => "جاري البحث..."}
+                className="text-sm"
+                isClearable
+              />
+              <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                يجب أن يكون الطالب مسجلاً مسبقاً في مسار العملاء (Leads).
+              </p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="label">اسم الطالب *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="input"
+                  placeholder="أدخل اسم الطالب"
+                  required
+                />
+              </div>
 
-          <div>
-            <label className="label">رقم الهاتف *</label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="input"
-              placeholder="+964 7XX XXX XXXX"
-              dir="ltr"
-              required
-            />
-          </div>
+              <div>
+                <label className="label">رقم الهاتف *</label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="input"
+                  placeholder="+964 7XX XXX XXXX"
+                  dir="ltr"
+                  required
+                />
+              </div>
 
-          <div>
-            <label className="label">المستوى</label>
-            <select
-              value={formData.level}
-              onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-              className="select"
-            >
-              <option value="">اختر المستوى</option>
-              {levels.map((level) => (
-                <option key={level.value} value={level.value}>
-                  {level.label}
-                </option>
-              ))}
-            </select>
-          </div>
+              <div>
+                <label className="label">المستوى</label>
+                <select
+                  value={formData.level}
+                  onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                  className="select"
+                >
+                  <option value="">اختر المستوى</option>
+                  {levels.map((level) => (
+                    <option key={level.value} value={level.value}>
+                      {level.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-
-
-          <div>
-            <label className="label">ملاحظات</label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="input min-h-[100px]"
-              placeholder="أضف أي ملاحظات عن الطالب..."
-            />
-          </div>
-
+              <div>
+                <label className="label">ملاحظات</label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  className="input min-h-[100px]"
+                  placeholder="أضف أي ملاحظات عن الطالب..."
+                />
+              </div>
+            </>
+          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
             <button type="button" onClick={closeModal} className="btn-secondary">
