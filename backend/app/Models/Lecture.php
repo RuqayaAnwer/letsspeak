@@ -136,11 +136,27 @@ class Lecture extends Model
      */
     public function getIsCompletedAttribute(): bool
     {
-        return in_array($this->attendance, [
+        if (in_array($this->attendance, [
             self::ATTENDANCE_PRESENT, 
             self::ATTENDANCE_PARTIALLY,
             self::ATTENDANCE_ABSENT
-        ]);
+        ])) {
+            return true;
+        }
+
+        if ($this->relationLoaded('students')) {
+            foreach ($this->students as $student) {
+                if (in_array($student->pivot->attendance, [
+                    self::ATTENDANCE_PRESENT, 
+                    self::ATTENDANCE_PARTIALLY,
+                    self::ATTENDANCE_ABSENT
+                ])) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

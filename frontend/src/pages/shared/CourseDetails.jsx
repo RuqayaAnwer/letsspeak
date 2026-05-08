@@ -2112,63 +2112,7 @@ const CourseDetails = () => {
                   ? (editedStudentData.homework ?? studentData.homework)
                   : (rawEdited.homework ?? studentData.homework);
                 
-                // Lecture-level completed status (not student-specific)
-                // A lecture is completed if:
-                // 1. is_completed is explicitly set to true, OR
-                // 2. attendance is 'present' or 'absent' (for single courses), OR
-                // 3. For dual courses: if any student has attendance 'present' or 'absent'
-                let isCompleted = false;
-                
-                // First check if explicitly set in edited data
-                if (rawEdited.is_completed !== undefined && rawEdited.is_completed !== null) {
-                    isCompleted = rawEdited.is_completed;
-                }
-                // Then check lecture's is_completed
-                else if (lecture.is_completed !== undefined && lecture.is_completed !== null) {
-                    isCompleted = lecture.is_completed;
-                }
-                // For dual courses: check student_attendance
-                else if (course?.is_dual) {
-                    // Check edited student_attendance first (unsaved changes)
-                    if (rawEdited.student_attendance) {
-                        const editedStudentAttendance = rawEdited.student_attendance;
-                        const hasEditedCompletedAttendance = Object.values(editedStudentAttendance).some(
-                            (studentData) => studentData && 
-                            typeof studentData === 'object' &&
-                            (studentData.attendance === 'present' || studentData.attendance === 'absent')
-                        );
-                        if (hasEditedCompletedAttendance) {
-                            isCompleted = true;
-                        }
-                    }
-                    
-                    // Also check saved student_attendance from lecture
-                    if (!isCompleted && lecture.student_attendance) {
-                        const studentAttendanceObj = lecture.student_attendance;
-                        // Handle both array and object formats
-                        const attendanceValues = Array.isArray(studentAttendanceObj) 
-                            ? studentAttendanceObj 
-                            : Object.values(studentAttendanceObj);
-                        
-                        const hasCompletedAttendance = attendanceValues.some(
-                            (studentData) => studentData && 
-                            typeof studentData === 'object' &&
-                            (studentData.attendance === 'present' || studentData.attendance === 'absent')
-                        );
-                        isCompleted = hasCompletedAttendance;
-                    }
-                    
-                    // Also check current attendance for the selected student
-                    if (!isCompleted && (currentAttendance === 'present' || currentAttendance === 'absent')) {
-                        isCompleted = true;
-                    }
-                }
-                // Single course: check main attendance
-                else {
-                    isCompleted = currentAttendance === 'present' || currentAttendance === 'absent';
-                }
-                
-                // Debug log for dual courses
+                let isCompleted = false;                                if (course?.is_dual) {                    let anyPresentOrAbsent = false;                    if (course.students && Array.isArray(course.students)) {                        course.students.forEach(student => {                            const studentIdStr = String(student.id);                            let att = "pending";                            if (lecture.student_attendance) {                                const savedData = Array.isArray(lecture.student_attendance)                                     ? lecture.student_attendance.find((_, i) => course.students[i]?.id === student.id)                                    : lecture.student_attendance[studentIdStr] || lecture.student_attendance[student.id];                                if (savedData?.attendance) att = savedData.attendance;                            }                            if (rawEdited.student_attendance?.[studentIdStr]?.attendance) {                                att = rawEdited.student_attendance[studentIdStr].attendance;                            }                            if (att === "present" || att === "absent") {                                anyPresentOrAbsent = true;                            }                        });                    }                    isCompleted = anyPresentOrAbsent;                    if (rawEdited.is_completed !== undefined && rawEdited.is_completed !== null) {                        isCompleted = isCompleted || rawEdited.is_completed;                    } else if (lecture.is_completed !== undefined && lecture.is_completed !== null) {                        isCompleted = isCompleted || lecture.is_completed;                    }                } else {                    isCompleted = currentAttendance === "present" || currentAttendance === "absent";                    if (rawEdited.is_completed !== undefined && rawEdited.is_completed !== null) {                        isCompleted = isCompleted || rawEdited.is_completed;                    } else if (lecture.is_completed !== undefined && lecture.is_completed !== null) {                        isCompleted = isCompleted || lecture.is_completed;                    }                }                // Debug log for dual courses
                 if (course?.is_dual) {
                     console.log(`Lecture ${lecture.lecture_number} completion:`, {
                         lectureId: lecture.id,

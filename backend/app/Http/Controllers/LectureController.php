@@ -305,6 +305,7 @@ class LectureController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'lectures' => $course->lectures()->orderBy('date')->get(),
             'updated_count' => $updatedCount,
             'skipped' => $skippedLectures
