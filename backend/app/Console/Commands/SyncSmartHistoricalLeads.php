@@ -86,6 +86,12 @@ class SyncSmartHistoricalLeads extends Command
                 if (!$existing->telegram_id && $tg) { $existing->telegram_id = $tg; $updatedFields = true; }
                 if (!$existing->gender && $gender) { $existing->gender = $gender; $updatedFields = true; }
                 
+                // Fix for the intro_date bug: new leads shouldn't have an intro_date
+                if ($existing->status === 'new' && $existing->intro_date !== null) {
+                    $existing->intro_date = null;
+                    $updatedFields = true;
+                }
+                
                 if ($updatedFields) {
                     $existing->save();
                 }
@@ -101,7 +107,7 @@ class SyncSmartHistoricalLeads extends Command
                 try {
                     $parsed = Carbon::parse($row['submission_time']);
                     if ($parsed->year > 2000) {
-                        $createdAt = $parsed;
+                        $createdAt = clone $parsed;
                     }
                 } catch (\Exception $e) {}
             }
@@ -126,7 +132,7 @@ class SyncSmartHistoricalLeads extends Command
                 'source' => $row['how_heard'] ?? 'legacy_sync',
                 'status' => 'new',
                 'notes' => implode("\n", $notes),
-                'intro_date' => clone $createdAt,
+                'intro_date' => null,
                 'created_at' => clone $createdAt,
                 'updated_at' => clone $createdAt,
             ]);
