@@ -31,34 +31,30 @@ class SyncSmartHistoricalLeads extends Command
         $confirmedPath = base_path('confirmed_students.json');
 
         if (!file_exists($formsPath)) {
-            $this->error("forms.json not found in " . base_path());
-            return Command::FAILURE;
-        }
-
-        // STEP 1: IMPORT FROM FORMS.JSON
-        $this->info("Parsing forms.json...");
-        $formsData = json_decode(file_get_contents($formsPath), true);
-        
-        $formsRows = [];
-        foreach ($formsData as $item) {
-            if (isset($item['type']) && $item['type'] === 'table' && isset($item['data'])) {
-                $formsRows = $item['data'];
-                break;
+            $this->warn("forms.json not found in " . base_path() . ", skipping step 1.");
+        } else {
+            // STEP 1: IMPORT FROM FORMS.JSON
+            $this->info("Parsing forms.json...");
+            $formsData = json_decode(file_get_contents($formsPath), true);
+            
+            $formsRows = [];
+            foreach ($formsData as $item) {
+                if (isset($item['type']) && $item['type'] === 'table' && isset($item['data'])) {
+                    $formsRows = $item['data'];
+                    break;
+                }
             }
-        }
 
-        if (empty($formsRows)) {
-            $this->error("No data rows found in forms.json!");
-            return Command::FAILURE;
-        }
+            if (empty($formsRows)) {
+                $this->error("No data rows found in forms.json!");
+            } else {
+                $this->info("Found " . count($formsRows) . " leads in forms.json. Importing...");
 
-        $this->info("Found " . count($formsRows) . " leads in forms.json. Importing...");
+                $bar = $this->output->createProgressBar(count($formsRows));
+                $bar->start();
 
-        $bar = $this->output->createProgressBar(count($formsRows));
-        $bar->start();
-
-        $imported = 0;
-        $skipped = 0;
+                $imported = 0;
+                $skipped = 0;
 
         foreach ($formsRows as $row) {
             $phone = trim($row['whatsapp'] ?? '');
@@ -120,6 +116,8 @@ class SyncSmartHistoricalLeads extends Command
         $bar->finish();
         $this->newLine();
         $this->info("Imported $imported, Skipped duplicates: $skipped");
+            }
+        }
 
         // STEP 2: UPDATE FROM CONFIRMED_STUDENTS.JSON
         if (file_exists($confirmedPath)) {
