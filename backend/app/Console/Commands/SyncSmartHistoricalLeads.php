@@ -99,7 +99,10 @@ class SyncSmartHistoricalLeads extends Command
             $createdAt = now();
             if (!empty($row['submission_time'])) {
                 try {
-                    $createdAt = Carbon::parse($row['submission_time']);
+                    $parsed = Carbon::parse($row['submission_time']);
+                    if ($parsed->year > 2000) {
+                        $createdAt = $parsed;
+                    }
                 } catch (\Exception $e) {}
             }
 
