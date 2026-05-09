@@ -1137,12 +1137,13 @@ const CourseDetails = () => {
     setRenewalResetModal({
       open: true,
       start_date: '',
-      course_package_id: '',
-      lectures_count: '',
+      course_package_id: course.is_custom ? 'custom' : (course.course_package_id?.toString() || ''),
+      lectures_count: course.lectures_count || '',
       lecture_time: course.lecture_time || '',
       lecture_days: Array.isArray(course.lecture_days) ? [...course.lecture_days] : [],
       paid_amount: '',
       remaining_amount: '',
+      custom_total_amount: course.is_custom ? (course.custom_total_amount || '') : '',
       student_ids: studentIds,
     });
   };
@@ -1182,15 +1183,31 @@ const CourseDetails = () => {
 
   // Handle package change in renewal reset modal
   const handleRenewalPackageChange = (packageId) => {
+    if (packageId === 'custom') {
+      setRenewalResetModal(prev => ({
+        ...prev,
+        course_package_id: 'custom',
+        lectures_count: '',
+        paid_amount: '',
+        remaining_amount: '',
+        custom_total_amount: '',
+      }));
+      return;
+    }
+    
     const selectedPackage = packages.find((p) => p.id.toString() === packageId);
     const lecturesCount = selectedPackage ? selectedPackage.lectures_count.toString() : '';
     const isDual = course?.is_dual || false;
     
-    // Calculate price based on course type (dual or single)
-    const studentPrice = getStudentPriceForPackage(selectedPackage?.name, isDual);
-    const packagePrice = isDual && studentPrice > 0 
-      ? studentPrice 
-      : (selectedPackage ? (selectedPackage.price || 0) : 0);
+    let packagePrice = 0;
+    if (renewalResetModal.course_package_id === 'custom') {
+      packagePrice = parseFloat(renewalResetModal.custom_total_amount) || 0;
+    } else {
+      const studentPrice = getStudentPriceForPackage(selectedPackage?.name, isDual);
+      packagePrice = isDual && studentPrice > 0 
+        ? studentPrice 
+        : (selectedPackage ? (selectedPackage.price || 0) : 0);
+    }
     
     const paidAmount = parseFloat(renewalResetModal.paid_amount) || 0;
     const remainingAmount = packagePrice - paidAmount;
@@ -1209,11 +1226,15 @@ const CourseDetails = () => {
     const selectedPackage = packages.find((p) => p.id.toString() === renewalResetModal.course_package_id);
     const isDual = course?.is_dual || false;
     
-    // Calculate price based on course type (dual or single)
-    const studentPrice = getStudentPriceForPackage(selectedPackage?.name, isDual);
-    const packagePrice = isDual && studentPrice > 0 
-      ? studentPrice 
-      : (selectedPackage ? (selectedPackage.price || 0) : 0);
+    let packagePrice = 0;
+    if (renewalResetModal.course_package_id === 'custom') {
+      packagePrice = parseFloat(renewalResetModal.custom_total_amount) || 0;
+    } else {
+      const studentPrice = getStudentPriceForPackage(selectedPackage?.name, isDual);
+      packagePrice = isDual && studentPrice > 0 
+        ? studentPrice 
+        : (selectedPackage ? (selectedPackage.price || 0) : 0);
+    }
     
     const remainingAmount = packagePrice - paidAmount;
     
@@ -1266,9 +1287,13 @@ const CourseDetails = () => {
 
       // Create new course
       // When resetting from alert status, this is a renewal with the same trainer
+      const isCustom = renewalResetModal.course_package_id === 'custom';
+      
       const courseData = {
         trainer_id: course.trainer_id, // Same trainer as the previous course
-        course_package_id: parseInt(renewalResetModal.course_package_id),
+        is_custom: isCustom,
+        course_package_id: isCustom ? undefined : parseInt(renewalResetModal.course_package_id),
+        custom_total_amount: isCustom ? parseFloat(renewalResetModal.custom_total_amount || 0) : undefined,
         lectures_count: renewalResetModal.lectures_count ? parseInt(renewalResetModal.lectures_count) : undefined,
         start_date: renewalResetModal.start_date,
         lecture_time: renewalResetModal.lecture_time,
@@ -2984,6 +3009,33 @@ const CourseDetails = () => {
                 </select>
               </div>
 
+              {/* Custom Total Amount */}
+              {renewalResetModal.course_package_id === 'custom' && (
+                <div>
+                  <label className="label text-[10px] sm:text-sm">?????? ???????? ?????? (?.?) *</label>
+                  <input
+                    type="number"
+                    value={renewalResetModal.custom_total_amount}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const totalAmount = parseFloat(val) || 0;
+                      const paidAmount = parseFloat(renewalResetModal.paid_amount) || 0;
+                      const remainingAmount = totalAmount - paidAmount;
+                      
+                      setRenewalResetModal(prev => ({ 
+                        ...prev, 
+                        custom_total_amount: val,
+                        remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00'
+                      }));
+                    }}
+                    className="input text-xs sm:text-sm py-2 sm:py-2.5"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+              )}
+
               {/* Lectures Count (auto-filled from package, but editable) */}
               {renewalResetModal.course_package_id && (
                 <div>
@@ -3250,4 +3302,10 @@ const CourseDetails = () => {
 };
 
 export default CourseDetails;
+
+
+
+
+
+
 

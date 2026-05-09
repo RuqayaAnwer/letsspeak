@@ -1151,8 +1151,8 @@ const CreateCourse = () => {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => !addingStudent && setIsAddStudentModalOpen(false)}
           />
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden relative z-[101] animate-scale-up border border-[var(--color-border)]">
-            <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50">
+          <div className="bg-[#0f172a] rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden relative z-[101] animate-scale-up border border-[var(--color-border)]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-[#1e293b]">
               <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
                 إضافة طالب جديد
               </h3>
