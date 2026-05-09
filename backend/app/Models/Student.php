@@ -17,7 +17,16 @@ class Student extends Model
         'level',
         'status',
         'notes',
+        'lead_id',
     ];
+
+    /**
+     * Get the lead that this student was converted from.
+     */
+    public function lead()
+    {
+        return $this->belongsTo(Lead::class);
+    }
 
     /**
      * Get all courses the student is enrolled in.

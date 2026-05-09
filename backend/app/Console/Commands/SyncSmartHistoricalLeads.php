@@ -184,6 +184,37 @@ class SyncSmartHistoricalLeads extends Command
             $this->warn("confirmed_students.json not found, skipping step 2.");
         }
 
+        // STEP 3: LINK EXISTING STUDENTS TO LEADS
+        $this->info("Linking existing students to leads...");
+        $studentsToLink = \App\Models\Student::whereNull('lead_id')->get();
+        $this->info("Found " . count($studentsToLink) . " students without lead_id.");
+        
+        $linked = 0;
+        if (count($studentsToLink) > 0) {
+            $bar3 = $this->output->createProgressBar(count($studentsToLink));
+            $bar3->start();
+
+            foreach ($studentsToLink as $student) {
+                // Try finding by phone first (stricter match)
+                $lead = Lead::where('phone_whatsapp', $student->phone)->first();
+                
+                // If not found, try by exact name
+                if (!$lead) {
+                    $lead = Lead::where('name', $student->name)->first();
+                }
+
+                if ($lead) {
+                    $student->lead_id = $lead->id;
+                    $student->save();
+                    $linked++;
+                }
+                $bar3->advance();
+            }
+            $bar3->finish();
+            $this->newLine();
+            $this->info("Successfully linked $linked students to their leads.");
+        }
+
         return Command::SUCCESS;
     }
 }

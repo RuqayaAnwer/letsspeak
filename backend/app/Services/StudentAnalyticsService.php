@@ -15,7 +15,7 @@ class StudentAnalyticsService
     public function getStudentProfileData(Student $student): array
     {
         // Load relationships if not loaded
-        $student->loadMissing(['courses' => function ($query) {
+        $student->loadMissing(['lead', 'courses' => function ($query) {
             $query->orderBy('created_at', 'desc');
         }, 'courses.trainer.user', 'courses.coursePackage', 'courses.lectures.students', 'payments', 'studentNotes.user:id,name']);
 

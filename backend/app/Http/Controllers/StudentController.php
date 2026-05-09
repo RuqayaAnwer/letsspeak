@@ -28,11 +28,11 @@ class StudentController extends Controller
         }
 
         if ($request->has('all') && $request->all == 'true') {
-            $students = $query->latest()->get();
+            $students = $query->with('lead')->latest()->get();
             return response()->json(['data' => $students]);
         }
 
-        $students = $query->withCount('courses')->latest()->paginate(15);
+        $students = $query->with('lead')->withCount('courses')->latest()->paginate(15);
 
         return response()->json($students);
     }
@@ -59,7 +59,7 @@ class StudentController extends Controller
      */
     public function show(Student $student)
     {
-        $student->load(['courses.trainer.user', 'courses.lectures', 'payments']);
+        $student->load(['lead', 'courses.trainer.user', 'courses.lectures', 'payments']);
         
         return response()->json($student);
     }

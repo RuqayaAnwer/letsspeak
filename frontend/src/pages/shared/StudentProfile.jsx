@@ -233,6 +233,21 @@ const StudentProfile = () => {
                     <GraduationCap className="w-4 h-4" /> {profileData.student.level}
                   </span>
                 )}
+                {profileData?.student?.lead?.telegram_id && (
+                  <span className="flex items-center gap-1.5 bg-black/10 px-2 py-1 rounded-md">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2L2 11.5L8.5 14L11.5 22L15 16L21.5 2Z"/><path d="M21.5 2L8.5 14"/></svg> {profileData.student.lead.telegram_id}
+                  </span>
+                )}
+                {profileData?.student?.lead?.governorate && (
+                  <span className="flex items-center gap-1.5 bg-black/10 px-2 py-1 rounded-md">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> {profileData.student.lead.governorate}
+                  </span>
+                )}
+                {profileData?.student?.lead?.age && (
+                  <span className="flex items-center gap-1.5 bg-black/10 px-2 py-1 rounded-md">
+                    <User className="w-4 h-4" /> {profileData.student.lead.age} سنة
+                  </span>
+                )}
               </div>
             </div>
           </div>

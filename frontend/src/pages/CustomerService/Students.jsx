@@ -504,6 +504,8 @@ const Students = () => {
                     <tr>
                       <th>#</th>
                       <th>اسم الطالب</th>
+                      <th>المحافظة</th>
+                      <th>العمر</th>
                       <th>رقم الهاتف</th>
                       <th>المستوى</th>
                       <th>عدد الكورسات</th>
@@ -530,6 +532,20 @@ const Students = () => {
                               {student.name} <UserCircle className="w-4 h-4 opacity-70" />
                             </button>
                           </div>
+                        </td>
+                        <td>
+                          {student.lead?.governorate ? (
+                            <span className="text-sm">{student.lead.governorate}</span>
+                          ) : (
+                            <span className="text-sm text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td>
+                          {student.lead?.age ? (
+                            <span className="text-sm">{student.lead.age}</span>
+                          ) : (
+                            <span className="text-sm text-gray-400">-</span>
+                          )}
                         </td>
                         <td>
                           <div className="flex items-center gap-2">
