@@ -60,6 +60,8 @@ class SyncSmartHistoricalLeads extends Command
             $phone = trim($row['whatsapp'] ?? '');
             if (empty($phone)) {
                 $phone = '0000000000';
+            } else {
+                $phone = preg_replace('/[^\+0-9]/', '', $phone);
             }
 
             $name = trim($row['full_name'] ?? 'بدون اسم');
