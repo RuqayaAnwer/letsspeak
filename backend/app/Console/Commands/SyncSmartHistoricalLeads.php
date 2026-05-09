@@ -189,20 +189,38 @@ class SyncSmartHistoricalLeads extends Command
         
         $linked = 0;
         if (count($studentsToLink) > 0) {
+            $allLeads = Lead::all();
             $bar3 = $this->output->createProgressBar(count($studentsToLink));
             $bar3->start();
 
             foreach ($studentsToLink as $student) {
-                // Try finding by phone first (stricter match)
-                $lead = Lead::where('phone_whatsapp', $student->phone)->first();
-                
-                // If not found, try by exact name
-                if (!$lead) {
-                    $lead = Lead::where('name', $student->name)->first();
+                $foundLead = null;
+                $sPhone = preg_replace('/[^0-9]/', '', $student->phone);
+                $sName = trim(strtolower($student->name));
+
+                foreach ($allLeads as $lead) {
+                    // Try phone match
+                    $lPhone = preg_replace('/[^0-9]/', '', $lead->phone_whatsapp);
+                    
+                    if (strlen($sPhone) >= 7 && strlen($lPhone) >= 7) {
+                        if (substr($sPhone, -7) === substr($lPhone, -7)) {
+                            $foundLead = $lead;
+                            break;
+                        }
+                    }
+                    
+                    // Try name match
+                    $lName = trim(strtolower($lead->name));
+                    if ($sName && $lName && (str_contains($sName, $lName) || str_contains($lName, $sName))) {
+                        if (strlen($sName) > 4 && strlen($lName) > 4) {
+                            $foundLead = $lead;
+                            break;
+                        }
+                    }
                 }
 
-                if ($lead) {
-                    $student->lead_id = $lead->id;
+                if ($foundLead) {
+                    $student->lead_id = $foundLead->id;
                     $student->save();
                     $linked++;
                 }
