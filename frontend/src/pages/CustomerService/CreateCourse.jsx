@@ -601,40 +601,55 @@ const CreateCourse = () => {
   const selectStyles = {
     control: (base, state) => ({
       ...base,
-      borderColor: state.isFocused ? 'var(--color-primary-500)' : 'var(--color-border)',
-      boxShadow: state.isFocused ? '0 0 0 1px var(--color-primary-500)' : 'none',
+      borderColor: state.isFocused ? '#14b8a6' : '#1e293b',
+      boxShadow: state.isFocused ? '0 0 0 1px #14b8a6' : 'none',
       '&:hover': {
-        borderColor: 'var(--color-primary-400)'
+        borderColor: '#0d9488'
       },
       padding: '0.125rem',
       borderRadius: '0.5rem',
-      backgroundColor: 'transparent'
+      backgroundColor: '#0f172a',
+      color: '#f1f5f9'
+    }),
+    singleValue: (base) => ({
+      ...base,
+      color: '#f1f5f9'
+    }),
+    input: (base) => ({
+      ...base,
+      color: '#f1f5f9'
     }),
     option: (base, state) => ({
       ...base,
       backgroundColor: state.isSelected 
-        ? 'var(--color-primary-500)' 
+        ? '#0d9488' 
         : state.isFocused 
-          ? 'var(--color-primary-50)' 
-          : 'transparent',
-      color: state.isSelected ? 'white' : 'inherit',
-      cursor: 'pointer'
+          ? '#1e293b' 
+          : '#0f172a',
+      color: '#f1f5f9',
+      cursor: 'pointer',
+      '&:active': {
+        backgroundColor: '#0f766e'
+      }
     }),
     menu: (base) => ({
       ...base,
       zIndex: 50,
-      backgroundColor: 'var(--color-bg-primary)',
-      border: '1px solid var(--color-border)',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      borderRadius: '0.5rem'
+      backgroundColor: '#0f172a',
+      border: '1px solid #1e293b',
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
     }),
-    input: (base) => ({
+    menuList: (base) => ({
       ...base,
-      color: 'var(--color-text-primary)'
+      padding: 0
     }),
-    singleValue: (base) => ({
+    noOptionsMessage: (base) => ({
       ...base,
-      color: 'var(--color-text-primary)'
+      color: '#94a3b8'
+    }),
+    loadingMessage: (base) => ({
+      ...base,
+      color: '#94a3b8'
     })
   };
 
