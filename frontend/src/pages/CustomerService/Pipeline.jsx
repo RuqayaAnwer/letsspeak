@@ -250,17 +250,21 @@ const Pipeline = () => {
                     </td>
 
                     <td className="px-4 py-4 border-l border-[#1e293b]">
-                      {lead.intro_date ? (
+                      {(lead.intro_date || lead.trainer_name || lead.intro_time) ? (
                         <div className="flex flex-col gap-1.5">
                           {lead.trainer_name && (
                             <div className="text-[12px] font-bold text-slate-200 flex items-center gap-1.5">
                               <span className="text-amber-500">👤</span> {lead.trainer_name}
                             </div>
                           )}
-                          <div className="text-[11px] text-amber-500/90 font-medium flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                            مجدولة: <span className="font-mono">{lead.intro_date.split('T')[0]}</span>
-                          </div>
+                          {lead.intro_date ? (
+                            <div className="text-[11px] text-amber-500/90 font-medium flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                              مجدولة: <span className="font-mono">{lead.intro_date.split('T')[0]}</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-600 text-[10px]">- لم يحدد التاريخ -</span>
+                          )}
                           {lead.intro_time && (
                             <div className="text-[10px] text-amber-500/70 font-mono">
                               الوقت: {(() => {
