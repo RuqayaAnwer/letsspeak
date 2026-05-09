@@ -64,15 +64,33 @@ class SyncSmartHistoricalLeads extends Command
 
             $name = trim($row['full_name'] ?? 'بدون اسم');
             
-            // Check if already imported
             $existing = Lead::where('phone_whatsapp', $phone)
                 ->when($phone === '0000000000', function ($q) use ($name) {
                     $q->where('name', $name);
                 })
                 ->first();
 
+            $age = $row['age'] ?? null;
+            $gov = $row['city'] ?? null;
+            $tg = $row['telegram'] ?? null;
+            $genderStr = $row['gender'] ?? '';
+            $gender = null;
+            if ($genderStr === 'ذكر' || $genderStr === '???') $gender = 'male';
+            elseif ($genderStr === 'أنثى' || $genderStr === '????') $gender = 'female';
+
             if ($existing) {
-                // Skip if duplicate
+                // Update missing rich data if it exists in forms.json but is null in DB
+                $updatedFields = false;
+                if (!$existing->age && $age) { $existing->age = $age; $updatedFields = true; }
+                if (!$existing->governorate && $gov) { $existing->governorate = $gov; $updatedFields = true; }
+                if (!$existing->telegram_id && $tg) { $existing->telegram_id = $tg; $updatedFields = true; }
+                if (!$existing->gender && $gender) { $existing->gender = $gender; $updatedFields = true; }
+                
+                if ($updatedFields) {
+                    $existing->save();
+                }
+                
+                // Skip creating a new one
                 $skipped++;
                 $bar->advance();
                 continue;
@@ -95,10 +113,10 @@ class SyncSmartHistoricalLeads extends Command
                 'name' => $name,
                 'email' => $row['email'] ?? null,
                 'phone_whatsapp' => $phone,
-                'telegram_id' => $row['telegram'] ?? null,
-                'governorate' => $row['city'] ?? null,
-                'age' => $row['age'] ?? null,
-                'gender' => isset($row['gender']) ? ($row['gender'] === '???' ? 'male' : ($row['gender'] === '????' ? 'female' : null)) : null,
+                'telegram_id' => $tg,
+                'governorate' => $gov,
+                'age' => $age,
+                'gender' => $gender,
                 'package_selected' => $row['package'] ?? null,
                 'preferred_time' => $row['suitable_time'] ?? null,
                 'current_level' => $row['english_level'] ?? null,
