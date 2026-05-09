@@ -278,7 +278,7 @@ const Pipeline = () => {
                           )}
                         </div>
                       ) : (
-                        <span className="text-slate-600 text-xs">- غير مجدولة -</span>
+                        <span className="text-slate-600 text-xs">- بانتظار التحديد -</span>
                       )}
                     </td>
 
