@@ -1134,6 +1134,15 @@ const CourseDetails = () => {
             ? [course.students[0].id]
             : [];
 
+    const initialLevels = {};
+    if (course.students && course.students.length > 0) {
+      course.students.forEach(s => {
+        initialLevels[s.id] = s.level || 'L1';
+      });
+    } else if (course.student) {
+      initialLevels[course.student.id] = course.student.level || 'L1';
+    }
+
     setRenewalResetModal({
       open: true,
       start_date: '',
@@ -1145,6 +1154,7 @@ const CourseDetails = () => {
       remaining_amount: '',
       custom_total_amount: course.is_custom ? (course.custom_total_amount || '') : '',
       student_ids: studentIds,
+      student_levels: initialLevels,
     });
   };
 
@@ -1303,6 +1313,7 @@ const CourseDetails = () => {
         paid_amount: renewalResetModal.paid_amount ? parseFloat(renewalResetModal.paid_amount) : 0,
         remaining_amount: renewalResetModal.remaining_amount ? parseFloat(renewalResetModal.remaining_amount) : 0,
         previous_course_id: course.id, // Pass the previous course ID to help identify it as a renewal
+        student_levels: renewalResetModal.student_levels || {},
       };
 
       const response = await api.post('/courses', courseData);
@@ -2977,6 +2988,29 @@ const CourseDetails = () => {
                     : course.student?.name || course.students?.[0]?.name || 'غير محدد'}
                 </div>
               </div>
+
+              {/* Student Levels */}
+              {(course.students && course.students.length > 0 ? course.students : (course.student ? [course.student] : [])).map(s => (
+                <div key={s.id}>
+                  <label className="label text-[10px] sm:text-sm">المستوى الجديد للطالب ({s.name}) *</label>
+                  <select
+                    value={renewalResetModal.student_levels?.[s.id] || 'L1'}
+                    onChange={(e) => setRenewalResetModal(prev => ({
+                      ...prev,
+                      student_levels: {
+                        ...prev.student_levels,
+                        [s.id]: e.target.value
+                      }
+                    }))}
+                    className="select text-xs sm:text-sm py-2 sm:py-2.5"
+                    required
+                  >
+                    {['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8'].map(level => (
+                      <option key={level} value={level}>{level}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
 
               {/* Start Date */}
               <div>

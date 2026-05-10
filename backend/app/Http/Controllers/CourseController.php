@@ -200,6 +200,8 @@ class CourseController extends Controller
             'is_custom' => 'sometimes|boolean',
             'custom_total_amount' => $isCustom ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
             'discount' => 'sometimes|numeric|min:0',
+            'student_levels' => 'sometimes|array',
+            'student_levels.*' => 'in:L1,L2,L3,L4,L5,L6,L7,L8',
         ]);
 
         // Get lectures count from package or custom
@@ -249,6 +251,20 @@ class CourseController extends Controller
             }
         }
 
+        $renewalIteration = 1;
+        if (!empty($studentIds)) {
+            $lastCourse = Course::whereHas('students', function ($query) use ($studentIds) {
+                $query->whereIn('students.id', $studentIds);
+            })
+            ->where('start_date', '<', $request->start_date)
+            ->orderBy('start_date', 'desc')
+            ->first();
+            
+            if ($lastCourse) {
+                $renewalIteration = $lastCourse->renewal_iteration + 1;
+            }
+        }
+
         $courseData = [
             'trainer_id' => $request->trainer_id,
             'course_package_id' => $isCustom ? null : $request->course_package_id,
@@ -258,6 +274,7 @@ class CourseController extends Controller
             'lecture_days' => $request->lecture_days,
             'is_dual' => $isDual,
             'renewed_with_trainer' => $renewedWithTrainer,
+            'renewal_iteration' => $renewalIteration,
             'payment_method' => $request->payment_method,
             'status' => 'active',
         ];
@@ -320,6 +337,15 @@ class CourseController extends Controller
         
         $course = DB::transaction(function () use ($courseData, $studentIds, $isDual, $request) {
             $course = Course::create($courseData);
+
+            // Update student levels if provided
+            if ($request->has('student_levels') && is_array($request->student_levels)) {
+                foreach ($request->student_levels as $studentId => $newLevel) {
+                    if (in_array($studentId, $studentIds)) {
+                        Student::where('id', $studentId)->update(['level' => $newLevel]);
+                    }
+                }
+            }
 
             // Attach students to course (for dual courses)
             foreach ($studentIds as $index => $studentId) {

@@ -29,5 +29,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, $request) {
+            \Log::error('Validation Failed: ' . json_encode($e->errors(), JSON_UNESCAPED_UNICODE));
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => $e->errors(),
+            ], 422);
+        });
     })->create();

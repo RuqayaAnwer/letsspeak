@@ -478,19 +478,24 @@ const Courses = () => {
                                   <React.Fragment key={s.id}>
                                     {idx > 0 && <span className="font-normal mx-1 text-gray-400">و</span>}
                                     <button onClick={(e) => { e.stopPropagation(); navigate('/students/' + s.id); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
-                                      {s.name}
+                                      {s.name} {s.level ? `(${s.level})` : ''}
                                     </button>
                                   </React.Fragment>
                                 ))
                               : (
-                                <button onClick={(e) => { e.stopPropagation(); navigate('/students/' + course.students?.[0]?.id || course.student_id); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
-                                  {(course.student_name || course.student?.name || course.students?.[0]?.name || '-')}
+                                <button onClick={(e) => { e.stopPropagation(); navigate('/students/' + (course.students?.[0]?.id || course.student_id)); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
+                                  {(course.student_name || course.student?.name || course.students?.[0]?.name || '-')} {(course.student?.level || course.students?.[0]?.level) ? `(${course.student?.level || course.students?.[0]?.level})` : ''}
                                 </button>
                               )}
                           </span>
                           {isDualCourse(course) && (
                             <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
                               ثنائي
+                            </span>
+                          )}
+                          {course.renewal_iteration > 1 && (
+                            <span className="px-1 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-[10px] font-semibold">
+                              تجديد {course.renewal_iteration}
                             </span>
                           )}
                         </div>
@@ -646,17 +651,17 @@ const Courses = () => {
                                       className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5"
                                       title="عرض ملف الطالب"
                                     >
-                                      {s.name} <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
+                                      {s.name} {s.level ? `(${s.level})` : ''} <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
                                     </button>
                                   </React.Fragment>
                                 ))
                               : (
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); navigate('/students/' + course.students?.[0]?.id || course.student_id); }} 
+                                  onClick={(e) => { e.stopPropagation(); navigate('/students/' + (course.students?.[0]?.id || course.student_id)); }} 
                                   className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5"
                                   title="عرض ملف الطالب"
                                 >
-                                  {course.student_name || course.student?.name || course.students?.[0]?.name || '-'}
+                                  {course.student_name || course.student?.name || course.students?.[0]?.name || '-'} {(course.student?.level || course.students?.[0]?.level) ? `(${course.student?.level || course.students?.[0]?.level})` : ''}
                                   <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
                                 </button>
                               )}
@@ -664,6 +669,11 @@ const Courses = () => {
                           {isDualCourse(course) && (
                             <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold font-normal">
                               ثنائي
+                            </span>
+                          )}
+                          {course.renewal_iteration > 1 && (
+                            <span className="px-1 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-[9px] font-semibold">
+                              تجديد {course.renewal_iteration}
                             </span>
                           )}
                         </div>

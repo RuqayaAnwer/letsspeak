@@ -42,6 +42,7 @@ class Course extends Model
         'extra_lectures_fee',
         'student_max_postponements_override',
         'trainer_max_postponements_override',
+        'renewal_iteration',
     ];
 
     protected $casts = [
