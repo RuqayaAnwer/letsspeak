@@ -110,6 +110,7 @@ const Layout = ({ children }) => {
           { path: '/finance', label: 'لوحة التحكم', icon: '📊' },
           { path: '/finance/payments', label: 'المدفوعات', icon: '💳' },
           { path: '/finance/payroll', label: 'رواتب الموظفين', icon: '💰' },
+          { path: '/finance/bonuses', label: 'المكافآت', icon: '🎁' },
           { path: '/courses', label: 'الكورسات', icon: '📚' },
         ];
       default:

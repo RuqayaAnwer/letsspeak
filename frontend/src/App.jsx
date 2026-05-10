@@ -49,6 +49,7 @@ const TrainerDashboard = lazy(() => import('./pages/Trainer/Dashboard'));
 const FinanceDashboard = lazy(() => import('./pages/Accounting/Dashboard'));
 const Payments = lazy(() => import('./pages/Accounting/Payments'));
 const TrainerPayroll = lazy(() => import('./pages/Accounting/TrainerPayroll'));
+const BonusesReport = lazy(() => import('./pages/Accounting/BonusesReport'));
 const Courses = lazy(() => import('./pages/shared/Courses'));
 const CourseDetailsShared = lazy(() => import('./pages/shared/CourseDetails'));
 const StudentProfile = lazy(() => import('./pages/shared/StudentProfile'));
@@ -265,6 +266,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['finance']}>
             <TrainerPayroll />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/finance/bonuses"
+        element={
+          <ProtectedRoute allowedRoles={['finance']}>
+            <BonusesReport />
           </ProtectedRoute>
         }
       />

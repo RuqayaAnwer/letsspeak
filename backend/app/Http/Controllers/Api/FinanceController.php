@@ -1551,6 +1551,182 @@ class FinanceController extends Controller
         // For statistics endpoints, we allow access
         // Other methods that require auth can override this
         return true;
+    /**
+     * Get all trainers who deserve bonuses for a specific month and year
+     */
+    public function bonusesReport(Request $request): JsonResponse
+    {
+        try {
+            if (!$this->isAuthorized($request)) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            }
+
+            $request->validate([
+                'month' => 'required|integer|min:1|max:12',
+                'year' => 'required|integer|min:2020',
+            ]);
+
+            $month = (int) $request->input('month');
+            $year = (int) $request->input('year');
+
+            $startDate = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth()->format('Y-m-d');
+            $endDate = \Carbon\Carbon::createFromDate($year, $month, 1)->endOfMonth()->format('Y-m-d');
+
+            $trainers = \App\Models\Trainer::where('status', 'active')->get();
+
+            $allRenewalsData = \App\Models\Course::where('renewed_with_trainer', true)
+                ->whereMonth('start_date', $month)
+                ->whereYear('start_date', $year)
+                ->get()
+                ->groupBy('trainer_id')
+                ->map(function ($courses) {
+                    return $courses->filter(function ($course) {
+                        $studentIds = $course->students->pluck('id')->toArray();
+                        if (empty($studentIds)) return false;
+                        
+                        $previousCourse = \App\Models\Course::whereHas('students', function ($query) use ($studentIds) {
+                            $query->whereIn('students.id', $studentIds);
+                        })
+                        ->where('id', '!=', $course->id)
+                        ->where('start_date', '<', $course->start_date)
+                        ->orderBy('start_date', 'desc')
+                        ->first();
+                        
+                        if ($previousCourse) {
+                            return $previousCourse->trainer_id === $course->trainer_id;
+                        }
+                        return false;
+                    })->count();
+                })
+                ->toArray();
+
+            arsort($allRenewalsData);
+            // Get trainers with renewals > 0
+            $trainersWithRenewals = array_filter($allRenewalsData, function($count) {
+                return $count > 0;
+            });
+            $top3TrainersIds = array_slice(array_keys($trainersWithRenewals), 0, 3);
+
+            $bonuses = [
+                'renewal' => [
+                    'level_5' => [],
+                    'level_7' => [],
+                ],
+                'competition' => [],
+                'volume' => [
+                    'level_60' => [],
+                    'level_80' => [],
+                ],
+                'manual' => []
+            ];
+
+            foreach ($trainers as $trainer) {
+                $trainerId = $trainer->id;
+                $trainerName = $trainer->name ?: ($trainer->user->name ?? 'مدرب غير محدد');
+                
+                $renewalsCount = $allRenewalsData[$trainerId] ?? 0;
+                
+                // Competition Bonus
+                if ($renewalsCount > 0 && in_array($trainerId, $top3TrainersIds)) {
+                    $bonuses['competition'][] = [
+                        'trainer_id' => $trainerId,
+                        'trainer_name' => $trainerName,
+                        'count' => $renewalsCount,
+                        'amount' => 20000
+                    ];
+                }
+                
+                // Renewal Bonus
+                if ($renewalsCount >= 7) {
+                    $bonuses['renewal']['level_7'][] = [
+                        'trainer_id' => $trainerId,
+                        'trainer_name' => $trainerName,
+                        'count' => $renewalsCount,
+                        'amount' => 100000
+                    ];
+                } elseif ($renewalsCount >= 5) {
+                    $bonuses['renewal']['level_5'][] = [
+                        'trainer_id' => $trainerId,
+                        'trainer_name' => $trainerName,
+                        'count' => $renewalsCount,
+                        'amount' => 50000
+                    ];
+                }
+                
+                // Volume Bonus
+                $completedLectures = \App\Models\Lecture::whereHas('course', function ($query) use ($trainerId) {
+                        $query->where('trainer_id', $trainerId);
+                    })
+                    ->whereBetween('date', [$startDate, $endDate])
+                    ->get()
+                    ->filter(function ($lecture) {
+                        if ($lecture->student_attendance && is_array($lecture->student_attendance)) {
+                            foreach ($lecture->student_attendance as $studentData) {
+                                if (is_array($studentData)) {
+                                    $attendance = $studentData['attendance'] ?? null;
+                                    if ($attendance === 'present' || $attendance === 'absent') {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                        return $lecture->is_completed || in_array($lecture->attendance, ['present', 'partially', 'absent']);
+                    })
+                    ->count();
+                    
+                if ($completedLectures >= 80) {
+                    $bonuses['volume']['level_80'][] = [
+                        'trainer_id' => $trainerId,
+                        'trainer_name' => $trainerName,
+                        'count' => $completedLectures,
+                        'amount' => 80000
+                    ];
+                } elseif ($completedLectures >= 60) {
+                    $bonuses['volume']['level_60'][] = [
+                        'trainer_id' => $trainerId,
+                        'trainer_name' => $trainerName,
+                        'count' => $completedLectures,
+                        'amount' => 30000
+                    ];
+                }
+                
+                // Manual Bonus/Deduction (Administrative)
+                $payroll = \App\Models\TrainerPayroll::where('trainer_id', $trainerId)
+                    ->where('month', $month)
+                    ->where('year', $year)
+                    ->first();
+                    
+                // only include positive bonuses here, not deductions, because this is a Bonuses page
+                if ($payroll && $payroll->bonus_deduction > 0) {
+                    $bonuses['manual'][] = [
+                        'trainer_id' => $trainerId,
+                        'trainer_name' => $trainerName,
+                        'amount' => $payroll->bonus_deduction,
+                        'notes' => $payroll->bonus_deduction_notes ?: 'مكافأة إدارية مخصصة'
+                    ];
+                }
+            }
+
+            // Sort each category by amount desc (or count desc)
+            usort($bonuses['competition'], fn($a, $b) => $b['count'] <=> $a['count']);
+            usort($bonuses['renewal']['level_7'], fn($a, $b) => $b['count'] <=> $a['count']);
+            usort($bonuses['renewal']['level_5'], fn($a, $b) => $b['count'] <=> $a['count']);
+            usort($bonuses['volume']['level_80'], fn($a, $b) => $b['count'] <=> $a['count']);
+            usort($bonuses['volume']['level_60'], fn($a, $b) => $b['count'] <=> $a['count']);
+            usort($bonuses['manual'], fn($a, $b) => $b['amount'] <=> $a['amount']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $bonuses,
+            ]);
+
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('bonusesReport Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }
 
