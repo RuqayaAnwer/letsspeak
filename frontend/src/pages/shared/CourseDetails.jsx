@@ -1139,7 +1139,7 @@ const CourseDetails = () => {
       start_date: '',
       course_package_id: course.is_custom ? 'custom' : (course.course_package_id?.toString() || ''),
       lectures_count: course.lectures_count || '',
-      lecture_time: course.lecture_time || '',
+      lecture_time: course.lecture_time ? course.lecture_time.substring(0, 5) : '',
       lecture_days: Array.isArray(course.lecture_days) ? [...course.lecture_days] : [],
       paid_amount: '',
       remaining_amount: '',
@@ -1296,7 +1296,7 @@ const CourseDetails = () => {
         custom_total_amount: isCustom ? parseFloat(renewalResetModal.custom_total_amount || 0) : undefined,
         lectures_count: renewalResetModal.lectures_count ? parseInt(renewalResetModal.lectures_count) : undefined,
         start_date: renewalResetModal.start_date,
-        lecture_time: renewalResetModal.lecture_time,
+        lecture_time: renewalResetModal.lecture_time.substring(0, 5),
         lecture_days: lectureDays,
         is_dual: course.is_dual || false,
         student_ids: studentIds.map(id => parseInt(id)),
@@ -3302,6 +3302,8 @@ const CourseDetails = () => {
 };
 
 export default CourseDetails;
+
+
 
 
 
