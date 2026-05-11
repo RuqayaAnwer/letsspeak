@@ -11,13 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('course_students', function (Blueprint $table) {
-            $table->string('student_level')->nullable()->after('is_primary');
-        });
+        if (!Schema::hasColumn('course_students', 'student_level')) {
+            Schema::table('course_students', function (Blueprint $table) {
+                $table->string('student_level')->nullable()->after('is_primary');
+            });
+        }
         
-        Schema::table('courses', function (Blueprint $table) {
-            $table->string('student_level')->nullable()->after('student_id');
-        });
+        if (!Schema::hasColumn('courses', 'student_level')) {
+            Schema::table('courses', function (Blueprint $table) {
+                $table->string('student_level')->nullable();
+            });
+        }
     }
 
     /**
@@ -25,12 +29,16 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('course_students', function (Blueprint $table) {
-            $table->dropColumn('student_level');
-        });
+        if (Schema::hasColumn('course_students', 'student_level')) {
+            Schema::table('course_students', function (Blueprint $table) {
+                $table->dropColumn('student_level');
+            });
+        }
         
-        Schema::table('courses', function (Blueprint $table) {
-            $table->dropColumn('student_level');
-        });
+        if (Schema::hasColumn('courses', 'student_level')) {
+            Schema::table('courses', function (Blueprint $table) {
+                $table->dropColumn('student_level');
+            });
+        }
     }
 };
