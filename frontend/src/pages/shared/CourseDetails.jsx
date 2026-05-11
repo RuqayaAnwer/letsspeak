@@ -366,6 +366,13 @@ const CourseDetails = () => {
       }
     }
     
+    // Show confirmation for trainers when changing attendance
+    if (isTrainer && field === 'attendance' && value !== 'postponed') {
+      if (!window.confirm("هل أنت متأكد من حفظ التعديلات الخاصة بهذه المحاضرة؟ سيتم تطبيق التغييرات فوراً.")) {
+        return; // Cancel the change
+      }
+    }
+    
     // If "postponed" is selected, open the postponement modal with date/time picker
     if (field === 'attendance' && value === 'postponed') {
       const lecture = lectures.find(l => l.id === lectureId);
@@ -749,6 +756,13 @@ const CourseDetails = () => {
       alert('يرجى اختيار التاريخ');
       return;
     }
+
+    if (isTrainer) {
+      if (!window.confirm("هل أنت متأكد من حفظ التعديلات الخاصة بتاريخ ووقت المحاضرة؟")) {
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const payload = { date: dateSent };
