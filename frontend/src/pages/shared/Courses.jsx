@@ -23,6 +23,7 @@ const Courses = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchStudent, setSearchStudent] = useState('');
+  const [searchTrainer, setSearchTrainer] = useState('');
   const [studentPaymentsModal, setStudentPaymentsModal] = useState({
     open: false,
     studentId: null,
@@ -52,7 +53,7 @@ const Courses = () => {
   // Reset pagination when courses change or search filters change
   useEffect(() => {
     setCoursesPages({});
-  }, [courses, searchStudent]);
+  }, [courses, searchStudent, searchTrainer]);
 
   const fetchCourses = async () => {
     try {
@@ -373,12 +374,25 @@ const Courses = () => {
         );
         if (!studentMatch) return false;
       }
+      
+      // Filter by trainer name
+      if (searchTrainer) {
+        const trainerName = course.trainer?.name || course.trainer?.user?.name || course.trainer_name || course.trainer || '';
+        if (trainerName !== searchTrainer) return false;
+      }
 
       return true;
     });
   };
 
   const coursesArray = Array.isArray(courses) ? courses : [];
+  
+  // Extract unique trainers for the filter dropdown
+  const uniqueTrainers = Array.from(new Set(
+    coursesArray
+      .map(c => c.trainer?.name || c.trainer?.user?.name || c.trainer_name || c.trainer)
+      .filter(Boolean)
+  )).sort((a, b) => a.localeCompare(b, 'ar'));
   
   // Filter courses by search criteria first
   const filteredCourses = filterCoursesBySearch(coursesArray);
@@ -787,10 +801,25 @@ const Courses = () => {
               className="input text-xs sm:text-sm"
             />
           </div>
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+              تصفية حسب المدرب
+            </label>
+            <select
+              value={searchTrainer}
+              onChange={(e) => setSearchTrainer(e.target.value)}
+              className="input text-xs sm:text-sm appearance-none cursor-pointer"
+            >
+              <option value="">جميع المدربين</option>
+              {uniqueTrainers.map((trainer, idx) => (
+                <option key={idx} value={trainer}>{trainer}</option>
+              ))}
+            </select>
+          </div>
         </div>
         
-        {searchStudent && (
-          <div className="mt-2 sm:mt-3 flex items-center gap-2 text-xs sm:text-sm">
+        {(searchStudent || searchTrainer) && (
+          <div className="mt-2 sm:mt-3 flex items-center gap-2 text-xs sm:text-sm flex-wrap">
             <span className="text-gray-600 dark:text-gray-400">عوامل التصفية النشطة:</span>
             {searchStudent && (
               <button
@@ -801,11 +830,23 @@ const Courses = () => {
                 <X className="w-3 h-3" />
               </button>
             )}
+            {searchTrainer && (
+              <button
+                onClick={() => setSearchTrainer('')}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded text-xs"
+              >
+                المدرب: {searchTrainer}
+                <X className="w-3 h-3" />
+              </button>
+            )}
             <button
-              onClick={() => setSearchStudent('')}
+              onClick={() => {
+                setSearchStudent('');
+                setSearchTrainer('');
+              }}
               className="text-red-600 dark:text-red-400 hover:underline text-xs"
             >
-              مسح
+              مسح الكل
             </button>
           </div>
         )}
