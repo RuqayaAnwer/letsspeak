@@ -1551,6 +1551,8 @@ class FinanceController extends Controller
         // For statistics endpoints, we allow access
         // Other methods that require auth can override this
         return true;
+    }
+
     /**
      * Get all trainers who deserve bonuses for a specific month and year
      */
