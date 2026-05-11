@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\Student;
 use App\Models\Lecture;
 use App\Models\CoursePackage;
 use App\Models\CourseStatusHistory;
