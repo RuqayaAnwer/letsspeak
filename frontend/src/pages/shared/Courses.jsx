@@ -492,13 +492,13 @@ const Courses = () => {
                                   <React.Fragment key={s.id}>
                                     {idx > 0 && <span className="font-normal mx-1 text-gray-400">و</span>}
                                     <button onClick={(e) => { e.stopPropagation(); navigate('/students/' + s.id); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
-                                      {s.name} {s.level ? `(${s.level})` : ''}
+                                      {s.name} {(s.pivot?.student_level || s.level) ? `(${s.pivot?.student_level || s.level})` : ''}
                                     </button>
                                   </React.Fragment>
                                 ))
                               : (
                                 <button onClick={(e) => { e.stopPropagation(); navigate('/students/' + (course.students?.[0]?.id || course.student_id)); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
-                                  {(course.student_name || course.student?.name || course.students?.[0]?.name || '-')} {(course.student?.level || course.students?.[0]?.level) ? `(${course.student?.level || course.students?.[0]?.level})` : ''}
+                                  {(course.student_name || course.student?.name || course.students?.[0]?.name || '-')} {(course.student_level || course.students?.[0]?.pivot?.student_level || course.student?.level || course.students?.[0]?.level) ? `(${course.student_level || course.students?.[0]?.pivot?.student_level || course.student?.level || course.students?.[0]?.level})` : ''}
                                 </button>
                               )}
                           </span>
@@ -670,7 +670,7 @@ const Courses = () => {
                                       className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5"
                                       title="عرض ملف الطالب"
                                     >
-                                      {s.name} {s.level ? `(${s.level})` : ''} <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
+                                      {s.name} {(s.pivot?.student_level || s.level) ? `(${s.pivot?.student_level || s.level})` : ''} <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
                                     </button>
                                   </React.Fragment>
                                 ))

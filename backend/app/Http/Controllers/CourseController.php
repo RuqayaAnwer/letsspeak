@@ -337,6 +337,20 @@ class CourseController extends Controller
         }
         
         $course = DB::transaction(function () use ($courseData, $studentIds, $isDual, $request) {
+            // Determine levels to save per student (before any updates)
+            $levelsToSave = [];
+            foreach ($studentIds as $studentId) {
+                if ($request->has('student_levels') && isset($request->student_levels[$studentId])) {
+                    $levelsToSave[$studentId] = $request->student_levels[$studentId];
+                } else {
+                    $student = Student::find($studentId);
+                    $levelsToSave[$studentId] = $student ? $student->level : null;
+                }
+            }
+
+            // Save primary student's level to course directly for fallback
+            $courseData['student_level'] = $levelsToSave[$studentIds[0]] ?? null;
+
             $course = Course::create($courseData);
 
             // Update student levels if provided
@@ -352,6 +366,7 @@ class CourseController extends Controller
             foreach ($studentIds as $index => $studentId) {
                 $course->students()->attach($studentId, [
                     'is_primary' => $index === 0,
+                    'student_level' => $levelsToSave[$studentId] ?? null,
                 ]);
             }
 

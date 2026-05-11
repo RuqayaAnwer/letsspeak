@@ -121,7 +121,7 @@ class Course extends Model
     public function students(): BelongsToMany
     {
         return $this->belongsToMany(Student::class, 'course_students')
-            ->withPivot('is_primary', 'created_at');
+            ->withPivot('is_primary', 'student_level', 'created_at');
     }
 
     /**
