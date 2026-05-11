@@ -564,6 +564,11 @@ const Courses = () => {
                             {completionPercentage}% مكتمل
                           </span>
                         )}
+                        {(course.status === 'finished' || completionPercentage >= 100) && (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded mt-0.5">
+                            ✅ كورس مكتمل
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -725,6 +730,13 @@ const Courses = () => {
                         <div className="mt-1">
                           <span className="text-[9px] text-orange-600 dark:text-orange-400 font-semibold">
                             {completionPercentage}% مكتمل
+                          </span>
+                        </div>
+                      )}
+                      {(course.status === 'finished' || completionPercentage >= 100) && (
+                        <div className="mt-1">
+                          <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5">
+                            ✅ مكتمل
                           </span>
                         </div>
                       )}
