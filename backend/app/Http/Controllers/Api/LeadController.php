@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Http\Controllers\Api;
 
@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class LeadController extends Controller
 {
-    public function index(Request )
+    public function index(Request $request)
     {
         $query = Lead::orderBy('created_at', 'desc');
 
