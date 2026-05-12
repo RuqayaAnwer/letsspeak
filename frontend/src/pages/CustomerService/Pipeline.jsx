@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { Search, Plus, Calendar, Phone, Trash2, ChevronRight, ChevronLeft, MoreVertical, Edit2, UserPlus } from 'lucide-react';
+import { Search, Plus, Calendar, Phone, Trash2, ChevronRight, ChevronLeft, MoreVertical, Edit2, UserPlus, BookOpen } from 'lucide-react';
 import Modal from '../../components/Modal';
 
 const columns = {
@@ -15,6 +16,7 @@ const columns = {
 };
 
 const Pipeline = () => {
+  const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [counts, setCounts] = useState({ all: 0, new: 0, attended_intro: 0, confirmed: 0 });
@@ -124,11 +126,14 @@ const Pipeline = () => {
   const convertLeadToStudent = async (lead) => {
     if(!confirm(`هل أنت متأكد من تحويل "${lead.name}" إلى طالب رسمي؟`)) return;
     try {
-      await api.post(`/leads/${lead.id}/convert`);
+      const res = await api.post(`/leads/${lead.id}/convert`);
       fetchLeads(pagination.current_page, activeTab);
-      alert('تمت إضافة الطالب بنجاح إلى قسم الطلاب!');
+      
+      if (confirm('تمت إضافة الطالب بنجاح! هل تريد الانتقال لإنشاء كورس له الآن؟')) {
+        navigate('/customer-service/create-course');
+      }
     } catch(err) {
-      alert('خطأ أثناء تحويل العميل');
+      alert(err.response?.data?.message || err.message || 'خطأ أثناء تحويل العميل');
     }
   };
 
@@ -172,9 +177,14 @@ const Pipeline = () => {
               className="bg-white dark:bg-[#0f172a] border border-gray-200 dark:border-[#1e293b] text-gray-800 dark:text-slate-200 text-sm rounded-lg pr-10 pl-3 py-2 w-full xl:w-64 focus:ring-1 focus:ring-teal-500 outline-none"
             />
           </div>
-          <button onClick={() => openModal()} className="bg-teal-600 hover:bg-teal-500 text-white rounded-lg p-2 transition-colors" title="إضافة عميل">
-            <Plus className="w-5 h-5" />
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => navigate('/customer-service/create-course')} className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg p-2 transition-colors" title="إنشاء كورس سريع">
+              <BookOpen className="w-5 h-5" />
+            </button>
+            <button onClick={() => openModal()} className="bg-teal-600 hover:bg-teal-500 text-white rounded-lg p-2 transition-colors" title="إضافة عميل">
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
 

@@ -1,10 +1,7 @@
-<?php
-require 'vendor/autoload.php';
-$app = require_once 'bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
-
-echo "Columns in lectures table:\n";
-print_r(Illuminate\Support\Facades\Schema::getColumnListing('lectures'));
-
-echo "\nColumns in trainer_payrolls table:\n";
-print_r(Illuminate\Support\Facades\Schema::getColumnListing('trainer_payrolls'));
+﻿<?php
+require __DIR__.'/vendor/autoload.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
+$result = DB::select("SELECT sql FROM sqlite_master WHERE type='table' AND name='students'");
+echo json_encode($result);
