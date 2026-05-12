@@ -91,11 +91,21 @@ class LeadController extends Controller
 
     public function convertToStudent(Lead $lead)
     {
+        // Extract level (L1-L8) from package_selected, default to L1
+        $level = 'L1';
+        if ($lead->package_selected) {
+            if (preg_match('/(L[1-8])/i', $lead->package_selected, $matches)) {
+                $level = strtoupper($matches[1]);
+            } elseif (preg_match('/مستوى\s*([1-8])/u', $lead->package_selected, $matches)) {
+                $level = 'L' . $matches[1];
+            }
+        }
+
         $student = \App\Models\Student::create([
             'name' => $lead->name,
             'phone' => $lead->phone_whatsapp,
-            'level' => mb_substr($lead->package_selected ?: 'L1', 0, 10),
-            'notes' => $lead->notes . "\n(تم التحويل من مسار العملاء)",
+            'level' => $level,
+            'notes' => "الباقة المطلوبة: " . ($lead->package_selected ?? 'غير محدد') . "\n" . $lead->notes . "\n(تم التحويل من مسار العملاء)",
             'lead_id' => $lead->id,
         ]);
 
