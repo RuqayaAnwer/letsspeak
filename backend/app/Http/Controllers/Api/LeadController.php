@@ -91,13 +91,27 @@ class LeadController extends Controller
 
     public function convertToStudent(Lead $lead)
     {
-        // Extract level (L1-L8) from package_selected, default to L1
+        // Extract level (L1-L8) from current_level, package_selected, or notes
         $level = 'L1';
-        if ($lead->package_selected) {
-            if (preg_match('/(L[1-8])/i', $lead->package_selected, $matches)) {
-                $level = strtoupper($matches[1]);
-            } elseif (preg_match('/مستوى\s*([1-8])/u', $lead->package_selected, $matches)) {
-                $level = 'L' . $matches[1];
+        $fieldsToCheck = [
+            $lead->current_level,
+            $lead->package_selected,
+            $lead->notes
+        ];
+
+        foreach ($fieldsToCheck as $field) {
+            if ($field) {
+                if (preg_match('/(L[1-8])/i', $field, $matches)) {
+                    $level = strtoupper($matches[1]);
+                    break;
+                } elseif (preg_match('/مستوى\s*([1-8])/u', $field, $matches) || preg_match('/المستوى\s*([1-8])/u', $field, $matches)) {
+                    $level = 'L' . $matches[1];
+                    break;
+                } elseif ($field === $lead->current_level && preg_match('/^[1-8]$/', trim($field))) {
+                    // If they just typed "5" in current_level
+                    $level = 'L' . trim($field);
+                    break;
+                }
             }
         }
 
@@ -105,7 +119,9 @@ class LeadController extends Controller
             'name' => $lead->name,
             'phone' => $lead->phone_whatsapp,
             'level' => $level,
-            'notes' => "الباقة المطلوبة: " . ($lead->package_selected ?? 'غير محدد') . "\n" . $lead->notes . "\n(تم التحويل من مسار العملاء)",
+            'notes' => "المستوى التقييمي: " . ($lead->current_level ?? 'غير محدد') . "\n" .
+                       "الباقة المطلوبة: " . ($lead->package_selected ?? 'غير محدد') . "\n" . 
+                       $lead->notes . "\n(تم التحويل من مسار العملاء)",
             'lead_id' => $lead->id,
         ]);
 
