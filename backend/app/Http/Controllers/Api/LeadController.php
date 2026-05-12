@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Api;
 
@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class LeadController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request )
     {
         $query = Lead::orderBy('created_at', 'desc');
 
@@ -16,7 +16,11 @@ class LeadController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('phone_whatsapp', 'like', "%{$search}%");
+                  ->orWhere('phone_whatsapp', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('telegram_id', 'like', "%{$search}%")
+                  ->orWhere('trainer_name', 'like', "%{$search}%")
+                  ->orWhere('notes', 'like', "%{$search}%");
             });
         }
 
