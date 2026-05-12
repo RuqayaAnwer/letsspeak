@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { Search, Plus, Calendar, Phone, Trash2, ChevronRight, ChevronLeft, MoreVertical, Edit2, UserPlus } from 'lucide-react';
@@ -30,13 +30,26 @@ const Pipeline = () => {
   });
 
   useEffect(() => {
-    fetchLeads(1, activeTab);
+    fetchLeads(1, activeTab, search);
   }, [activeTab]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchLeads(1, activeTab, search);
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [search]);
 
   const fetchLeads = async (page = 1, status = 'all', searchQuery = search) => {
     setLoading(true);
     try {
-      const res = await api.get(`/leads?page=${page}&status=${status === 'all' ? 'all' : status}`);
+      const res = await api.get('/leads', {
+        params: {
+          page: page,
+          status: status === 'all' ? 'all' : status,
+          search: searchQuery || ''
+        }
+      });
       setLeads(res.data.leads.data);
       setPagination({
         current_page: res.data.leads.current_page,
