@@ -239,20 +239,11 @@ class Lecture extends Model
         $lectureDate = \Carbon\Carbon::parse($this->date)->startOfDay();
         $today = \Carbon\Carbon::today();
 
-        // Future lecture (date is after today) - cannot be modified
-        if ($lectureDate->gt($today)) {
-            return [
-                'canModify' => false,
-                'reason' => 'لا يمكن تعديل محاضرة مستقبلية',
-                'type' => 'future'
-            ];
-        }
-
-        // Today's lecture or past lecture - can be modified
+        // Always allow modification, matching frontend logic which allows editing/postponing future lectures
         return [
             'canModify' => true,
             'reason' => null,
-            'type' => $lectureDate->eq($today) ? 'today' : 'past'
+            'type' => $lectureDate->gt($today) ? 'future' : ($lectureDate->eq($today) ? 'today' : 'past')
         ];
     }
 
