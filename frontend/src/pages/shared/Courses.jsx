@@ -801,21 +801,23 @@ const Courses = () => {
               className="input text-xs sm:text-sm"
             />
           </div>
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
-              تصفية حسب المدرب
-            </label>
-            <select
-              value={searchTrainer}
-              onChange={(e) => setSearchTrainer(e.target.value)}
-              className="input text-xs sm:text-sm appearance-none cursor-pointer"
-            >
-              <option value="">جميع المدربين</option>
-              {uniqueTrainers.map((trainer, idx) => (
-                <option key={idx} value={trainer}>{trainer}</option>
-              ))}
-            </select>
-          </div>
+          {!isTrainer && (
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+                تصفية حسب المدرب
+              </label>
+              <select
+                value={searchTrainer}
+                onChange={(e) => setSearchTrainer(e.target.value)}
+                className="input text-xs sm:text-sm appearance-none cursor-pointer"
+              >
+                <option value="">جميع المدربين</option>
+                {uniqueTrainers.map((trainer, idx) => (
+                  <option key={idx} value={trainer}>{trainer}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
         
         {(searchStudent || searchTrainer) && (

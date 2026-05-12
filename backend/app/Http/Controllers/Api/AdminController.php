@@ -264,26 +264,41 @@ class AdminController extends Controller
             return response()->json(['success' => false, 'message' => 'لا يمكنك حذف حسابك الخاص'], 422);
         }
 
-        if ($user->role === 'trainer' && $user->trainer) {
-            $trainer = $user->trainer;
-            // Wipe all courses and their relations so they don't become orphaned
-            foreach ($trainer->courses as $course) {
-                $course->lectures()->delete();
-                $course->payments()->delete();
-                $course->statusHistory()->delete();
-                $course->students()->detach();
-                $course->delete();
-            }
-            $trainer->payrolls()->delete();
-            $trainer->unavailabilities()->delete();
-            $trainer->delete();
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($user) {
+                if ($user->role === 'trainer' && $user->trainer) {
+                    $trainer = $user->trainer;
+                    
+                    // Cleanup related data explicitly
+                    foreach ($trainer->courses as $course) {
+                        $course->lectures()->delete();
+                        $course->payments()->delete();
+                        $course->statusHistory()->delete();
+                        \Illuminate\Support\Facades\DB::table('course_alerts')->where('course_id', $course->id)->delete();
+                        $course->students()->detach();
+                        $course->delete();
+                    }
+                    $trainer->payrolls()->delete();
+                    $trainer->unavailabilities()->delete();
+                    $trainer->delete();
+                }
+
+                // Cleanup activity logs and other explicit references just in case
+                \Illuminate\Support\Facades\DB::table('activity_logs')->where('user_id', $user->id)->update(['user_id' => null]);
+                
+                $user->delete();
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم حذف الموظف بنجاح',
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error deleting user: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكن حذف المستخدم لوجود سجلات مرتبطة به في النظام. يرجى مراجعة سجلات النظام.'
+            ], 422);
         }
-
-        $user->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'تم حذف الموظف بنجاح',
-        ]);
     }
 }
