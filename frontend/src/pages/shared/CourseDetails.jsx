@@ -371,6 +371,9 @@ const CourseDetails = () => {
       if (!window.confirm("هل أنت متأكد من حفظ التعديلات الخاصة بهذه المحاضرة؟ سيتم تطبيق التغييرات فوراً.")) {
         return; // Cancel the change
       }
+      
+      // They confirmed. We set a flag to save immediately bypassing the 1.5s delay
+      window.__immediateSaveNext = true;
     }
     
     // If "postponed" is selected, open the postponement modal with date/time picker
@@ -936,14 +939,20 @@ const CourseDetails = () => {
     }
   };
 
-  // Auto-save edited lectures after 1.5 seconds of inactivity
+  // Auto-save edited lectures after 1.5 seconds of inactivity, or immediately if forced
   useEffect(() => {
-    const saveTimer = setTimeout(() => {
-      if (Object.keys(editedLectures).length > 0 && !saving) {
-        saveLectures(false); // auto-save without alert
+    if (Object.keys(editedLectures).length > 0 && !saving) {
+      if (window.__immediateSaveNext) {
+        window.__immediateSaveNext = false;
+        saveLectures(true); // show success alert since it's immediate
+        return;
       }
-    }, 1500);
-    return () => clearTimeout(saveTimer);
+      
+      const saveTimer = setTimeout(() => {
+        saveLectures(false); // auto-save without alert
+      }, 1500);
+      return () => clearTimeout(saveTimer);
+    }
   }, [editedLectures, saving]);
 
 
