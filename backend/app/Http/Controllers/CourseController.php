@@ -951,7 +951,15 @@ class CourseController extends Controller
         // 1. Get courses with lecture counts through SQL, much faster and zero Memory leakage
         $coursesData = Course::with(['trainer.user', 'student', 'coursePackage'])
             ->where('status', 'active')
-            ->withCount('lectures as total_lectures')
+            ->withCount(['lectures as total_lectures' => function ($query) {
+                $query->where(function($q) {
+                    $q->whereNotIn('attendance', [
+                        \App\Models\Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
+                        \App\Models\Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
+                        \App\Models\Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
+                    ])->orWhereNull('attendance');
+                });
+            }])
             ->withCount(['lectures as completed_lectures' => function ($query) {
                 // Count how many lectures are considered finished (present, partially, absent)
                 $query->whereIn('attendance', [\App\Models\Lecture::ATTENDANCE_PRESENT, \App\Models\Lecture::ATTENDANCE_PARTIALLY, \App\Models\Lecture::ATTENDANCE_ABSENT]);
