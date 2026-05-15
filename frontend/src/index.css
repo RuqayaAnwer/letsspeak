@@ -286,3 +286,52 @@
 .animate-stagger > *:nth-child(2) { animation-delay: 0.1s; }
 .animate-stagger > *:nth-child(3) { animation-delay: 0.15s; }
 .animate-stagger > *:nth-child(4) { animation-delay: 0.2s; }
+/* Overrides for mobile to display desktop tables globally and scale down fonts */
+@media (max-width: 767px) {
+  /* Hide the clunky mobile card views */
+  .md\:hidden {
+    display: none !important;
+  }
+  
+  /* Force desktop table views to show on mobile */
+  .hidden.md\:block {
+    display: block !important;
+  }
+  
+  .hidden.md\:flex {
+    display: flex !important;
+  }
+  
+  /* Scale down text and padding to fit table data proportionally */
+  table, .table {
+    font-size: 10px !important;
+  }
+  
+  th, td, .table th, .table td {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Scale down inputs and selects inside tables */
+  td input, td select {
+    font-size: 9px !important;
+    padding: 2px 4px !important;
+    height: auto !important;
+    min-height: 20px !important;
+  }
+  
+  /* Fix badge sizes inside tables */
+  td .badge {
+    padding: 0.125rem 0.25rem !important;
+    font-size: 8px !important;
+  }
+  
+  /* Reduce page padding for more screen space */
+  main {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+}
