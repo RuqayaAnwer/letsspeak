@@ -22,8 +22,17 @@ const Courses = () => {
   };
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchStudent, setSearchStudent] = useState('');
-  const [searchTrainer, setSearchTrainer] = useState('');
+  const [searchStudent, setSearchStudent] = useState(() => sessionStorage.getItem('coursesSearchStudent') || '');
+  const [searchTrainer, setSearchTrainer] = useState(() => sessionStorage.getItem('coursesSearchTrainer') || '');
+
+  useEffect(() => {
+    sessionStorage.setItem('coursesSearchStudent', searchStudent);
+  }, [searchStudent]);
+
+  useEffect(() => {
+    sessionStorage.setItem('coursesSearchTrainer', searchTrainer);
+  }, [searchTrainer]);
+
   const [studentPaymentsModal, setStudentPaymentsModal] = useState({
     open: false,
     studentId: null,
@@ -804,7 +813,7 @@ const Courses = () => {
           {!isTrainer && (
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
-                تصفية حسب المدرب
+                ابحث عن مدرب
               </label>
               <select
                 value={searchTrainer}

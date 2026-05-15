@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { Search, Plus, Calendar, Phone, Trash2, ChevronRight, ChevronLeft, MoreVertical, Edit2, UserPlus, BookOpen } from 'lucide-react';
@@ -178,9 +178,9 @@ const Pipeline = () => {
             />
           </div>
           <div className="flex gap-2">
-            <button onClick={() => navigate('/customer-service/create-course')} className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg p-2 transition-colors" title="إنشاء كورس سريع">
+            <Link to="/customer-service/create-course" className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg p-2 transition-colors flex items-center justify-center" title="إنشاء كورس سريع">
               <BookOpen className="w-5 h-5" />
-            </button>
+            </Link>
             <button onClick={() => openModal()} className="bg-teal-600 hover:bg-teal-500 text-white rounded-lg p-2 transition-colors" title="إضافة عميل">
               <Plus className="w-5 h-5" />
             </button>
