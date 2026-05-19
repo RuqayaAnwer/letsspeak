@@ -168,8 +168,9 @@ const Courses = () => {
 
   // Check if course is at 75% completion
   const isAt75Percent = (course) => {
+    if (course?.renewal_alert_status === 'renewed') return false;
     const percentage = calculateCompletionPercentage(course);
-    return percentage >= 75 && percentage < 100;
+    return percentage >= 75;
   };
 
   // Fetch student payments for a specific course

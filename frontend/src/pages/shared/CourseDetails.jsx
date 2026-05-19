@@ -1071,8 +1071,9 @@ const CourseDetails = () => {
 
   // Check if course is at 75% completion
   const isAt75Percent = () => {
+    if (course?.renewal_alert_status === 'renewed') return false;
     const percentage = calculateCompletionPercentage();
-    return percentage >= 75 && percentage < 100;
+    return percentage >= 75;
   };
 
   // Check if evaluation milestone is reached (every 5 completed lectures)
@@ -1573,15 +1574,13 @@ const CourseDetails = () => {
                 : 'يرجى إرسال رسالة للمتدرب لتجديد الاشتراك'}
             </p>
             
-            {/* Two-stage buttons: Sent and Renewed */}
+            {/* Single button: Sent and Renew Course */}
             <div className="flex items-center justify-center gap-1.5 sm:gap-3 flex-wrap">
               <button
                 onClick={() => handleRenewalAlertStatusChange('sent')}
                 className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-[10px] sm:text-sm font-semibold transition-all ${
                   course.renewal_alert_status === 'sent'
                     ? 'bg-blue-500 text-white shadow-lg scale-105'
-                    : course.renewal_alert_status === 'sent' || course.renewal_alert_status === 'renewed'
-                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
                     : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
                 }`}
               >
@@ -1589,45 +1588,20 @@ const CourseDetails = () => {
               </button>
               
               <button
-                onClick={() => handleRenewalAlertStatusChange('renewed')}
-                className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-[10px] sm:text-sm font-semibold transition-all ${
-                  course.renewal_alert_status === 'renewed'
-                    ? 'bg-green-500 text-white shadow-lg scale-105'
-                    : course.renewal_alert_status === 'sent' || course.renewal_alert_status === 'renewed'
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                }`}
-                disabled={course.renewal_alert_status === 'none' || course.renewal_alert_status === 'alert'}
+                onClick={openRenewalResetModal}
+                className="px-2 sm:px-4 py-1 sm:py-2 rounded-lg bg-purple-500 text-white shadow-lg hover:bg-purple-600 hover:scale-105 text-[10px] sm:text-sm font-semibold transition-all"
               >
-                ✅ تم الاشتراك
+                🔄 تجديد الكورس
               </button>
-              
-              {course.renewal_alert_status === 'renewed' && (
-                <button
-                  onClick={openRenewalResetModal}
-                  className="px-2 sm:px-4 py-1 sm:py-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 text-[10px] sm:text-sm font-semibold transition-all"
-                >
-                  🔄 إعادة تعيين
-                </button>
-              )}
             </div>
             
             {/* Status indicator */}
-            {course.renewal_alert_status !== 'none' && course.renewal_alert_status !== 'alert' && (
-              <div className={`mt-2 sm:mt-3 pt-2 sm:pt-3 border-t ${
-                course.renewal_alert_status === 'renewed'
-                  ? 'border-green-300 dark:border-green-700'
-                  : 'border-orange-300 dark:border-orange-700'
-              }`}>
-                <p className={`text-[10px] sm:text-sm text-center ${
-                  course.renewal_alert_status === 'renewed'
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-orange-600 dark:text-orange-400'
-                }`}>
+            {course.renewal_alert_status === 'sent' && (
+              <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-orange-300 dark:border-orange-700">
+                <p className="text-[10px] sm:text-sm text-center text-orange-600 dark:text-orange-400">
                   الحالة الحالية: 
                   <span className="font-bold ml-2">
-                    {course.renewal_alert_status === 'sent' && '📧 تم الإرسال'}
-                    {course.renewal_alert_status === 'renewed' && '✅ تم الاشتراك'}
+                    📧 تم الإرسال
                   </span>
                 </p>
               </div>

@@ -972,7 +972,7 @@ class CourseController extends Controller
             if ($total == 0) return false;
             
             $percentage = round(($course->completed_lectures / $total) * 100);
-            return $percentage >= 75 && $percentage < 100;
+            return $percentage >= 75 && $course->renewal_alert_status !== 'renewed';
         })->map(function ($course) {
             $total = $course->total_lectures > 0 ? $course->total_lectures : ($course->coursePackage->lectures_count ?? 0);
             return [
