@@ -137,6 +137,13 @@ const Pipeline = () => {
     }
   };
 
+  const isKidsLead = (lead) => {
+    if (!lead) return false;
+    const pkgName = lead.package_selected || '';
+    const source = lead.source || '';
+    return pkgName.includes('اطفال') || pkgName.includes('توازن') || pkgName.includes('سرعة') || source.includes('استمارة الاطفال');
+  };
+
   return (
     <div className="space-y-6 animate-fade-in relative z-0 min-h-screen font-sans text-right" dir="rtl">
       
@@ -228,7 +235,12 @@ const Pipeline = () => {
 
                     <td className="px-4 py-4 text-center border-l border-gray-200 dark:border-[#1e293b]">
                       {lead.package_selected ? (
-                        <span className="inline-block border border-[#334155] bg-white dark:bg-[#1e293b]/50 text-gray-700 dark:text-slate-300 text-[11px] px-3 py-1 rounded-full">
+                        <span className={`inline-block border text-[11px] px-3 py-1 rounded-full ${
+                          isKidsLead(lead) 
+                            ? 'border-pink-300 bg-pink-50 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 dark:border-pink-800/50 shadow-sm' 
+                            : 'border-[#334155] bg-white dark:bg-[#1e293b]/50 text-gray-700 dark:text-slate-300'
+                        }`}>
+                          {isKidsLead(lead) && <span className="ml-1 text-[12px]">👧👦</span>}
                           {lead.package_selected}
                         </span>
                       ) : <span className="text-slate-600">-</span>}

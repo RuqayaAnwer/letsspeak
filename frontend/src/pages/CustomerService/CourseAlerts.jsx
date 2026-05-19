@@ -168,7 +168,15 @@ const CourseAlerts = () => {
              : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-';
   };
 
-  const getStatusBadge = (status) => {
+  const isKidsCourse = (course) => {
+    const pkgName = course?.course_package?.name || course?.coursePackage?.name || course?.package_selected || '';
+    return pkgName.includes('اطفال') || pkgName.includes('توازن') || pkgName.includes('سرعة');
+  };
+
+  const getStatusBadge = (course, completionPercentage) => {
+    if (course.status === 'active' && completionPercentage >= 100) {
+      return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+    }
     const badges = {
       active: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
       finished: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
@@ -176,10 +184,13 @@ const CourseAlerts = () => {
       paid: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
       cancelled: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
     };
-    return badges[status] || 'bg-gray-100 text-gray-700';
+    return badges[course.status] || 'bg-gray-100 text-gray-700';
   };
 
-  const getStatusLabel = (status) => {
+  const getStatusLabel = (course, completionPercentage) => {
+    if (course.status === 'active' && completionPercentage >= 100) {
+      return 'مكتمل';
+    }
     const labels = {
       active: 'نشط',
       finished: 'منتهي',
@@ -187,7 +198,7 @@ const CourseAlerts = () => {
       paid: 'مدفوع',
       cancelled: 'ملغي',
     };
-    return labels[status] || status;
+    return labels[course.status] || course.status;
   };
 
   if (loading) {
@@ -273,7 +284,11 @@ const CourseAlerts = () => {
                       return (
                         <div
                           key={course.id}
-                          className="p-2 rounded-lg border-2 border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 max-w-full mx-auto overflow-hidden"
+                          className={`p-2 rounded-lg border-2 max-w-full mx-auto overflow-hidden ${
+                            isKidsCourse(course)
+                              ? 'border-pink-300 dark:border-pink-700 bg-pink-50 dark:bg-pink-900/20'
+                              : 'border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20'
+                          }`}
                         >
                           <div className="grid grid-cols-2 gap-1.5">
                             {/* Course ID */}
@@ -356,8 +371,8 @@ const CourseAlerts = () => {
                             {/* Status */}
                             <div className="flex flex-col items-center gap-0.5">
                               <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400">الحالة</span>
-                              <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${getStatusBadge(course.status)}`}>
-                                {getStatusLabel(course.status)}
+                              <span className={`px-1 py-0.5 rounded-full text-[9px] font-medium w-full text-center ${getStatusBadge(course, completionPercentage)}`}>
+                                {getStatusLabel(course, completionPercentage)}
                               </span>
                             </div>
                             
@@ -436,7 +451,11 @@ const CourseAlerts = () => {
                   return (
                     <tr 
                       key={course.id} 
-                      className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 hover:bg-orange-100 dark:hover:bg-orange-900/30"
+                      className={`border-l-4 hover:bg-opacity-80 transition-colors ${
+                        isKidsCourse(course)
+                          ? 'bg-pink-50 dark:bg-pink-900/20 border-pink-500 hover:bg-pink-100 dark:hover:bg-pink-900/30'
+                          : 'bg-orange-50 dark:bg-orange-900/20 border-orange-500 hover:bg-orange-100 dark:hover:bg-orange-900/30'
+                      }`}
                     >
                       <td className="px-2 py-2 text-center text-gray-800 dark:text-white text-[10px] font-medium">{course.id}</td>
                       <td className="px-2 py-2 text-center text-gray-800 dark:text-white text-[10px]">
@@ -489,8 +508,8 @@ const CourseAlerts = () => {
                         </span>
                       </td>
                       <td className="px-2 py-2 text-center">
-                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${getStatusBadge(course.status)}`}>
-                          {getStatusLabel(course.status)}
+                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${getStatusBadge(course, completionPercentage)}`}>
+                          {getStatusLabel(course, completionPercentage)}
                         </span>
                       </td>
                       <td className="px-2 py-2 text-center">

@@ -157,6 +157,12 @@ const CourseDetails = () => {
   // Profile Modal State
   
 
+  const isKidsCourse = (courseObj = course) => {
+    if (!courseObj) return false;
+    const pkgName = courseObj.course_package?.name || courseObj.coursePackage?.name || courseObj.package_selected || '';
+    return pkgName.includes('اطفال') || pkgName.includes('توازن') || pkgName.includes('سرعة');
+  };
+
   // تفعيل بدء الكورس الفعلي (للمدرب)
   const [startingCourse, setStartingCourse] = useState(false);
   const [startCourseModal, setStartCourseModal] = useState({
@@ -1425,6 +1431,11 @@ const CourseDetails = () => {
           </button>
           <div>
             <div className="flex flex-wrap items-center gap-3 mb-1">
+              {isKidsCourse() && (
+                <span className="px-2 py-1 bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 rounded-lg text-xs font-bold border border-pink-200 dark:border-pink-800/50 shadow-sm flex items-center gap-1.5 animate-pulse-slow">
+                  <span className="text-[14px]">👧👦</span> كورس أطفال
+                </span>
+              )}
               <h1 className="page-title flex items-center gap-2 font-bold flex-wrap">
                 {course.is_dual && course.students && course.students.length > 0
                   ? course.students.map((s, idx) => (

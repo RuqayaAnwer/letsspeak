@@ -381,6 +381,12 @@ const Courses = () => {
     return course.is_dual || (course.students && Array.isArray(course.students) && course.students.length > 1);
   };
 
+  const isKidsCourse = (course) => {
+    if (!course) return false;
+    const pkgName = course.course_package?.name || course.coursePackage?.name || course.package_selected || '';
+    return pkgName.includes('اطفال') || pkgName.includes('توازن') || pkgName.includes('سرعة');
+  };
+
   // Filter courses by search criteria
   const filterCoursesBySearch = (coursesList) => {
     return coursesList.filter(course => {
@@ -490,11 +496,13 @@ const Courses = () => {
                   className={`p-3 rounded-lg border-2 ${
                     is75Percent 
                       ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-500' 
-                      : course.extra_lectures_count > 0
-                        ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50'
-                        : course.status === 'finished'
-                          ? 'bg-pink-50 dark:bg-pink-900/10 border-pink-200 dark:border-pink-800/40'
-                          : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50'
+                      : isKidsCourse(course)
+                        ? 'bg-pink-50 dark:bg-pink-900/10 border-pink-300 dark:border-pink-700/50'
+                        : course.extra_lectures_count > 0
+                          ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50'
+                          : course.status === 'finished'
+                            ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/40'
+                            : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50'
                   }`}
                 >
                   <div className="space-y-1.5">
@@ -667,11 +675,13 @@ const Courses = () => {
                     className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 p-1 rounded-xl transition-all ${
                       is75Percent 
                         ? 'bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500' 
-                        : course.extra_lectures_count > 0
-                          ? 'bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-400'
-                          : course.status === 'finished'
-                            ? 'bg-pink-50/70 dark:bg-pink-900/10 shadow-sm opacity-90'
-                            : ''
+                        : isKidsCourse(course)
+                          ? 'bg-pink-50/70 dark:bg-pink-900/10 border-l-4 border-pink-400 shadow-sm opacity-90'
+                          : course.extra_lectures_count > 0
+                            ? 'bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-400'
+                            : course.status === 'finished'
+                              ? 'bg-blue-50/70 dark:bg-blue-900/10 shadow-sm opacity-90'
+                              : ''
                     }`}
                   >
                     <td className="px-2 py-2 text-center text-gray-800 dark:text-white font-bold">
