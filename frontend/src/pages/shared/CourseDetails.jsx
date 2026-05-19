@@ -3018,7 +3018,6 @@ const CourseDetails = () => {
                   onChange={(e) => setRenewalResetModal(prev => ({ ...prev, start_date: e.target.value }))}
                   className="input text-xs sm:text-sm py-2 sm:py-2.5"
                   required
-                  min={new Date().toISOString().split('T')[0]}
                 />
               </div>
 

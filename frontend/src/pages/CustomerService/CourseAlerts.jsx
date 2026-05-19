@@ -25,6 +25,7 @@ const CourseAlerts = () => {
     loading: false,
   });
   const [alertsPage, setAlertsPage] = useState(1); // Pagination for mobile cards
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Profile Modal State
   
@@ -198,22 +199,43 @@ const CourseAlerts = () => {
   }
 
   const coursesArray = Array.isArray(courses) ? courses : [];
-  const coursesWithAlerts = coursesArray.filter(isAt75Percent);
+  const coursesWithAlerts = coursesArray.filter(course => {
+    if (!isAt75Percent(course)) return false;
+    if (!searchQuery) return true;
+    const studentName = getStudentName(course).toLowerCase();
+    return studentName.includes(searchQuery.toLowerCase());
+  });
 
   return (
     <div>
       {/* Header */}
       <div className="mb-3 sm:mb-6">
         <div className="bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-700 rounded-xl p-2.5 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <AlertTriangle className="w-5 h-5 sm:w-8 sm:h-8 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-            <div>
-              <h1 className="text-base sm:text-2xl font-bold text-orange-800 dark:text-orange-300">
-                التنبيهات
-              </h1>
-              <p className="text-[10px] sm:text-sm text-orange-600 dark:text-orange-400 mt-0.5 sm:mt-1">
-                الكورسات التي على وشك الانتهاء (اكتملت 75% من محاضراتها)
-              </p>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <AlertTriangle className="w-5 h-5 sm:w-8 sm:h-8 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+              <div>
+                <h1 className="text-base sm:text-2xl font-bold text-orange-800 dark:text-orange-300">
+                  التنبيهات
+                </h1>
+                <p className="text-[10px] sm:text-sm text-orange-600 dark:text-orange-400 mt-0.5 sm:mt-1">
+                  الكورسات التي على وشك الانتهاء (اكتملت 75% من محاضراتها)
+                </p>
+              </div>
+            </div>
+            
+            {/* Search Input */}
+            <div className="w-full sm:w-auto mt-2 sm:mt-0">
+              <input
+                type="text"
+                placeholder="البحث باسم الطالب..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setAlertsPage(1);
+                }}
+                className="input py-1.5 sm:py-2 text-xs sm:text-sm w-full sm:w-64 border-orange-300 focus:border-orange-500 focus:ring-orange-500"
+              />
             </div>
           </div>
         </div>
