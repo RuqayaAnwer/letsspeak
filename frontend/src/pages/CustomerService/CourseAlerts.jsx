@@ -170,8 +170,8 @@ const CourseAlerts = () => {
   };
 
   const isKidsCourse = (course) => {
-    const pkgName = course?.course_package?.name || course?.coursePackage?.name || course?.package_selected || '';
-    return pkgName.includes('اطفال') || pkgName.includes('أطفال');
+    // Disabled temporarily until kids data integration is completed
+    return false;
   };
 
   const getStatusBadge = (course, completionPercentage) => {

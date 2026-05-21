@@ -158,9 +158,8 @@ const CourseDetails = () => {
   
 
   const isKidsCourse = (courseObj = course) => {
-    if (!courseObj) return false;
-    const pkgName = courseObj.course_package?.name || courseObj.coursePackage?.name || courseObj.package_selected || '';
-    return pkgName.includes('اطفال') || pkgName.includes('أطفال');
+    // Disabled temporarily until kids data integration is completed
+    return false;
   };
 
   // تفعيل بدء الكورس الفعلي (للمدرب)
