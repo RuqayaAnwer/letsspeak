@@ -374,6 +374,9 @@ class LectureController extends Controller
                         ->where('trainer_payment_status', 'paid')
                         ->get()
                         ->filter(function ($l) {
+                            if (str_starts_with($l->attendance ?? '', 'postponed_')) {
+                                return false;
+                            }
                             if ($l->student_attendance && is_array($l->student_attendance)) {
                                 foreach ($l->student_attendance as $studentData) {
                                     if (is_array($studentData)) {
@@ -447,7 +450,10 @@ class LectureController extends Controller
 
         // Auto-finish course if all required lectures are completed
         if ($course && $course->status === 'active') {
-            $completedCount = $course->lectures()->get()->filter(function ($l) {
+            $validLectures = $course->lectures()->get()->filter(function ($l) {
+                return !str_starts_with($l->attendance ?? '', 'postponed_');
+            });
+            $completedCount = $validLectures->filter(function ($l) {
                 if ($l->student_attendance && is_array($l->student_attendance)) {
                     foreach ($l->student_attendance as $studentData) {
                         if (is_array($studentData)) {

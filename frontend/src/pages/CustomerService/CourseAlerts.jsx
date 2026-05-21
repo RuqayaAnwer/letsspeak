@@ -77,15 +77,16 @@ const CourseAlerts = () => {
     
     // Fallback: calculate from lectures if available
     if (course.lectures && Array.isArray(course.lectures) && course.lectures.length > 0) {
-      const completedCount = course.lectures.filter(l => 
-        l.is_completed || l.attendance === 'present' || l.attendance === 'absent' || l.attendance === 'partially'
-      ).length;
-      
       const validLectures = course.lectures.filter(l => 
         l.attendance !== 'postponed_by_trainer' && 
         l.attendance !== 'postponed_by_student' && 
         l.attendance !== 'postponed_holiday'
       );
+      
+      const completedCount = validLectures.filter(l => 
+        l.is_completed || l.attendance === 'present' || l.attendance === 'absent' || l.attendance === 'partially'
+      ).length;
+      
       const totalCount = validLectures.length;
       
       return totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;

@@ -1064,11 +1064,12 @@ const CourseDetails = () => {
     }
     
     if (lectures && lectures.length > 0) {
-      const completedCount = lectures.filter(l => 
+      const validLectures = lectures.filter(l => !l.attendance?.startsWith('postponed_'));
+      const completedCount = validLectures.filter(l => 
         l.is_completed || l.attendance === 'present' || l.attendance === 'absent'
       ).length;
       // استخدام lectures_count من الكورس إذا كان متوفراً، وإلا استخدام عدد المحاضرات المحملة
-      const totalCount = course?.lectures_count || lectures.length;
+      const totalCount = course?.lectures_count || validLectures.length;
       return totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
     }
     
@@ -1086,8 +1087,9 @@ const CourseDetails = () => {
   const checkEvaluationMilestone = (courseData) => {
     if (!courseData || !courseData.lectures) return;
     
-    // Count completed lectures
-    const completedLectures = courseData.lectures.filter(l => 
+    // Count completed lectures (excluding postponed)
+    const validLectures = courseData.lectures.filter(l => !l.attendance?.startsWith('postponed_'));
+    const completedLectures = validLectures.filter(l => 
       l.is_completed || l.attendance === 'present' || l.attendance === 'absent'
     ).length;
     
@@ -1630,8 +1632,8 @@ const CourseDetails = () => {
             </h2>
             <span className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">
               {sortedLectures.filter((l) => {
-                return l.is_completed || l.attendance === 'present' || l.attendance === 'absent';
-              }).length} / {course?.lectures_count || sortedLectures.length} مكتمل
+                return !l.attendance?.startsWith('postponed_') && (l.is_completed || l.attendance === 'present' || l.attendance === 'absent');
+              }).length} / {course?.lectures_count || sortedLectures.filter(l => !l.attendance?.startsWith('postponed_')).length} مكتمل
             </span>
           </div>
           

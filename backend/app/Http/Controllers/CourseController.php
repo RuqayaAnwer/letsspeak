@@ -79,11 +79,16 @@ class CourseController extends Controller
                                 }
                                 
                                 // Count completed lectures: either is_completed=true OR attendance is present/absent
-                                $completedCount = $course->lectures->filter(function ($lecture) {
+                                // Exclude postponed lectures
+                                $validLectures = $course->lectures->filter(function ($lecture) {
+                                    return !str_starts_with($lecture->attendance ?? '', 'postponed_');
+                                });
+                                $completedCount = $validLectures->filter(function ($lecture) {
                                     return $lecture->is_completed || in_array($lecture->attendance, ['present', 'absent']);
                                 })->count();
-                                $totalCount = $course->lectures->count();
-                                $completionPercentage = $totalCount > 0 ? round(($completedCount / $totalCount) * 100) : 0;
+                                $totalCount = $validLectures->count();
+                                $totalRequired = $course->lectures_count ?: $totalCount;
+                                $completionPercentage = $totalRequired > 0 ? round(($completedCount / $totalRequired) * 100) : 0;
                                 
                                 // Add attributes to the course model
                                 $course->completed_lectures_count = $completedCount;
@@ -117,11 +122,16 @@ class CourseController extends Controller
             }
             
             // Count completed lectures: either is_completed=true OR attendance is present/absent
-            $completedCount = $course->lectures->filter(function ($lecture) {
+            // Exclude postponed lectures
+            $validLectures = $course->lectures->filter(function ($lecture) {
+                return !str_starts_with($lecture->attendance ?? '', 'postponed_');
+            });
+            $completedCount = $validLectures->filter(function ($lecture) {
                 return $lecture->is_completed || in_array($lecture->attendance, ['present', 'absent']);
             })->count();
-            $totalCount = $course->lectures->count();
-            $completionPercentage = $totalCount > 0 ? round(($completedCount / $totalCount) * 100) : 0;
+            $totalCount = $validLectures->count();
+            $totalRequired = $course->lectures_count ?: $totalCount;
+            $completionPercentage = $totalRequired > 0 ? round(($completedCount / $totalRequired) * 100) : 0;
             
             // Add attributes to the course model
             $course->completed_lectures_count = $completedCount;
@@ -961,8 +971,15 @@ class CourseController extends Controller
                 });
             }])
             ->withCount(['lectures as completed_lectures' => function ($query) {
-                // Count how many lectures are considered finished (present, partially, absent)
-                $query->whereIn('attendance', [\App\Models\Lecture::ATTENDANCE_PRESENT, \App\Models\Lecture::ATTENDANCE_PARTIALLY, \App\Models\Lecture::ATTENDANCE_ABSENT]);
+                // Count how many lectures are considered finished
+                $query->where(function($q) {
+                    $q->where('is_completed', true)
+                      ->orWhereIn('attendance', [\App\Models\Lecture::ATTENDANCE_PRESENT, \App\Models\Lecture::ATTENDANCE_PARTIALLY, \App\Models\Lecture::ATTENDANCE_ABSENT]);
+                })->whereNotIn('attendance', [
+                    \App\Models\Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
+                    \App\Models\Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
+                    \App\Models\Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
+                ]);
             }])
             ->get();
 
