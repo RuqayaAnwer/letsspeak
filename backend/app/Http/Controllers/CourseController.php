@@ -972,13 +972,10 @@ class CourseController extends Controller
             }])
             ->withCount(['lectures as completed_lectures' => function ($query) {
                 // Count how many lectures are considered finished
-                $query->where(function($q) {
-                    $q->where('is_completed', true)
-                      ->orWhereIn('attendance', [\App\Models\Lecture::ATTENDANCE_PRESENT, \App\Models\Lecture::ATTENDANCE_PARTIALLY, \App\Models\Lecture::ATTENDANCE_ABSENT]);
-                })->whereNotIn('attendance', [
-                    \App\Models\Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
-                    \App\Models\Lecture::ATTENDANCE_POSTPONED_BY_STUDENT,
-                    \App\Models\Lecture::ATTENDANCE_POSTPONED_HOLIDAY,
+                $query->whereIn('attendance', [
+                    \App\Models\Lecture::ATTENDANCE_PRESENT, 
+                    \App\Models\Lecture::ATTENDANCE_PARTIALLY, 
+                    \App\Models\Lecture::ATTENDANCE_ABSENT
                 ]);
             }])
             ->get();
