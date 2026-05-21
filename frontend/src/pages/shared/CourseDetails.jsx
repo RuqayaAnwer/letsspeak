@@ -160,7 +160,7 @@ const CourseDetails = () => {
   const isKidsCourse = (courseObj = course) => {
     if (!courseObj) return false;
     const pkgName = courseObj.course_package?.name || courseObj.coursePackage?.name || courseObj.package_selected || '';
-    return pkgName.includes('اطفال') || pkgName.includes('توازن') || pkgName.includes('سرعة');
+    return pkgName.includes('اطفال') || pkgName.includes('أطفال');
   };
 
   // تفعيل بدء الكورس الفعلي (للمدرب)
