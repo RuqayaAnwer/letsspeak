@@ -138,10 +138,8 @@ const Pipeline = () => {
   };
 
   const isKidsLead = (lead) => {
-    if (!lead) return false;
-    const pkgName = lead.package_selected || '';
-    const source = lead.source || '';
-    return pkgName.includes('اطفال') || pkgName.includes('توازن') || pkgName.includes('سرعة') || source.includes('استمارة الاطفال');
+    // Disabled temporarily until kids data integration is completed
+    return false;
   };
 
   return (
