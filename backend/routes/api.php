@@ -167,8 +167,8 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::delete('/users/{id}', [AdminController::class, 'destroy']);
 });
 
-// External Public Webhooks
-Route::prefix('external')->group(function () {
-    Route::post('/leads', [\App\Http\Controllers\Api\PublicWebhooksController::class, 'storeLead']);
-});
+// External Public Webhooks (DISABLED - Replaced by automatic sync from intro system)
+// Route::prefix('external')->group(function () {
+//     Route::post('/leads', [\App\Http\Controllers\Api\PublicWebhooksController::class, 'storeLead']);
+// });
 

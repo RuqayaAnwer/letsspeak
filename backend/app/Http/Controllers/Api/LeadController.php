@@ -5,11 +5,24 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Lead;
 use Illuminate\Http\Request;
+use App\Services\IntroSystemSyncService;
+use Illuminate\Support\Facades\Cache;
 
 class LeadController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, IntroSystemSyncService $syncService)
     {
+        // Auto sync with the intro system, throttle to run at most once every 2 minutes (120 seconds)
+        if (!Cache::has('intro_system_last_sync_throttle')) {
+            try {
+                // Sync upcoming lectures and up to 20 history records to keep load times short
+                $syncService->sync(20);
+                Cache::put('intro_system_last_sync_throttle', true, 120);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('IntroSystemSync: AutoSync failed in LeadController: ' . $e->getMessage());
+            }
+        }
+
         $query = Lead::orderBy('created_at', 'desc');
 
         if ($request->has('search') && $request->search != '') {
