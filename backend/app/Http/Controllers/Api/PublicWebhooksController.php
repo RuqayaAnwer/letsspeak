@@ -10,9 +10,8 @@ class PublicWebhooksController extends Controller
 {
     public function storeLead(Request $request)
     {
-        // Simple authentication check using a predefined token.
-        // In a real app, this key should be in .env (e.g. env('WEBHOOK_SECRET_KEY'))
-        $expectedToken = "letspeak_secure_link_12345";
+        // Get webhook token from environment variable, with a fallback for compatibility
+        $expectedToken = env('EXTERNAL_WEBHOOK_TOKEN', 'letspeak_secure_link_12345');
         
         $providedToken = $request->header('X-Webhook-Token') ?? $request->input('api_token');
 

@@ -95,7 +95,8 @@ const AppRoutes = () => {
       case 'admin': return '/admin';
       case 'customer_service': return '/customer-service';
       case 'trainer': return '/trainer';
-      case 'finance': return '/finance';
+      case 'finance':
+      case 'accounting': return '/finance';
       default: return '/login';
     }
   };

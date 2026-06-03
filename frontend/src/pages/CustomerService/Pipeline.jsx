@@ -138,8 +138,13 @@ const Pipeline = () => {
   };
 
   const isKidsLead = (lead) => {
-    // Disabled temporarily until kids data integration is completed
-    return false;
+    if (!lead) return false;
+    const source = (lead.source || '').toLowerCase();
+    const pkg = (lead.package_selected || '').toLowerCase();
+    const notes = (lead.notes || '').toLowerCase();
+    return source.includes('اطفال') || source.includes('kids') || 
+           pkg.includes('اطفال') || pkg.includes('kids') || 
+           notes.includes('اطفال') || notes.includes('kids');
   };
 
   return (

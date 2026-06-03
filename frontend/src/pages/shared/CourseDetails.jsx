@@ -158,7 +158,30 @@ const CourseDetails = () => {
   
 
   const isKidsCourse = (courseObj = course) => {
-    // Disabled temporarily until kids data integration is completed
+    if (!courseObj) return false;
+    
+    // Check package name
+    const pkgName = getPackageName(courseObj).toLowerCase();
+    if (pkgName.includes('اطفال') || pkgName.includes('kids')) return true;
+    
+    // Check students enrolled in the course
+    const hasKidsStudent = courseObj.students?.some(student => {
+      const studentNotes = (student.notes || '').toLowerCase();
+      const studentLevel = (student.pivot?.student_level || student.level || '').toLowerCase();
+      return studentNotes.includes('اطفال') || studentNotes.includes('kids') || 
+             studentNotes.includes('استمارة الاطفال') || 
+             studentLevel.includes('اطفال') || studentLevel.includes('kids');
+    });
+    if (hasKidsStudent) return true;
+    
+    // Check course attributes
+    const courseNotes = (courseObj.notes || '').toLowerCase();
+    const source = (courseObj.subscription_source || '').toLowerCase();
+    if (courseNotes.includes('اطفال') || courseNotes.includes('kids') || 
+        source.includes('اطفال') || source.includes('kids')) {
+      return true;
+    }
+    
     return false;
   };
 
