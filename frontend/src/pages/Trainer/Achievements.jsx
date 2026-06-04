@@ -128,21 +128,47 @@ const Achievements = () => {
           <div className="p-3 sm:p-6">
             <div className="space-y-2.5 sm:space-y-4">
               {/* Lecture Pay */}
-              <div className="flex items-center justify-between p-2.5 sm:p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                  <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs sm:text-base">💎</span>
+              <div className="flex flex-col p-2.5 sm:p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                    <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs sm:text-base">💎</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">أجور المحاضرات المكتملة</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                        {achievements.completed_lectures || 0} محاضرة
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">أجور المحاضرات المكتملة</p>
-                    <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                      {achievements.completed_lectures || 0} محاضرة
-                    </p>
-                  </div>
+                  <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white mr-2 sm:mr-0 flex-shrink-0">
+                    {formatCurrency(achievements.earnings.base_pay || 0)}
+                  </p>
                 </div>
-                <p className="text-sm sm:text-lg font-bold text-gray-800 dark:text-white mr-2 sm:mr-0 flex-shrink-0">
-                  {formatCurrency(achievements.earnings.base_pay || 0)}
-                </p>
+                
+                {/* Separated Kids vs Adults Details */}
+                {achievements.earnings.kids_revenue > 0 && (
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
+                    <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700/30 flex flex-col justify-center">
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">محاضرات الكبار (4,000 د.ع)</span>
+                      <span className="text-xs font-semibold text-gray-800 dark:text-white mt-0.5">
+                        {achievements.earnings.adults_completed_lectures || 0} محاضرة
+                      </span>
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400 mt-0.5">
+                        {formatCurrency(achievements.earnings.adults_revenue || 0)}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-lg bg-pink-50/50 dark:bg-pink-900/10 flex flex-col justify-center border border-pink-100/50 dark:border-pink-900/30">
+                      <span className="text-[10px] font-medium text-pink-600 dark:text-pink-400">محاضرات الأطفال (6,000 د.ع) 👧👦</span>
+                      <span className="text-xs font-semibold text-gray-800 dark:text-white mt-0.5">
+                        {achievements.earnings.kids_completed_lectures || 0} محاضرة
+                      </span>
+                      <span className="text-xs font-bold text-pink-600 dark:text-pink-400 mt-0.5">
+                        {formatCurrency(achievements.earnings.kids_revenue || 0)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Administrative Salary Profile */}

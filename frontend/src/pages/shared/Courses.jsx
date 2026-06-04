@@ -534,7 +534,8 @@ const Courses = () => {
                       <div className="text-right flex items-center gap-1.5">
                         <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{course.id}</span>
                         <div className="flex items-center gap-1 flex-wrap justify-end">
-                          <span className="text-sm font-bold text-gray-800 dark:text-white">
+                          <span className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-1">
+                            {isKidsCourse(course) && <span className="ml-1 text-[13px]" title="كورس أطفال">👧👦</span>}
                             {course.is_dual && course.students?.length > 0
                               ? course.students.map((s, idx) => (
                                   <React.Fragment key={s.id}>
@@ -720,6 +721,7 @@ const Courses = () => {
                                       className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5"
                                       title="عرض ملف الطالب"
                                     >
+                                      {isKidsCourse(course) && <span className="ml-1 text-xs">👧👦</span>}
                                       {s.name} {(s.pivot?.student_level || s.level) ? `(${s.pivot?.student_level || s.level})` : ''} <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
                                     </button>
                                   </React.Fragment>
@@ -730,6 +732,7 @@ const Courses = () => {
                                   className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5"
                                   title="عرض ملف الطالب"
                                 >
+                                  {isKidsCourse(course) && <span className="ml-1 text-xs">👧👦</span>}
                                   {course.student_name || course.student?.name || course.students?.[0]?.name || '-'} {(course.student?.level || course.students?.[0]?.level) ? `(${course.student?.level || course.students?.[0]?.level})` : ''}
                                   <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
                                 </button>

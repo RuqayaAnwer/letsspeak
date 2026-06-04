@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { formatTime12Hour } from '../../utils/timeFormat';
@@ -11,6 +11,7 @@ import AsyncSelect from 'react-select/async';
 
 const CreateCourse = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [students, setStudents] = useState([]);
@@ -22,7 +23,7 @@ const CreateCourse = () => {
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [addingStudent, setAddingStudent] = useState(false);
   const [addStudentTarget, setAddStudentTarget] = useState(0); // 0 for Student 1, 1 for Student 2
-  const [selectedLeadId, setSelectedLeadId] = useState(null);
+  const [selectedLeadOption, setSelectedLeadOption] = useState(null);
 
   const loadLeads = async (inputValue) => {
     if (!inputValue || inputValue.length < 2) return [];
@@ -84,6 +85,45 @@ const CreateCourse = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Handle pre-fill from location.state (redirected from Pipeline)
+  useEffect(() => {
+    if (location.state && students.length > 0 && packages.length > 0) {
+      const { studentId, packageSelected } = location.state;
+      const newIds = [...formData.student_ids];
+      
+      let updated = false;
+      if (studentId && newIds[0] !== studentId) {
+        newIds[0] = studentId;
+        updated = true;
+      }
+      
+      let selectedPkgId = formData.course_package_id;
+      if (packageSelected) {
+        const matchedPkg = packages.find(p => 
+          p.name.toLowerCase().includes(packageSelected.toLowerCase()) || 
+          packageSelected.toLowerCase().includes(p.name.toLowerCase())
+        );
+        if (matchedPkg && selectedPkgId !== matchedPkg.id.toString()) {
+          selectedPkgId = matchedPkg.id.toString();
+          updated = true;
+        }
+      }
+      
+      if (updated) {
+        setFormData(prev => ({
+          ...prev,
+          student_ids: newIds,
+          course_package_id: selectedPkgId
+        }));
+        if (selectedPkgId) {
+          setTimeout(() => {
+            handlePackageChange(selectedPkgId);
+          }, 100);
+        }
+      }
+    }
+  }, [location.state, students, packages]);
 
   // Re-fetch packages when window gains focus (in case packages were updated in another tab/page)
   useEffect(() => {
@@ -532,7 +572,7 @@ const CreateCourse = () => {
   const handleAddStudentSubmit = async (e) => {
     e.preventDefault();
     if (addingStudent) return; // Prevent double submission
-    if (!selectedLeadId) {
+    if (!selectedLeadOption) {
       alert('يرجى اختيار عميل أولاً');
       return;
     }
@@ -540,7 +580,7 @@ const CreateCourse = () => {
     setAddingStudent(true);
     
     try {
-      const response = await api.post(`/leads/${selectedLeadId}/convert`);
+      const response = await api.post(`/leads/${selectedLeadOption.value}/convert`);
       
       // StudentController returns the student object directly
       const createdStudent = response.data.data || response.data.student;
@@ -557,11 +597,30 @@ const CreateCourse = () => {
         // Auto select the new student
         const newIds = [...formData.student_ids];
         newIds[addStudentTarget] = createdStudent.id.toString();
-        setFormData({ ...formData, student_ids: newIds });
+        
+        // Check if lead has a package_selected and try to pre-select it
+        const leadPkg = selectedLeadOption.lead?.package_selected;
+        let selectedPkgId = formData.course_package_id;
+        if (leadPkg && packages.length > 0) {
+          const matchedPkg = packages.find(p => 
+            p.name.toLowerCase().includes(leadPkg.toLowerCase()) || 
+            leadPkg.toLowerCase().includes(p.name.toLowerCase())
+          );
+          if (matchedPkg) {
+            selectedPkgId = matchedPkg.id.toString();
+          }
+        }
+
+        setFormData({ ...formData, student_ids: newIds, course_package_id: selectedPkgId });
+        if (selectedPkgId) {
+          setTimeout(() => {
+            handlePackageChange(selectedPkgId);
+          }, 100);
+        }
         
         // Close modal and reset
         setIsAddStudentModalOpen(false);
-        setSelectedLeadId(null);
+        setSelectedLeadOption(null);
         
         // Quietly refresh the full list from server in the background
         api.get('/students?all=true').then(res => {
@@ -1172,7 +1231,7 @@ const CreateCourse = () => {
                   cacheOptions
                   defaultOptions
                   loadOptions={loadLeads}
-                  onChange={(selected) => setSelectedLeadId(selected ? selected.value : null)}
+                  onChange={(selected) => setSelectedLeadOption(selected)}
                   placeholder="اكتب اسم العميل أو رقمه للبحث..."
                   noOptionsMessage={({ inputValue }) => !inputValue ? "اكتب للبحث..." : "لا يوجد عملاء مطابقين للبحث"}
                   loadingMessage={() => "جاري البحث..."}
@@ -1197,7 +1256,7 @@ const CreateCourse = () => {
                 <button
                   type="submit"
                   className="btn-primary flex-1"
-                  disabled={addingStudent || !selectedLeadId}
+                  disabled={addingStudent || !selectedLeadOption}
                 >
                   {addingStudent ? 'جاري التحويل...' : 'تحويل وإضافة للكورس'}
                 </button>

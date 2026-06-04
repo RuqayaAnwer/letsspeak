@@ -1407,7 +1407,11 @@ const CourseDetails = () => {
   if (!course) return null;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className={`space-y-6 animate-fade-in ${
+      isKidsCourse() 
+        ? 'bg-gradient-to-br from-pink-50/40 via-transparent to-pink-50/20 dark:from-pink-950/10 dark:via-transparent dark:to-pink-950/5 p-4 sm:p-6 rounded-2xl border border-pink-200/50 dark:border-pink-900/30' 
+        : ''
+    }`}>
       {/* Evaluation Modal - Blocks access until confirmed (for trainers only) */}
       {evaluationModal.open && isTrainer && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[10000] p-2 sm:p-4">
@@ -1461,6 +1465,7 @@ const CourseDetails = () => {
                 </span>
               )}
               <h1 className="page-title flex items-center gap-2 font-bold flex-wrap">
+                {isKidsCourse() && <span className="text-[20px]" title="كورس أطفال">👧👦</span>}
                 {course.is_dual && course.students && course.students.length > 0
                   ? course.students.map((s, idx) => (
                       <React.Fragment key={s.id}>

@@ -385,6 +385,8 @@ const TrainerPayroll = () => {
       // إنشاء HTML
       const baseSalaryFormatted = formatCurrencyForPDF(payroll.base_salary || 0);
       const trainerRevenueFormatted = formatCurrencyForPDF(payroll.trainer_revenue || 0);
+      const kidsRevenueFormatted = formatCurrencyForPDF(payroll.kids_revenue || 0);
+      const adultsRevenueFormatted = formatCurrencyForPDF(payroll.adults_revenue || 0);
       const renewalBonusFormatted = formatCurrencyForPDF(renewalBonus);
       const competitionBonusFormatted = formatCurrencyForPDF(competitionBonus);
       const volumeBonusFormatted = formatCurrencyForPDF(volumeBonus);
@@ -555,11 +557,26 @@ const TrainerPayroll = () => {
               ${payroll.is_trainer ? `
               <div class="info-row">
                 <span class="info-label">عدد المحاضرات:</span>
-                <span class="info-value">${payroll.completed_lectures || 0} محاضرة</span>
+                <span class="info-value">
+                  ${payroll.kids_revenue > 0 ? `
+                    ${payroll.adults_completed_lectures || 0} كبار + ${payroll.kids_completed_lectures || 0} أطفال
+                  ` : `
+                    ${payroll.completed_lectures || 0} محاضرة
+                  `}
+                </span>
               </div>
               <div class="info-row">
                 <span class="info-label">أجور التدريب:</span>
-                <span class="info-value">${trainerRevenueFormatted}</span>
+                <span class="info-value">
+                  ${payroll.kids_revenue > 0 ? `
+                    ${adultsRevenueFormatted} + ${kidsRevenueFormatted} (أطفال)
+                    <div style="font-size: 10px; color: #6b7280; margin-top: 2px; font-weight: normal;">
+                      (${payroll.adults_completed_lectures} كبار × 4,000 | ${payroll.kids_completed_lectures} أطفال × 6,000)
+                    </div>
+                  ` : `
+                    ${trainerRevenueFormatted}
+                  `}
+                </span>
               </div>
               ` : ''}
             </div>
@@ -973,10 +990,25 @@ const TrainerPayroll = () => {
                       </span>
                     </div>
                     
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">التدريب:</span>
-                      <span className="text-sm font-medium text-gray-800 dark:text-white truncate" title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع = ${formatCurrency(payroll.trainer_revenue)}`}>
-                        {formatCurrency(payroll.trainer_revenue)} <span className="text-[10px]">({payroll.completed_lectures})</span>
+                    <div className="col-span-2 flex items-center justify-between border-t border-gray-100 dark:border-gray-700/50 pt-1">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">أجور التدريب:</span>
+                      <span className="text-sm font-medium text-gray-800 dark:text-white text-left">
+                        {payroll.is_trainer ? (
+                          payroll.kids_revenue > 0 ? (
+                            <div className="text-left">
+                              <span className="font-semibold">
+                                {formatCurrency(payroll.adults_revenue)} + {formatCurrency(payroll.kids_revenue)} (أطفال)
+                              </span>
+                              <div className="text-[9px] text-[var(--color-text-muted)] font-normal">
+                                ({payroll.adults_completed_lectures} كبار × 4ك | {payroll.kids_completed_lectures} أطفال × 6ك)
+                              </div>
+                            </div>
+                          ) : (
+                            <span>{formatCurrency(payroll.trainer_revenue)} <span className="text-[10px]">({payroll.completed_lectures})</span></span>
+                          )
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </span>
                     </div>
                     
@@ -1292,9 +1324,25 @@ const TrainerPayroll = () => {
                           {payroll.completed_lectures}
                         </span>
                       </td>
-                      <td className={`font-medium py-2 px-2 text-xs text-center ${!payroll.is_trainer ? 'opacity-30 bg-gray-100 dark:bg-gray-800/60 transition-all' : ''}`} title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع `}
-                      >
-                        {formatCurrency(payroll.trainer_revenue)}
+                      <td className={`font-medium py-2 px-2 text-xs text-center ${!payroll.is_trainer ? 'opacity-30 bg-gray-100 dark:bg-gray-800/60 transition-all' : ''}`}>
+                        {payroll.is_trainer ? (
+                          payroll.kids_revenue > 0 ? (
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span className="font-semibold text-gray-800 dark:text-gray-200">
+                                {formatCurrency(payroll.adults_revenue)} + {formatCurrency(payroll.kids_revenue)} (أطفال)
+                              </span>
+                              <span className="text-[9px] text-[var(--color-text-muted)] font-normal">
+                                ({payroll.adults_completed_lectures} كبار × 4ك | {payroll.kids_completed_lectures} أطفال × 6ك)
+                              </span>
+                            </div>
+                          ) : (
+                            <span title={`${payroll.completed_lectures} محاضرة × 4,000 د.ع`}>
+                              {formatCurrency(payroll.trainer_revenue)}
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="py-2 px-2 payment-method-cell text-center">
                         {payroll.payment_method ? (

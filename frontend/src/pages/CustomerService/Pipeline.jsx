@@ -129,8 +129,14 @@ const Pipeline = () => {
       const res = await api.post(`/leads/${lead.id}/convert`);
       fetchLeads(pagination.current_page, activeTab);
       
+      const createdStudent = res.data.data || res.data.student;
       if (confirm('تمت إضافة الطالب بنجاح! هل تريد الانتقال لإنشاء كورس له الآن؟')) {
-        navigate('/customer-service/create-course');
+        navigate('/customer-service/create-course', {
+          state: {
+            studentId: createdStudent ? createdStudent.id.toString() : '',
+            packageSelected: lead.package_selected
+          }
+        });
       }
     } catch(err) {
       alert(err.response?.data?.message || err.message || 'خطأ أثناء تحويل العميل');
@@ -142,9 +148,11 @@ const Pipeline = () => {
     const source = (lead.source || '').toLowerCase();
     const pkg = (lead.package_selected || '').toLowerCase();
     const notes = (lead.notes || '').toLowerCase();
+    const level = (lead.current_level || '').toLowerCase();
     return source.includes('اطفال') || source.includes('kids') || 
            pkg.includes('اطفال') || pkg.includes('kids') || 
-           notes.includes('اطفال') || notes.includes('kids');
+           notes.includes('اطفال') || notes.includes('kids') ||
+           level.includes('اطفال') || level.includes('kids');
   };
 
   return (
@@ -221,13 +229,18 @@ const Pipeline = () => {
                 <tr><td colSpan="8" className="py-20 text-center text-gray-500 dark:text-slate-500">لا يوجد بيانات مطابقة</td></tr>
               ) : (
                 leads.map((lead, index) => (
-                  <tr key={lead.id} className="hover:bg-white dark:bg-[#1e293b]/40 transition-colors group">
+                  <tr key={lead.id} className={`hover:bg-white dark:bg-[#1e293b]/40 transition-colors group ${
+                    isKidsLead(lead) ? 'bg-pink-50/20 dark:bg-pink-900/5' : ''
+                  }`}>
                     <td className="px-4 py-4 text-center text-gray-500 dark:text-slate-500 font-mono border-l border-gray-200 dark:border-[#1e293b]">
                       {((pagination.current_page - 1) * 30) + index + 1}
                     </td>
                     
                     <td className="px-4 py-4 border-l border-gray-200 dark:border-[#1e293b]">
-                      <div className="font-bold text-gray-900 dark:text-slate-100 text-[14px] mb-1">{lead.name}</div>
+                      <div className="font-bold text-gray-900 dark:text-slate-100 text-[14px] mb-1 flex items-center gap-1.5">
+                        {isKidsLead(lead) && <span className="text-[14px]" title="عميل أطفال">👧👦</span>}
+                        {lead.name}
+                      </div>
                       <div className="text-[11px] text-gray-500 dark:text-slate-400 font-medium opacity-80">
                         {lead.governorate ? lead.governorate : 'بدون محافظة'} 
                         {lead.age ? ` • ${lead.age} سنة` : ''}

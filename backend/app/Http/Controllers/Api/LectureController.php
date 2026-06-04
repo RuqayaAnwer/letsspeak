@@ -398,7 +398,7 @@ class LectureController extends Controller
                     foreach ($completedLecturesList as $lecture) {
                         $rate = 4000;
                         $pkgName = $lecture->course->coursePackage->name ?? '';
-                        if (mb_strpos($pkgName, 'باقة اطفال توازن') !== false || mb_strpos($pkgName, 'باقة اطفال سرعة') !== false) {
+                        if (mb_strpos($pkgName, 'اطفال') !== false || mb_strpos(mb_strtolower($pkgName, 'UTF-8'), 'kids') !== false) {
                             $rate = 6000;
                         }
                         $basePay += $rate;

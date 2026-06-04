@@ -529,13 +529,22 @@ class TrainerController extends Controller
             $completedLectures = $completedLecturesList->count();
             
             $basePay = 0;
+            $kidsCompletedLectures = 0;
+            $kidsRevenue = 0;
+            $adultsCompletedLectures = 0;
+            $adultsRevenue = 0;
             foreach ($completedLecturesList as $lecture) {
-                $rate = 4000;
                 $pkgName = $lecture->course->coursePackage->name ?? '';
-                if (mb_strpos($pkgName, 'باقة اطفال توازن') !== false || mb_strpos($pkgName, 'باقة اطفال سرعة') !== false) {
-                    $rate = 6000;
-                }
+                $isKids = (mb_strpos($pkgName, 'اطفال') !== false || mb_strpos(mb_strtolower($pkgName, 'UTF-8'), 'kids') !== false);
+                $rate = $isKids ? 6000 : 4000;
                 $basePay += $rate;
+                if ($isKids) {
+                    $kidsCompletedLectures++;
+                    $kidsRevenue += $rate;
+                } else {
+                    $adultsCompletedLectures++;
+                    $adultsRevenue += $rate;
+                }
             }
 
             // إجمالي المحاضرات المجدولة في الشهر (من 1 إلى آخر يوم)
@@ -698,6 +707,10 @@ class TrainerController extends Controller
                     'renewals_count' => $renewalsCount,
                     'earnings' => [
                         'base_pay' => $basePay,
+                        'kids_completed_lectures' => $kidsCompletedLectures,
+                        'kids_revenue' => $kidsRevenue,
+                        'adults_completed_lectures' => $adultsCompletedLectures,
+                        'adults_revenue' => $adultsRevenue,
                         'administrative_salary' => $administrativeSalary,
                         'job_title' => $jobTitle,
                         'renewal_bonus' => $renewalBonus,

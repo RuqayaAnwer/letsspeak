@@ -329,8 +329,9 @@ const CourseAlerts = () => {
                                     <button 
                                       key={student.id} 
                                       onClick={(e) => { e.stopPropagation(); navigate('/students/' + student.id); }}
-                                      className="text-[10px] font-bold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline focus:outline-none"
+                                      className="text-[10px] font-bold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline focus:outline-none flex items-center gap-0.5 justify-center"
                                     >
+                                      {isKidsCourse(course) && <span className="text-[10px]">👧👦</span>}
                                       {student.name}
                                     </button>
                                   ))}
@@ -339,8 +340,9 @@ const CourseAlerts = () => {
                                 <div className="flex items-center justify-center gap-1">
                                   <button 
                                     onClick={(e) => { e.stopPropagation(); navigate('/students/' + getStudentId(course)); }}
-                                    className="text-[10px] font-bold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline focus:outline-none text-center"
+                                    className="text-[10px] font-bold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline focus:outline-none text-center flex items-center gap-0.5"
                                   >
+                                    {isKidsCourse(course) && <span className="text-[10px]">👧👦</span>}
                                     {course.student_name || 
                                      (course.students && course.students.length > 0 
                                        ? course.students.map(s => s.name).join(', ') 
@@ -489,6 +491,7 @@ const CourseAlerts = () => {
                             className="font-bold flex items-center justify-center gap-1 hover:text-primary-600 dark:hover:text-primary-400 hover:underline focus:outline-none"
                             title="عرض ملف الطالب"
                           >
+                            {isKidsCourse(course) && <span className="text-[10px]">👧👦</span>}
                             {course.student_name || 
                              (course.students && course.students.length > 0 
                                ? course.students.map((s, idx) => (

@@ -104,8 +104,11 @@ const PackageBadge = ({ course, packageName, className = '' }) => {
     colorClass = 'text-teal-500 dark:text-teal-400';
   }
 
+  const isKids = name.toLowerCase().includes('اطفال') || name.toLowerCase().includes('kids');
+
   return (
     <div className={`inline-flex items-center gap-1.5 ${className}`}>
+      {isKids && <span className="text-[12px] flex-shrink-0" title="باقة أطفال">👧👦</span>}
       <Icon className={`w-4 h-4 flex-shrink-0 ${colorClass}`} />
       <span>{name}</span>
     </div>

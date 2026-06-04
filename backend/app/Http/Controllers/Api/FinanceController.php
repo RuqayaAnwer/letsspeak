@@ -165,15 +165,26 @@ class FinanceController extends Controller
 
         $completedLecturesCounts = [];
         $trainerBasePays = [];
+        $kidsCompletedLecturesCounts = [];
+        $kidsBasePays = [];
+        $adultsCompletedLecturesCounts = [];
+        $adultsBasePays = [];
         foreach ($completedLecturesRates as $rateRow) {
             $tId = $rateRow->trainer_id;
             $pkgName = $rateRow->package_name ?? '';
-            $rate = 4000; // Default rate
-            if (mb_strpos($pkgName, 'باقة اطفال توازن') !== false || mb_strpos($pkgName, 'باقة اطفال سرعة') !== false) {
-                $rate = 6000;
-            }
+            $isKids = (mb_strpos($pkgName, 'اطفال') !== false || mb_strpos(mb_strtolower($pkgName, 'UTF-8'), 'kids') !== false);
+            $rate = $isKids ? 6000 : 4000;
+            
             $trainerBasePays[$tId] = ($trainerBasePays[$tId] ?? 0) + ($rateRow->count * $rate);
             $completedLecturesCounts[$tId] = ($completedLecturesCounts[$tId] ?? 0) + $rateRow->count;
+            
+            if ($isKids) {
+                $kidsCompletedLecturesCounts[$tId] = ($kidsCompletedLecturesCounts[$tId] ?? 0) + $rateRow->count;
+                $kidsBasePays[$tId] = ($kidsBasePays[$tId] ?? 0) + ($rateRow->count * $rate);
+            } else {
+                $adultsCompletedLecturesCounts[$tId] = ($adultsCompletedLecturesCounts[$tId] ?? 0) + $rateRow->count;
+                $adultsBasePays[$tId] = ($adultsBasePays[$tId] ?? 0) + ($rateRow->count * $rate);
+            }
         }
 
         // OPTIMIZATION: 2. Calculate renewals for the month in memory
@@ -381,6 +392,10 @@ class FinanceController extends Controller
                 'base_salary' => $employeeBaseSalary,
                 'trainer_revenue' => $trainerBasePay,
                 'completed_lectures' => $completedLectures,
+                'kids_completed_lectures' => $trainerId && isset($kidsCompletedLecturesCounts[$trainerId]) ? $kidsCompletedLecturesCounts[$trainerId] : 0,
+                'kids_revenue' => $trainerId && isset($kidsBasePays[$trainerId]) ? $kidsBasePays[$trainerId] : 0,
+                'adults_completed_lectures' => $trainerId && isset($adultsCompletedLecturesCounts[$trainerId]) ? $adultsCompletedLecturesCounts[$trainerId] : 0,
+                'adults_revenue' => $trainerId && isset($adultsBasePays[$trainerId]) ? $adultsBasePays[$trainerId] : 0,
                 'base_pay' => $basePay,
                 'renewals_count' => $renewalsCount,
                 'renewal_total' => $renewalTotalToUse,
