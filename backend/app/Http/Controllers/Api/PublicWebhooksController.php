@@ -22,13 +22,28 @@ class PublicWebhooksController extends Controller
 
         \Illuminate\Support\Facades\Log::info('Webhook Payload Received', $request->all());
 
-        // Prevent duplicates: find by phone or create new
-        $phone = $request->input('phone_whatsapp', 'بدون رقم');
-        $lead = Lead::firstOrNew(['phone_whatsapp' => $phone]);
-        $lead->name = $request->input('name', 'عميل جديد');
+        // Prevent duplicates: find by phone or create new (robust to phone/whatsapp fields)
+        $phone = $request->input('phone_whatsapp') ?? $request->input('phone') ?? $request->input('whatsapp');
+        if (empty($phone)) {
+            $phone = 'بدون رقم';
+        } else {
+            $phone = preg_replace('/[^\+0-9]/', '', $phone);
+        }
+
+        $lead = null;
+        if ($phone !== 'بدون رقم' && $phone !== '0000000000') {
+            $lead = Lead::where('phone_whatsapp', $phone)->first();
+        }
+
+        if (!$lead) {
+            $lead = new Lead();
+            $lead->phone_whatsapp = $phone;
+        }
+
+        $lead->name = $request->input('name') ?? $request->input('full_name') ?? 'عميل جديد';
         $lead->email = $request->input('email');
-        $lead->telegram_id = $request->input('telegram_id');
-        $lead->governorate = $request->input('governorate');
+        $lead->telegram_id = $request->input('telegram_id') ?? $request->input('telegram');
+        $lead->governorate = $request->input('governorate') ?? $request->input('city') ?? $request->input('gov');
         $lead->age = $request->input('age');
         $genderInput = mb_strtolower(trim($request->input('gender') ?? ''), 'UTF-8');
         if (in_array($genderInput, ['ذكر', 'مذكر', 'ولد', 'male', 'm'])) {
