@@ -13,6 +13,7 @@ const Students = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [directAdd, setDirectAdd] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [packages, setPackages] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -144,6 +145,8 @@ const Students = () => {
     try {
       if (editingStudent) {
         await api.put(`/students/${editingStudent.id}`, formData);
+      } else if (directAdd) {
+        await api.post('/students', formData);
       } else {
         if (!selectedLeadId) {
           alert('يرجى اختيار عميل أولاً');
@@ -228,6 +231,7 @@ const Students = () => {
     setIsModalOpen(false);
     setEditingStudent(null);
     setSelectedLeadId(null);
+    setDirectAdd(false);
     setFormData({ 
       name: '', 
       phone: '', 
@@ -613,7 +617,22 @@ const Students = () => {
         title={editingStudent ? 'تعديل بيانات الطالب' : 'إضافة طالب جديد'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {!editingStudent ? (
+          {!editingStudent && (
+            <div className="flex items-center gap-2 pb-3 mb-2 border-b border-[var(--color-border)]">
+              <input
+                type="checkbox"
+                id="directAdd"
+                checked={directAdd}
+                onChange={(e) => setDirectAdd(e.target.checked)}
+                className="checkbox w-4 h-4 text-teal-600 focus:ring-teal-500 rounded cursor-pointer"
+              />
+              <label htmlFor="directAdd" className="text-xs font-bold text-gray-700 dark:text-slate-300 cursor-pointer select-none">
+                إضافة طالب مباشرة (دون اختيار عميل من مسار العملاء)
+              </label>
+            </div>
+          )}
+
+          {!editingStudent && !directAdd ? (
             <div>
               <label className="label text-sm mb-1">ابحث عن العميل في مسار العملاء *</label>
               <AsyncSelect
