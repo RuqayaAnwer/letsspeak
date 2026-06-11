@@ -143,21 +143,13 @@ class CourseController extends Controller
             // Add previous trainer name if available
             $previousTrainerName = '-';
             try {
-                $pStudentId = $course->student_id;
-                
-                // If the course uses the new pivot relation
-                if (!$pStudentId && $course->students()->exists()) {
-                    $firstStudent = $course->students()->first();
-                    $pStudentId = $firstStudent ? $firstStudent->id : null;
-                }
+                $firstStudent = $course->students->first();
+                $pStudentId = $firstStudent ? $firstStudent->id : null;
                 
                 if ($pStudentId) {
                     // Find previous course for this student before the current course
-                    $previousCourse = \App\Models\Course::where(function ($q) use ($pStudentId) {
-                            $q->where('courses.student_id', $pStudentId)
-                              ->orWhereHas('students', function ($sq) use ($pStudentId) {
-                                  $sq->where('students.id', $pStudentId);
-                              });
+                    $previousCourse = \App\Models\Course::whereHas('students', function ($sq) use ($pStudentId) {
+                            $sq->where('students.id', $pStudentId);
                         })
                         ->where('courses.id', '<', $course->id)
                         ->orderBy('courses.id', 'desc')
