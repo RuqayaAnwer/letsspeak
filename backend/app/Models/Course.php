@@ -62,7 +62,8 @@ class Course extends Model
         'student_postponement_count',
         'trainer_postponement_count',
         'max_student_postponements',
-        'max_trainer_postponements'
+        'max_trainer_postponements',
+        'has_trainer_changed'
     ];
 
     /**
@@ -81,6 +82,14 @@ class Course extends Model
     {
         $postponementService = app(\App\Services\LecturePostponementService::class);
         return $postponementService->getTrainerMaxPostponementsForCourse($this);
+    }
+
+    /**
+     * Check if the trainer has been changed during the course.
+     */
+    public function getHasTrainerChangedAttribute(): bool
+    {
+        return $this->lectures()->whereNotNull('trainer_id')->where('trainer_id', '!=', $this->trainer_id)->exists();
     }
 
     /**

@@ -437,9 +437,9 @@ public function store(Request $request)
 
         $today = Carbon::today()->format('Y-m-d');
         
-        $lectures = Lecture::whereHas('course', function ($q) use ($trainer) {
-            $q->where('trainer_id', $trainer->id)
-              ->where('status', 'active');
+        $lectures = Lecture::forTrainer($trainer->id)
+        ->whereHas('course', function ($q) {
+            $q->where('status', 'active');
         })
         ->where('date', $today)
         ->with(['course.student', 'course.coursePackage'])
@@ -496,9 +496,9 @@ public function store(Request $request)
         $nextWeekStart = $today->copy()->addWeek()->startOfWeek();
         $nextWeekEnd = $today->copy()->addWeek()->endOfWeek();
         
-        $lectures = Lecture::whereHas('course', function ($q) use ($trainer) {
-            $q->where('trainer_id', $trainer->id)
-              ->where('status', 'active');
+        $lectures = Lecture::forTrainer($trainer->id)
+        ->whereHas('course', function ($q) {
+            $q->where('status', 'active');
         })
         ->whereBetween('date', [$nextWeekStart->format('Y-m-d'), $nextWeekEnd->format('Y-m-d')])
         ->with(['course.student', 'course.coursePackage'])
@@ -575,9 +575,9 @@ public function store(Request $request)
             // Check for conflicts in each date
             foreach ($dates as $date) {
                 // Check if trainer has a lecture at this date/time
-                $conflict = Lecture::whereHas('course', function ($q) use ($trainer) {
-                    $q->where('trainer_id', $trainer->id)
-                      ->where('status', 'active');
+                $conflict = Lecture::forTrainer($trainer->id)
+                ->whereHas('course', function ($q) {
+                    $q->where('status', 'active');
                 })
                 ->where('date', $date)
                 ->where('time', $time)
@@ -686,9 +686,9 @@ public function store(Request $request)
 
                 foreach ($datesByWeekDay[$weekDay] as $date) {
                     // Check if trainer has a lecture at this date/time
-                    $conflict = Lecture::whereHas('course', function ($q) use ($trainer) {
-                        $q->where('trainer_id', $trainer->id)
-                          ->where('status', 'active');
+                    $conflict = Lecture::forTrainer($trainer->id)
+                    ->whereHas('course', function ($q) {
+                        $q->where('status', 'active');
                     })
                     ->where('date', $date)
                     ->where('time', $time)

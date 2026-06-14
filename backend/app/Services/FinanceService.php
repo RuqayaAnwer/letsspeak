@@ -35,9 +35,7 @@ class FinanceService
         $volumeBonus80 = Setting::getVolumeBonus80();
 
         // Calculate completed lectures for the month
-        $completedLectures = Lecture::whereHas('course', function ($query) use ($trainerId) {
-            $query->where('trainer_id', $trainerId);
-        })
+        $completedLectures = Lecture::forTrainer($trainerId)
         ->whereMonth('date', $month)
         ->whereYear('date', $year)
         ->whereIn('attendance', ['present', 'partially'])
@@ -277,9 +275,7 @@ class FinanceService
             ->get();
 
         // Get lectures for this period
-        $lectures = Lecture::whereHas('course', function ($query) use ($trainerId) {
-            $query->where('trainer_id', $trainerId);
-        })
+        $lectures = Lecture::forTrainer($trainerId)
         ->whereBetween('date', [$startDate, $endDate])
         ->with('course.students')
         ->orderBy('date')

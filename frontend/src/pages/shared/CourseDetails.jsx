@@ -22,7 +22,7 @@ import {
   Trash2,
   PlayCircle,
   PlusCircle,
-  Check, CreditCard, Activity, Flag, FileText, Upload, Eye, EyeOff, UserCircle
+  Check, CreditCard, Activity, Flag, FileText, Upload, Eye, EyeOff, UserCircle, Edit2
 } from 'lucide-react';
 import PackageBadge from '../../components/PackageBadge';
 
@@ -140,6 +140,9 @@ const CourseDetails = () => {
     milestone: 0,
     completedLectures: 0,
   });
+
+  // Change trainer modal state
+  const [changeTrainerModal, setChangeTrainerModal] = useState({ open: false, selectedTrainerId: '' });
 
   // Renewal reset modal state
   const [renewalResetModal, setRenewalResetModal] = useState({
@@ -1400,6 +1403,28 @@ const CourseDetails = () => {
     }
   };
 
+  const handleUpdateTrainer = async () => {
+    if (!changeTrainerModal.selectedTrainerId) return;
+    try {
+      setSaving(true);
+      const res = await api.put(`/courses/${id}`, {
+        trainer_id: parseInt(changeTrainerModal.selectedTrainerId)
+      });
+      if (res.data) {
+        setCourse(res.data);
+        // Refresh course lectures to ensure we get updated names/trainer_ids
+        fetchCourse();
+        setChangeTrainerModal({ open: false, selectedTrainerId: '' });
+        alert('✅ تم تغيير المدرب وتحديث المحاضرات القادمة بنجاح');
+      }
+    } catch (err) {
+      console.error('Error changing trainer:', err);
+      alert(err.response?.data?.message || 'حدث خطأ أثناء تغيير المدرب');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner size="lg" />;
   }
@@ -1514,6 +1539,11 @@ const CourseDetails = () => {
                   'badge-gray'
                 }`}>
                   {getStatusLabel(course.status)}
+                </span>
+              )}
+              {course.has_trainer_changed && (
+                <span className="badge badge-warning text-[11px] mr-2">
+                  ⚠️ تم تغيير المدرب
                 </span>
               )}
             </div>
@@ -1714,12 +1744,22 @@ const CourseDetails = () => {
                 <span className="badge badge-purple text-[10px]">كورس ثنائي</span>
               </div>
             )}
-            <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg max-w-full min-w-0" title={course.trainer?.user?.name || course.trainer?.name || 'غير محدد'}>
+            <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-lg max-w-full min-w-0" title={course.trainer?.user?.name || course.trainer?.name || 'غير محدد'}>
               <GraduationCap className="w-3.5 h-3.5 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span className="text-[var(--color-text-muted)] flex-shrink-0">المدرب:</span>
               <span className="font-semibold text-[var(--color-text-primary)] truncate">
                 {course.trainer?.user?.name || course.trainer?.name || 'غير محدد'}
               </span>
+              {isCustomerService && (
+                <button
+                  type="button"
+                  onClick={() => setChangeTrainerModal({ open: true, selectedTrainerId: course.trainer_id?.toString() || '' })}
+                  className="mr-1.5 p-0.5 rounded text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-950/40 transition-colors flex-shrink-0"
+                  title="تغيير المدرب"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1852,6 +1892,11 @@ const CourseDetails = () => {
                       {!!isMakeup && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-bold whitespace-nowrap" title="محاضرة تعويضية">
                           تعويضية
+                        </span>
+                      )}
+                      {lecture.trainer_id && lecture.trainer_id_actual !== course.trainer_id && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-medium whitespace-nowrap" title={`المدرب: ${lecture.trainer_name}`}>
+                          👤 {lecture.trainer_name}
                         </span>
                       )}
                     </div>
@@ -2231,6 +2276,11 @@ const CourseDetails = () => {
                         {!!isMakeup && (
                           <span className="text-[9px] px-1 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 font-bold whitespace-nowrap" title="محاضرة تعويضية">
                             تعويضية
+                          </span>
+                        )}
+                        {lecture.trainer_id && lecture.trainer_id_actual !== course.trainer_id && (
+                          <span className="text-[8px] px-1 py-0.5 mt-1 rounded bg-gray-100 text-gray-700 dark:bg-gray-800/80 dark:text-gray-300 font-medium whitespace-nowrap" title={`المدرب لهذه المحاضرة: ${lecture.trainer_name}`}>
+                            👤 {lecture.trainer_name}
                           </span>
                         )}
                       </div>
@@ -2993,6 +3043,65 @@ const CourseDetails = () => {
                 className="flex-1 py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Trainer Modal */}
+      {changeTrainerModal.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                تغيير مدرب الكورس
+              </h3>
+              <button
+                onClick={() => setChangeTrainerModal({ open: false, selectedTrainerId: '' })}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border-r-4 border-amber-500 rounded-lg text-xs sm:text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
+                ⚠️ <strong>تنبيه هام:</strong> عند تغيير المدرب، سيتم تثبيت المدرب الحالي (القديم) للمحاضرات المكتملة السابقة لغرض حساب الرواتب، وسيتم تعيين المدرب الجديد للمحاضرات القادمة فقط.
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  المدرب الجديد
+                </label>
+                <select
+                  value={changeTrainerModal.selectedTrainerId}
+                  onChange={(e) => setChangeTrainerModal(prev => ({ ...prev, selectedTrainerId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                >
+                  <option value="">-- اختر المدرب الجديد --</option>
+                  {trainers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleUpdateTrainer}
+                disabled={saving || !changeTrainerModal.selectedTrainerId}
+                className="flex-1 py-2 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                {saving ? 'جاري الحفظ...' : 'تأكيد تغيير المدرب'}
+              </button>
+              <button
+                onClick={() => setChangeTrainerModal({ open: false, selectedTrainerId: '' })}
+                className="flex-1 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
+              >
+                إلغاء
               </button>
             </div>
           </div>

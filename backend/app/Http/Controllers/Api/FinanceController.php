@@ -149,7 +149,7 @@ class FinanceController extends Controller
 
         // OPTIMIZATION: 1. Fetch all completed lectures counts grouped by trainer and package
         $completedLecturesRates = \App\Models\Lecture::select(
-            'courses.trainer_id', 
+            \Illuminate\Support\Facades\DB::raw('COALESCE(lectures.trainer_id, courses.trainer_id) as trainer_id'), 
             'courses.course_package_id',
             'course_packages.name as package_name',
             \Illuminate\Support\Facades\DB::raw('count(*) as count')
@@ -160,7 +160,7 @@ class FinanceController extends Controller
             ->where(function ($query) {
                 $query->whereIn('lectures.attendance', ['present', 'partially', 'absent']);
             })
-            ->groupBy('courses.trainer_id', 'courses.course_package_id', 'course_packages.name')
+            ->groupBy(\Illuminate\Support\Facades\DB::raw('COALESCE(lectures.trainer_id, courses.trainer_id)'), 'courses.course_package_id', 'course_packages.name')
             ->get();
 
         $completedLecturesCounts = [];
@@ -1019,9 +1019,7 @@ class FinanceController extends Controller
         $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();
         
-        $completedLectures = Lecture::whereHas('course', function ($query) use ($trainerId) {
-                $query->where('trainer_id', $trainerId);
-            })
+        $completedLectures = Lecture::forTrainer($trainerId)
             ->whereBetween('date', [$startDate, $endDate])
             ->get()
             ->filter(function ($lecture) {

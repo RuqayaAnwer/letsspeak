@@ -68,7 +68,7 @@ class CourseController extends Controller
         // For trainers, get all courses (no pagination limit)
         // For other roles, use pagination
         if ($user && method_exists($user, 'isTrainer') && $user->isTrainer()) {
-            $courses = $query->with(['lectures.students', 'coursePackage'])
+            $courses = $query->with(['lectures.students', 'lectures.lectureTrainer.user', 'coursePackage'])
                             ->withCount('lectures')
                             ->orderBy('id', 'asc')
                             ->get()
@@ -109,7 +109,7 @@ class CourseController extends Controller
             ]);
         }
 
-        $courses = $query->with(['lectures.students', 'coursePackage'])
+        $courses = $query->with(['lectures.students', 'lectures.lectureTrainer.user', 'coursePackage'])
                         ->withCount('lectures')
                         ->orderBy('id', 'asc')
                         ->paginate(15);
@@ -471,7 +471,7 @@ class CourseController extends Controller
             }
         }
 
-        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures.students', 'payments']);
+        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures.students', 'lectures.lectureTrainer.user', 'payments']);
         
         // Make coursePackage visible and ensure it's serialized as course_package
         $course->makeVisible('coursePackage');
@@ -502,15 +502,28 @@ class CourseController extends Controller
             'notes' => 'sometimes|nullable|string',
             'extra_lectures_count' => 'sometimes|nullable|integer|min:0',
             'extra_lectures_fee' => 'sometimes|nullable|numeric|min:0',
+            'trainer_id' => 'sometimes|required|exists:trainers,id',
         ]);
+
+        if ($request->has('trainer_id')) {
+            $newTrainerId = (int) $request->trainer_id;
+            $oldTrainerId = (int) $course->trainer_id;
+            if ($newTrainerId !== $oldTrainerId) {
+                // Freeze old trainer on completed lectures
+                $course->lectures()
+                    ->whereIn('attendance', ['present', 'partially', 'absent'])
+                    ->whereNull('trainer_id')
+                    ->update(['trainer_id' => $oldTrainerId]);
+            }
+        }
 
         $course->update($request->only([
             'status', 'lecture_time', 'lecture_days', 'trainer_payment_status', 'renewal_status',
             'student_max_postponements_override', 'trainer_max_postponements_override', 'notes',
-            'extra_lectures_count', 'extra_lectures_fee'
+            'extra_lectures_count', 'extra_lectures_fee', 'trainer_id'
         ]));
 
-        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures']);
+        $course->load(['trainer.user', 'students', 'coursePackage', 'lectures.students', 'lectures.lectureTrainer.user']);
         
         // Make coursePackage visible and ensure it's serialized as course_package
         $course->makeVisible('coursePackage');

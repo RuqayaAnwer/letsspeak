@@ -59,6 +59,7 @@ class Lecture extends Model
 
     protected $fillable = [
         'course_id',
+        'trainer_id',
         'lecture_number',
         'date',
         'time',
@@ -79,7 +80,9 @@ class Lecture extends Model
 
     protected $appends = [
         'is_completed',
-        'student_attendance'
+        'student_attendance',
+        'trainer_name',
+        'trainer_id_actual'
     ];
 
     /**
@@ -101,12 +104,40 @@ class Lecture extends Model
     }
 
     /**
-     * Get the trainer through the course.
+     * Get the explicit trainer relation.
+     */
+    public function lectureTrainer(): BelongsTo
+    {
+        return $this->belongsTo(Trainer::class, 'trainer_id');
+    }
+
+    /**
+     * Get the trainer through the lecture or the course fallback.
      * Provides quick access to the trainer for conflict detection.
      */
     public function trainer()
     {
+        if ($this->trainer_id) {
+            return $this->lectureTrainer ?? Trainer::find($this->trainer_id);
+        }
         return $this->course?->trainer;
+    }
+
+    /**
+     * Get the trainer's name for this lecture.
+     */
+    public function getTrainerNameAttribute(): ?string
+    {
+        $trainer = $this->trainer();
+        return $trainer?->user?->name ?? $trainer?->name ?? null;
+    }
+
+    /**
+     * Get the actual trainer's ID for this lecture.
+     */
+    public function getTrainerIdActualAttribute(): ?int
+    {
+        return $this->trainer_id ?: $this->course?->trainer_id;
     }
 
     /**
@@ -323,12 +354,18 @@ class Lecture extends Model
     }
 
     /**
-     * Scope: For a specific trainer (through course).
+     * Scope: For a specific trainer (directly or through course fallback).
      */
     public function scopeForTrainer($query, int $trainerId)
     {
-        return $query->whereHas('course', function ($q) use ($trainerId) {
-            $q->where('trainer_id', $trainerId);
+        return $query->where(function ($q) use ($trainerId) {
+            $q->where('lectures.trainer_id', $trainerId)
+              ->orWhere(function ($sub) use ($trainerId) {
+                  $sub->whereNull('lectures.trainer_id')
+                      ->whereHas('course', function ($c) use ($trainerId) {
+                          $c->where('trainer_id', $trainerId);
+                      });
+              });
         });
     }
 

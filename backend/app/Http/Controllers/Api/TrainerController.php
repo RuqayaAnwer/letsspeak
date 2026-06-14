@@ -368,8 +368,9 @@ class TrainerController extends Controller
 
         $today = Carbon::today()->format('Y-m-d');
         
-        $lectures = Lecture::whereHas('course', function ($q) use ($trainer) {
-            $q->where('trainer_id', $trainer->id)->where('status', 'active');
+        $lectures = Lecture::forTrainer($trainer->id)
+        ->whereHas('course', function ($q) {
+            $q->where('status', 'active');
         })
         ->where('date', $today)
         ->with(['course.student', 'course.students', 'course.coursePackage'])
@@ -418,8 +419,9 @@ class TrainerController extends Controller
         $startDate = $today->copy()->addDay(); // Tomorrow
         $endDate = $today->copy()->addDays(7); // 7 days from today
         
-        $lectures = Lecture::whereHas('course', function ($q) use ($trainer) {
-            $q->where('trainer_id', $trainer->id)->where('status', 'active');
+        $lectures = Lecture::forTrainer($trainer->id)
+        ->whereHas('course', function ($q) {
+            $q->where('status', 'active');
         })
         ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
         ->with(['course.student', 'course.students', 'course.coursePackage'])
@@ -519,9 +521,7 @@ class TrainerController extends Controller
 
             // المحاضرات المكتملة في الشهر (حاضر/غائب أو is_completed) — للعداد والاستحقاق
             $completedLecturesList = Lecture::with('course.coursePackage')
-            ->whereHas('course', function ($query) use ($trainer) {
-                $query->where('trainer_id', $trainer->id);
-            })
+            ->forTrainer($trainer->id)
             ->whereBetween('date', [$startDate, $endDate])
             ->get()
             ->filter($isCompletedLecture);
@@ -548,9 +548,7 @@ class TrainerController extends Controller
             }
 
             // إجمالي المحاضرات المجدولة في الشهر (من 1 إلى آخر يوم)
-            $totalLectures = Lecture::whereHas('course', function ($query) use ($trainer) {
-                $query->where('trainer_id', $trainer->id);
-            })
+            $totalLectures = Lecture::forTrainer($trainer->id)
             ->whereBetween('date', [$startDate, $endDate])
             ->whereNotIn('attendance', [
                 Lecture::ATTENDANCE_POSTPONED_BY_TRAINER,
@@ -563,9 +561,7 @@ class TrainerController extends Controller
             $isCurrentMonth = ($month == $today->month && $year == $today->year);
 
             // عدد الكورسات: كورسات لها محاضرة واحدة على الأقل في هذا الشهر (للشهر الحالي والسابق)
-            $courseIdsInMonth = Lecture::whereHas('course', function ($query) use ($trainer) {
-                $query->where('trainer_id', $trainer->id);
-            })
+            $courseIdsInMonth = Lecture::forTrainer($trainer->id)
             ->whereBetween('date', [$startDate, $endDate])
             ->pluck('course_id')
             ->unique()
@@ -833,8 +829,9 @@ class TrainerController extends Controller
             $isAvailable = true;
             foreach ($dates as $date) {
                 // Check Lecture Conflicts
-                $conflict = Lecture::whereHas('course', function ($q) use ($trainer) {
-                    $q->where('trainer_id', $trainer->id)->where('status', 'active');
+                $conflict = Lecture::forTrainer($trainer->id)
+                ->whereHas('course', function ($q) {
+                    $q->where('status', 'active');
                 })
                 ->where('date', $date)
                 ->where('time', $time)
