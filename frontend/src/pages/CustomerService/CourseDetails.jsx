@@ -102,96 +102,85 @@ const CourseDetails = () => {
       }
 
       // جلب تفاصيل إضافية لكل كورس
-      const coursesWithDetails = await Promise.all(
-        allCourses.map(async (course) => {
-          try {
-            // جلب تفاصيل الكورس الكاملة
-            const courseResponse = await api.get(`/courses/${course.id}`);
-            const fullCourse = courseResponse.data?.data || courseResponse.data || course;
-            
-            // استخراج معلومات الطالب
-            let studentName = '-';
-            if (fullCourse.student_name) {
-              studentName = fullCourse.student_name;
-            } else if (fullCourse.students && Array.isArray(fullCourse.students) && fullCourse.students.length > 0) {
-              studentName = fullCourse.students.map(s => (typeof s === 'object' ? s.name : s)).filter(Boolean).join(', ');
-            } else if (fullCourse.student) {
-              studentName = typeof fullCourse.student === 'object' ? fullCourse.student?.name : fullCourse.student;
-            }
-            
-            // استخراج معلومات الطالب الثاني (للثنائي)
-            let secondStudentName = '-';
-            if (fullCourse.students && Array.isArray(fullCourse.students) && fullCourse.students.length > 1) {
-              secondStudentName = fullCourse.students.slice(1).map(s => (typeof s === 'object' ? s.name : s)).filter(Boolean).join(' / ');
-            }
-            
-            // استخراج معلومات المدرب
-            let trainerName = '-';
-            if (fullCourse.trainer_name) {
-              trainerName = fullCourse.trainer_name;
-            } else if (fullCourse.trainer) {
-              if (typeof fullCourse.trainer === 'object') {
-                trainerName = fullCourse.trainer?.user?.name || fullCourse.trainer?.name || '-';
-              } else {
-                trainerName = fullCourse.trainer;
-              }
-            }
-            
-            // استخراج المستوى (من بيانات الطالب)
-            let level = '-';
-            // محاولة الحصول على المستوى من بيانات الطالب
-            if (fullCourse.students && Array.isArray(fullCourse.students) && fullCourse.students.length > 0) {
-              // أخذ المستوى من الطالب الأول
-              const firstStudent = fullCourse.students[0];
-              if (typeof firstStudent === 'object' && firstStudent.level) {
-                level = firstStudent.level;
-              }
-            } else if (fullCourse.student && typeof fullCourse.student === 'object' && fullCourse.student.level) {
-              level = fullCourse.student.level;
-            } else if (fullCourse.student_level) {
-              level = fullCourse.student_level;
-            }
-            
-            // تنسيق الوقت בצيغة 12 ساعة
-            let lectureTime = '-';
-            if (fullCourse.lecture_time) {
-              if (typeof fullCourse.lecture_time === 'string') {
-                const timeParts = fullCourse.lecture_time.split(':');
-                if (timeParts.length >= 2) {
-                  let hours = parseInt(timeParts[0], 10);
-                  const minutes = timeParts[1];
-                  const ampm = hours >= 12 ? 'م' : 'ص';
-                  hours = hours % 12;
-                  hours = hours ? hours : 12; // 0 becomes 12
-                  lectureTime = `${hours}:${minutes} ${ampm}`;
-                } else {
-                  lectureTime = fullCourse.lecture_time;
-                }
-              } else {
-                lectureTime = String(fullCourse.lecture_time);
-              }
-            }
-            
-            return {
-              ...fullCourse,
-              student_id: fullCourse.student_id || (fullCourse.students && fullCourse.students[0] ? fullCourse.students[0].id : null),
-              student_name: studentName,
-              second_student_name: secondStudentName,
-              trainer_name: trainerName,
-              payment_method: fullCourse.payment_method || null,
-              start_date: fullCourse.start_date || fullCourse.created_at || null,
-              lecture_days: fullCourse.lecture_days || null,
-              lecture_time: lectureTime,
-              status: fullCourse.status || 'active',
-              level: level,
-              previous_trainer_name: fullCourse.previous_trainer_name || '-',
-            };
-          } catch (err) {
-            console.error(`Error fetching details for course ${course.id}:`, err);
-            return course;
+      const coursesWithDetails = allCourses.map((course) => {
+        // استخراج معلومات الطالب
+        let studentName = '-';
+        if (course.student_name) {
+          studentName = course.student_name;
+        } else if (course.students && Array.isArray(course.students) && course.students.length > 0) {
+          studentName = course.students.map(s => (typeof s === 'object' ? s.name : s)).filter(Boolean).join(', ');
+        } else if (course.student) {
+          studentName = typeof course.student === 'object' ? course.student?.name : course.student;
+        }
+        
+        // استخراج معلومات الطالب الثاني (للثنائي)
+        let secondStudentName = '-';
+        if (course.students && Array.isArray(course.students) && course.students.length > 1) {
+          secondStudentName = course.students.slice(1).map(s => (typeof s === 'object' ? s.name : s)).filter(Boolean).join(' / ');
+        }
+        
+        // استخراج معلومات المدرب
+        let trainerName = '-';
+        if (course.trainer_name) {
+          trainerName = course.trainer_name;
+        } else if (course.trainer) {
+          if (typeof course.trainer === 'object') {
+            trainerName = course.trainer?.user?.name || course.trainer?.name || '-';
+          } else {
+            trainerName = course.trainer;
           }
-        })
-      );
+        }
+        
+        // استخراج المستوى (من بيانات الطالب)
+        let level = '-';
+        // محاولة الحصول على المستوى من بيانات الطالب
+        if (course.students && Array.isArray(course.students) && course.students.length > 0) {
+          // أخذ المستوى من الطالب الأول
+          const firstStudent = course.students[0];
+          if (typeof firstStudent === 'object' && firstStudent.level) {
+            level = firstStudent.level;
+          }
+        } else if (course.student && typeof course.student === 'object' && course.student.level) {
+          level = course.student.level;
+        } else if (course.student_level) {
+          level = course.student_level;
+        }
+        
+        // تنسيق الوقت בצيغة 12 ساعة
+        let lectureTime = '-';
+        if (course.lecture_time) {
+          if (typeof course.lecture_time === 'string') {
+            const timeParts = course.lecture_time.split(':');
+            if (timeParts.length >= 2) {
+              let hours = parseInt(timeParts[0], 10);
+              const minutes = timeParts[1];
+              const ampm = hours >= 12 ? 'م' : 'ص';
+              hours = hours % 12;
+              hours = hours ? hours : 12; // 0 becomes 12
+              lectureTime = `${hours}:${minutes} ${ampm}`;
+            } else {
+              lectureTime = course.lecture_time;
+            }
+          } else {
+            lectureTime = String(course.lecture_time);
+          }
+        }
+        
+        return {
+          ...course,
+          student_id: course.student_id || (course.students && course.students[0] ? course.students[0].id : null),
+          student_name: studentName,
+          second_student_name: secondStudentName,
+          trainer_name: trainerName,
+          payment_method: course.payment_method || null,
+          start_date: course.start_date || course.created_at || null,
+          lecture_days: course.lecture_days || null,
+          lecture_time: lectureTime,
+          status: course.status || 'active',
+          level: level,
+          previous_trainer_name: course.previous_trainer_name || '-',
+        };
+      });
 
       setCourses(coursesWithDetails);
     } catch (err) {

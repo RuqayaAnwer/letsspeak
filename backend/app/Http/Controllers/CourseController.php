@@ -109,10 +109,11 @@ class CourseController extends Controller
             ]);
         }
 
+        $perPage = (int) $request->input('per_page', 15);
         $courses = $query->with(['lectures.students', 'lectures.lectureTrainer.user', 'coursePackage'])
                         ->withCount('lectures')
                         ->orderBy('id', 'asc')
-                        ->paginate(15);
+                        ->paginate($perPage);
 
         // Add completion percentage to each course
         $courses->getCollection()->transform(function ($course) {
