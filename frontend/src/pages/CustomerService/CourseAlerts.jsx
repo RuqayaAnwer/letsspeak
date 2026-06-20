@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, HelpCircle, X, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
@@ -16,6 +16,7 @@ const CourseAlerts = () => {
   
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const lastFetchTimeRef = useRef(0);
   const [studentPaymentsModal, setStudentPaymentsModal] = useState({
     open: false,
     studentId: null,
@@ -30,7 +31,7 @@ const CourseAlerts = () => {
   // Profile Modal State
   
   useEffect(() => {
-    fetchCourses();
+    fetchCourses(true);
   }, []);
 
   // Reset pagination when courses change
@@ -41,15 +42,22 @@ const CourseAlerts = () => {
   // إعادة تحميل الكورسات عند العودة للصفحة
   useEffect(() => {
     const handleFocus = () => {
-      fetchCourses();
+      fetchCourses(false);
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  const fetchCourses = async () => {
+  const fetchCourses = async (showLoading = true) => {
+    // If background refetch (focus event), throttle it to once every 30 seconds
+    if (!showLoading && Date.now() - lastFetchTimeRef.current < 30000) {
+      return;
+    }
+    lastFetchTimeRef.current = Date.now();
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       
       // جلب الكورسات القريبة من الانتهاء فقط (75% فأكثر) من الباك إند مباشرة بدلاً من جلب كل شيء والفلترة
       const response = await api.get('/courses/nearing-completion');
@@ -64,7 +72,9 @@ const CourseAlerts = () => {
       console.error('Error fetching courses:', error);
       setCourses([]);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 

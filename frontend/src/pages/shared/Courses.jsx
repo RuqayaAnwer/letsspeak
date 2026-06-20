@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Plus, PlusCircle, AlertTriangle, Info, X, HelpCircle, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
@@ -22,6 +22,7 @@ const Courses = () => {
   };
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const lastFetchTimeRef = useRef(0);
   const [searchStudent, setSearchStudent] = useState(() => sessionStorage.getItem('coursesSearchStudent') || '');
   const [searchTrainer, setSearchTrainer] = useState(() => sessionStorage.getItem('coursesSearchTrainer') || '');
 
@@ -65,6 +66,11 @@ const Courses = () => {
   }, [courses, searchStudent, searchTrainer]);
 
   const fetchCourses = async (showLoading = true) => {
+    // If background refetch (focus event), throttle it to once every 30 seconds
+    if (!showLoading && Date.now() - lastFetchTimeRef.current < 30000) {
+      return;
+    }
+    lastFetchTimeRef.current = Date.now();
     try {
       if (showLoading) {
         setLoading(true);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -13,6 +13,7 @@ const CreateCourse = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(true);
+  const lastFetchTimeRef = useRef(0);
   const [submitting, setSubmitting] = useState(false);
   const [students, setStudents] = useState([]);
   const [trainers, setTrainers] = useState([]);
@@ -136,6 +137,11 @@ const CreateCourse = () => {
   }, []);
 
   const fetchData = async (skipLoading = false) => {
+    // If background refetch (focus event), throttle it to once every 30 seconds
+    if (skipLoading && Date.now() - lastFetchTimeRef.current < 30000) {
+      return;
+    }
+    lastFetchTimeRef.current = Date.now();
     try {
       if (!skipLoading) {
         setLoading(true);
