@@ -78,6 +78,11 @@ class CourseController extends Controller
                                     $course->load('coursePackage');
                                 }
                                 
+                                // Manually associate parent course instance to avoid N+1 query loops during serialization
+                                foreach ($course->lectures as $lecture) {
+                                    $lecture->setRelation('course', $course);
+                                }
+                                
                                 // Count completed lectures: either is_completed=true OR attendance is present/absent
                                 // Exclude postponed lectures
                                 $validLectures = $course->lectures->filter(function ($lecture) {
@@ -110,16 +115,49 @@ class CourseController extends Controller
         }
 
         $perPage = (int) $request->input('per_page', 15);
-        $courses = $query->with(['lectures.students', 'lectures.lectureTrainer.user', 'coursePackage'])
+        $courses = $query->with(['lectures.students', 'lectures.lectureTrainer.user', 'coursePackage', 'students'])
                         ->withCount('lectures')
                         ->orderBy('id', 'asc')
                         ->paginate($perPage);
 
-        // Add completion percentage to each course
-        $courses->getCollection()->transform(function ($course) {
+        // Pre-fetch all previous trainers in bulk to avoid N+1 query issue
+        $studentIds = [];
+        foreach ($courses->items() as $course) {
+            foreach ($course->students as $student) {
+                $studentIds[] = $student->id;
+            }
+        }
+        $studentIds = array_unique($studentIds);
+
+        $studentCoursesMap = [];
+        if (!empty($studentIds)) {
+            $allCoursesForStudents = Course::whereHas('students', function ($q) use ($studentIds) {
+                    $q->whereIn('students.id', $studentIds);
+                })
+                ->with(['students', 'trainer.user'])
+                ->orderBy('id', 'desc')
+                ->get();
+
+            foreach ($allCoursesForStudents as $c) {
+                foreach ($c->students as $student) {
+                    $studentCoursesMap[$student->id][] = [
+                        'course_id' => $c->id,
+                        'trainer_name' => $c->trainer && $c->trainer->user ? $c->trainer->user->name : ($c->trainer ? $c->trainer->name : '-')
+                    ];
+                }
+            }
+        }
+
+        // Add completion percentage and previous trainer to each course
+        $courses->getCollection()->transform(function ($course) use ($studentCoursesMap) {
             // Ensure coursePackage is loaded
             if (!$course->relationLoaded('coursePackage')) {
                 $course->load('coursePackage');
+            }
+            
+            // Manually associate parent course instance to avoid N+1 query loops during serialization
+            foreach ($course->lectures as $lecture) {
+                $lecture->setRelation('course', $course);
             }
             
             // Count completed lectures: either is_completed=true OR attendance is present/absent
@@ -147,21 +185,12 @@ class CourseController extends Controller
                 $firstStudent = $course->students->first();
                 $pStudentId = $firstStudent ? $firstStudent->id : null;
                 
-                if ($pStudentId) {
-                    // Find previous course for this student before the current course
-                    $previousCourse = \App\Models\Course::whereHas('students', function ($sq) use ($pStudentId) {
-                            $sq->where('students.id', $pStudentId);
-                        })
-                        ->where('courses.id', '<', $course->id)
-                        ->orderBy('courses.id', 'desc')
-                        ->with('trainer.user')
-                        ->first();
-                    
-                    if ($previousCourse && $previousCourse->trainer) {
-                        if ($previousCourse->trainer->user) {
-                            $previousTrainerName = $previousCourse->trainer->user->name;
-                        } else {
-                            $previousTrainerName = $previousCourse->trainer->name;
+                if ($pStudentId && isset($studentCoursesMap[$pStudentId])) {
+                    // Find the first course in the array (sorted desc by ID) that has course_id < $course->id
+                    foreach ($studentCoursesMap[$pStudentId] as $prev) {
+                        if ($prev['course_id'] < $course->id) {
+                            $previousTrainerName = $prev['trainer_name'];
+                            break;
                         }
                     }
                 }

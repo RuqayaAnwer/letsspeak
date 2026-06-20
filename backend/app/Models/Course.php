@@ -89,6 +89,11 @@ class Course extends Model
      */
     public function getHasTrainerChangedAttribute(): bool
     {
+        if ($this->relationLoaded('lectures')) {
+            return $this->lectures->contains(function ($lecture) {
+                return $lecture->trainer_id !== null && $lecture->trainer_id != $this->trainer_id;
+            });
+        }
         return $this->lectures()->whereNotNull('trainer_id')->where('trainer_id', '!=', $this->trainer_id)->exists();
     }
 
@@ -162,6 +167,9 @@ class Course extends Model
      */
     public function getStudentPostponementCountAttribute(): int
     {
+        if ($this->relationLoaded('lectures')) {
+            return $this->lectures->where('attendance', Lecture::ATTENDANCE_POSTPONED_BY_STUDENT)->count();
+        }
         return $this->lectures()->where('attendance', Lecture::ATTENDANCE_POSTPONED_BY_STUDENT)->count();
     }
 
@@ -170,6 +178,9 @@ class Course extends Model
      */
     public function getTrainerPostponementCountAttribute(): int
     {
+        if ($this->relationLoaded('lectures')) {
+            return $this->lectures->where('attendance', Lecture::ATTENDANCE_POSTPONED_BY_TRAINER)->count();
+        }
         return $this->lectures()->where('attendance', Lecture::ATTENDANCE_POSTPONED_BY_TRAINER)->count();
     }
 
@@ -218,6 +229,9 @@ class Course extends Model
      */
     public function getCompletedLecturesCountAttribute(): int
     {
+        if ($this->relationLoaded('lectures')) {
+            return $this->lectures->where('attendance', 'present')->count();
+        }
         return $this->lectures()->where('attendance', 'present')->count();
     }
 

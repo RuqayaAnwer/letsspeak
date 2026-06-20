@@ -47,13 +47,13 @@ const Courses = () => {
   const [coursesPages, setCoursesPages] = useState({});
 
   useEffect(() => {
-    fetchCourses();
+    fetchCourses(true);
   }, []);
 
   // إعادة تحميل الكورسات عند العودة للصفحة
   useEffect(() => {
     const handleFocus = () => {
-      fetchCourses();
+      fetchCourses(false);
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
@@ -64,9 +64,11 @@ const Courses = () => {
     setCoursesPages({});
   }, [courses, searchStudent, searchTrainer]);
 
-  const fetchCourses = async () => {
+  const fetchCourses = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       // جلب جميع الكورسات بدون pagination
       let allCourses = [];
       let currentPage = 1;
@@ -113,7 +115,9 @@ const Courses = () => {
       console.error('Error response:', error.response?.data);
       setCourses([]);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
