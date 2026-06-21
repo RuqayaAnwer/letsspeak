@@ -48,6 +48,8 @@ const AdminUsers = () => {
     min_level: '',
     max_level: '',
     notes: '',
+    job_title: '',
+    base_salary: '',
     submitting: false,
   });
 
@@ -195,17 +197,19 @@ const AdminUsers = () => {
       min_level: '',
       max_level: '',
       notes: '',
+      job_title: '',
+      base_salary: '',
       submitting: false,
     });
   };
 
   const closeAddTrainerModal = () => {
-    setAddTrainerModal({ open: false, name: '', email: '', phone: '', password: '', min_level: '', max_level: '', notes: '', submitting: false });
+    setAddTrainerModal({ open: false, name: '', email: '', phone: '', password: '', min_level: '', max_level: '', notes: '', job_title: '', base_salary: '', submitting: false });
   };
 
   const handleAddTrainerSubmit = async (e) => {
     e.preventDefault();
-    const { name, email, phone, password, min_level, max_level, notes } = addTrainerModal;
+    const { name, email, phone, password, min_level, max_level, notes, job_title, base_salary } = addTrainerModal;
     if (!name.trim()) {
       alert('الاسم مطلوب');
       return;
@@ -220,6 +224,8 @@ const AdminUsers = () => {
         min_level: min_level || undefined,
         max_level: max_level || undefined,
         notes: notes.trim() || undefined,
+        job_title: job_title ? job_title.trim() : undefined,
+        base_salary: base_salary ? parseFloat(base_salary) : undefined,
       });
       alert('تم إضافة المدرب بنجاح.');
       closeAddTrainerModal();
@@ -490,6 +496,7 @@ const AdminUsers = () => {
               placeholder="example@letspeak.com"
               dir="ltr"
               required
+              autoComplete="username"
             />
           </div>
 
@@ -502,6 +509,7 @@ const AdminUsers = () => {
                 onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
                 className="input w-full"
                 placeholder="مثال: خدمة عملاء / مدرب"
+                autoComplete="organization-title"
               />
             </div>
             <div>
@@ -513,6 +521,7 @@ const AdminUsers = () => {
                 className="input w-full"
                 placeholder="0"
                 min="0"
+                autoComplete="off"
               />
             </div>
           </div>
@@ -530,6 +539,7 @@ const AdminUsers = () => {
               dir="ltr"
               required={!editingUser}
               minLength={6}
+              autoComplete="new-password"
             />
           </div>
 
@@ -642,7 +652,7 @@ const AdminUsers = () => {
               className="input w-full"
               placeholder="trainer@example.com"
               dir="ltr"
-              autoComplete="new-email"
+              autoComplete="username"
             />
           </div>
           <div>
@@ -666,6 +676,7 @@ const AdminUsers = () => {
                 onChange={(e) => setAddTrainerModal(prev => ({ ...prev, job_title: e.target.value }))}
                 className="input w-full"
                 placeholder="مثال: ضمان جودة"
+                autoComplete="organization-title"
               />
             </div>
             <div>
@@ -677,6 +688,7 @@ const AdminUsers = () => {
                 className="input w-full"
                 placeholder="0"
                 min="0"
+                autoComplete="off"
               />
             </div>
           </div>
@@ -728,6 +740,7 @@ const AdminUsers = () => {
               placeholder="6 أحرف على الأقل"
               dir="ltr"
               minLength={6}
+              autoComplete="new-password"
             />
           </div>
           <div>
