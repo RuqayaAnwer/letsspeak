@@ -78,7 +78,15 @@ class AdminController extends Controller
                 'created_at' => $u->created_at?->format('Y-m-d'),
             ]);
 
-        return response()->json(['success' => true, 'data' => $users]);
+        $totalUsers = User::count();
+        $totalTrainers = Trainer::count();
+
+        return response()->json([
+            'success' => true,
+            'data' => $users,
+            'total_users' => $totalUsers,
+            'total_trainers' => $totalTrainers,
+        ]);
     }
 
     /**

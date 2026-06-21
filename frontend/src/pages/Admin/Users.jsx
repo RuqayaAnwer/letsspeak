@@ -22,6 +22,8 @@ const sampleUsers = [
 
 const AdminUsers = () => {
   const [users, setUsers]           = useState([]);
+  const [totalUsersCount, setTotalUsersCount] = useState(0);
+  const [totalTrainersCount, setTotalTrainersCount] = useState(0);
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -65,6 +67,8 @@ const AdminUsers = () => {
       if (roleFilter) params.role   = roleFilter;
       const res = await api.get('/admin/users', { params });
       setUsers(res.data?.data || []);
+      setTotalUsersCount(res.data?.total_users || 0);
+      setTotalTrainersCount(res.data?.total_trainers || 0);
     } catch (err) {
       console.error('Error fetching users:', err);
       if (import.meta.env.DEV) {
@@ -72,8 +76,12 @@ const AdminUsers = () => {
         if (roleFilter) filtered = filtered.filter(u => u.role === roleFilter);
         if (search)     filtered = filtered.filter(u => u.name.includes(search) || u.email.includes(search));
         setUsers(filtered);
+        setTotalUsersCount(sampleUsers.length);
+        setTotalTrainersCount(5);
       } else {
         setUsers([]);
+        setTotalUsersCount(0);
+        setTotalTrainersCount(0);
       }
     } finally {
       setLoading(false);
@@ -289,6 +297,46 @@ const AdminUsers = () => {
           <option value="trainer">المدربون</option>
           <option value="employee">موظف (رواتب فقط)</option>
         </select>
+      </div>
+
+      {/* Search & Filter info bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800 text-sm">
+        <div className="flex items-center flex-wrap gap-2 text-[var(--color-text-muted)]">
+          {(search || roleFilter) ? (
+            <>
+              <span>نتائج تصفية البحث:</span>
+              {search && (
+                <span className="font-semibold text-primary-600 dark:text-primary-400 bg-primary-100/50 dark:bg-primary-900/30 px-2 py-0.5 rounded-md text-xs">
+                  الاسم/الإيميل: "{search}"
+                </span>
+              )}
+              {roleFilter && (
+                <span className="font-semibold text-purple-600 dark:text-purple-400 bg-purple-100/50 dark:bg-purple-900/30 px-2 py-0.5 rounded-md text-xs">
+                  القسم: {roleLabels[roleFilter]?.label || roleFilter}
+                </span>
+              )}
+              <span className="text-gray-300 dark:text-gray-700">|</span>
+              <span>المطابقين للبحث:</span>
+              <span className="font-bold text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
+                {users.length}
+              </span>
+            </>
+          ) : (
+            <span>عرض جميع المستخدمين في النظام</span>
+          )}
+        </div>
+        <div className="flex items-center flex-wrap gap-3 text-xs font-semibold">
+          <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-100/50 dark:border-emerald-900/30">
+            <GraduationCap className="w-3.5 h-3.5" />
+            <span>إجمالي المدربين:</span>
+            <span className="font-bold text-sm">{totalTrainersCount}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-lg border border-blue-100/50 dark:border-blue-900/30">
+            <Users className="w-3.5 h-3.5" />
+            <span>إجمالي موظفي النظام:</span>
+            <span className="font-bold text-sm">{totalUsersCount}</span>
+          </div>
+        </div>
       </div>
 
       {/* Content */}
