@@ -27,6 +27,11 @@ class StudentController extends Controller
             });
         }
 
+        // Filter by is_child
+        if ($request->has('is_child')) {
+            $query->where('is_child', filter_var($request->is_child, FILTER_VALIDATE_BOOLEAN));
+        }
+
         if ($request->has('all') && $request->all == 'true') {
             $students = $query->with('lead')->latest()->get();
             return response()->json(['data' => $students]);
@@ -47,9 +52,11 @@ class StudentController extends Controller
             'phone' => 'required|string|max:20',
             'level' => 'nullable|string|max:10',
             'notes' => 'nullable|string',
+            'is_child' => 'sometimes|boolean',
+            'age' => 'nullable|integer|min:0|max:120',
         ]);
 
-        $student = Student::create($request->only(['name', 'phone', 'level', 'notes']));
+        $student = Student::create($request->only(['name', 'phone', 'level', 'notes', 'is_child', 'age']));
 
         return response()->json($student, 201);
     }
@@ -74,9 +81,11 @@ class StudentController extends Controller
             'phone' => 'sometimes|required|string|max:20',
             'level' => 'nullable|string|max:10',
             'notes' => 'nullable|string',
+            'is_child' => 'sometimes|boolean',
+            'age' => 'nullable|integer|min:0|max:120',
         ]);
 
-        $student->update($request->only(['name', 'phone', 'level', 'notes']));
+        $student->update($request->only(['name', 'phone', 'level', 'notes', 'is_child', 'age']));
 
         return response()->json($student);
     }

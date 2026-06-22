@@ -18,6 +18,13 @@ class Student extends Model
         'status',
         'notes',
         'lead_id',
+        'is_child',
+        'age',
+    ];
+
+    protected $casts = [
+        'is_child' => 'boolean',
+        'age' => 'integer',
     ];
 
     /**

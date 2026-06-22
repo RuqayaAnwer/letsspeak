@@ -128,6 +128,7 @@ class LeadController extends Controller
             }
         }
 
+        $isChild = $lead->age !== null && $lead->age < 16;
         $student = \App\Models\Student::create([
             'name' => $lead->name,
             'phone' => $lead->phone_whatsapp,
@@ -136,6 +137,8 @@ class LeadController extends Controller
                        "الباقة المطلوبة: " . ($lead->package_selected ?? 'غير محدد') . "\n" . 
                        $lead->notes . "\n(تم التحويل من مسار العملاء)",
             'lead_id' => $lead->id,
+            'is_child' => $isChild,
+            'age' => $lead->age,
         ]);
 
         $lead->status = 'confirmed';

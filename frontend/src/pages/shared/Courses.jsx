@@ -395,6 +395,12 @@ const Courses = () => {
   const isKidsCourse = (course) => {
     if (!course) return false;
     
+    // Check is_kids attribute directly
+    if (course.is_kids) return true;
+    
+    // Check if any student has is_child flagged
+    if (course.students?.some(s => s.is_child)) return true;
+    
     // Check package name
     const pkgName = getPackageName(course).toLowerCase();
     if (pkgName.includes('اطفال') || pkgName.includes('kids')) return true;
@@ -403,7 +409,7 @@ const Courses = () => {
     const hasKidsStudent = course.students?.some(student => {
       const studentNotes = (student.notes || '').toLowerCase();
       const studentLevel = (student.pivot?.student_level || student.level || '').toLowerCase();
-      return studentNotes.includes('اطفال') || studentNotes.includes('kids') || 
+      return student.is_child || studentNotes.includes('اطفال') || studentNotes.includes('kids') || 
              studentNotes.includes('استمارة الاطفال') || 
              studentLevel.includes('اطفال') || studentLevel.includes('kids');
     });

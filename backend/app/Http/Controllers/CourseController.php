@@ -235,6 +235,7 @@ class CourseController extends Controller
             'discount' => 'sometimes|numeric|min:0',
             'student_levels' => 'sometimes|array',
             'student_levels.*' => 'in:L1,L2,L3,L4,L5,L6,L7,L8',
+            'is_kids' => 'sometimes|boolean',
         ]);
 
         // Get lectures count from package or custom
@@ -251,6 +252,11 @@ class CourseController extends Controller
 
         if (empty($studentIds)) {
             return response()->json(['message' => 'يجب تحديد طالب واحد على الأقل'], 422);
+        }
+
+        $isKids = $request->input('is_kids', false);
+        if (!$isKids) {
+            $isKids = Student::whereIn('id', $studentIds)->where('is_child', true)->exists();
         }
 
         // Automatically determine if this is a renewal with the same trainer
@@ -310,6 +316,7 @@ class CourseController extends Controller
             'renewal_iteration' => $renewalIteration,
             'payment_method' => $request->payment_method,
             'status' => 'active',
+            'is_kids' => $isKids,
         ];
         
         // For custom courses, set total_amount and amount_paid
@@ -533,6 +540,7 @@ class CourseController extends Controller
             'extra_lectures_count' => 'sometimes|nullable|integer|min:0',
             'extra_lectures_fee' => 'sometimes|nullable|numeric|min:0',
             'trainer_id' => 'sometimes|required|exists:trainers,id',
+            'is_kids' => 'sometimes|boolean',
         ]);
 
         if ($request->has('trainer_id')) {
@@ -550,7 +558,7 @@ class CourseController extends Controller
         $course->update($request->only([
             'status', 'lecture_time', 'lecture_days', 'trainer_payment_status', 'renewal_status',
             'student_max_postponements_override', 'trainer_max_postponements_override', 'notes',
-            'extra_lectures_count', 'extra_lectures_fee', 'trainer_id'
+            'extra_lectures_count', 'extra_lectures_fee', 'trainer_id', 'is_kids'
         ]));
 
         $course->load(['trainer.user', 'students', 'coursePackage', 'lectures.students', 'lectures.lectureTrainer.user']);
@@ -1260,7 +1268,7 @@ class CourseController extends Controller
                                         foreach ($completedLecturesList as $lecture) {
                                             $rate = 4000;
                                             $pkgName = $lecture->course->coursePackage->name ?? '';
-                                            if (mb_strpos($pkgName, 'اطفال') !== false || mb_strpos(mb_strtolower($pkgName, 'UTF-8'), 'kids') !== false) {
+                                            if ($lecture->course->is_kids || mb_strpos($pkgName, 'اطفال') !== false || mb_strpos(mb_strtolower($pkgName, 'UTF-8'), 'kids') !== false) {
                                                 $rate = 6000;
                                             }
                                             $basePay += $rate;

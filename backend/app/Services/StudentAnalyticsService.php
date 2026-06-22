@@ -156,6 +156,9 @@ class StudentAnalyticsService
                 'level' => $student->level,
                 'status' => $student->status,
                 'notes' => $student->notes,
+                'is_child' => (bool)$student->is_child,
+                'age' => $student->age,
+                'lead' => $student->lead,
                 'created_at' => $student->created_at->format('Y-m-d'),
             ],
             'stats' => [

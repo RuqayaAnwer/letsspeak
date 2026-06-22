@@ -12,6 +12,7 @@ const Students = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('all'); // 'all', 'adult', 'child'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [directAdd, setDirectAdd] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
@@ -26,6 +27,8 @@ const Students = () => {
     paid_amount: '',
     remaining_amount: '',
     payment_method: 'zain_cash',
+    is_child: false,
+    age: '',
   });
   const [selectedLeadId, setSelectedLeadId] = useState(null);
 
@@ -64,7 +67,7 @@ const Students = () => {
     fetchStudents();
     fetchPackages();
     fetchCourses();
-  }, [search]);
+  }, [search, filterType]);
 
   const fetchPackages = async () => {
     try {
@@ -125,7 +128,13 @@ const Students = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await api.get('/students', { params: { search } });
+      const params = { search };
+      if (filterType === 'child') {
+        params.is_child = true;
+      } else if (filterType === 'adult') {
+        params.is_child = false;
+      }
+      const response = await api.get('/students', { params });
       setStudents(response.data.data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
@@ -210,6 +219,8 @@ const Students = () => {
         paid_amount: '',
         remaining_amount: '',
         payment_method: 'zain_cash',
+        is_child: student.is_child || false,
+        age: student.age || '',
       });
     } else {
       setEditingStudent(null);
@@ -222,6 +233,8 @@ const Students = () => {
         paid_amount: '',
         remaining_amount: '',
         payment_method: 'zain_cash',
+        is_child: false,
+        age: '',
       });
     }
     setIsModalOpen(true);
@@ -241,6 +254,8 @@ const Students = () => {
       paid_amount: '',
       remaining_amount: '',
       payment_method: 'zain_cash',
+      is_child: false,
+      age: '',
     });
   };
 
@@ -276,8 +291,8 @@ const Students = () => {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="card p-4">
+      {/* Search & Filters */}
+      <div className="card p-4 space-y-4">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-text-muted)]" />
           <input
@@ -287,6 +302,46 @@ const Students = () => {
             onChange={(e) => setSearch(e.target.value)}
             className="input pr-10"
           />
+        </div>
+        
+        {/* Type Filter Tabs */}
+        <div className="flex items-center gap-2 border-t border-[var(--color-border)] pt-3 flex-wrap">
+          <span className="text-xs text-[var(--color-text-muted)] ml-2">تصنيف الطلاب:</span>
+          <div className="flex bg-[var(--color-bg-secondary)] p-1 rounded-lg border border-[var(--color-border)]">
+            <button
+              type="button"
+              onClick={() => setFilterType('all')}
+              className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                filterType === 'all'
+                  ? 'bg-teal-600 text-white shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+              }`}
+            >
+              الكل
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterType('adult')}
+              className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                filterType === 'adult'
+                  ? 'bg-teal-600 text-white shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+              }`}
+            >
+              كبار
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterType('child')}
+              className={`px-3 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1 ${
+                filterType === 'child'
+                  ? 'bg-pink-600 text-white shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+              }`}
+            >
+              أطفال 👶
+            </button>
+          </div>
         </div>
       </div>
 
@@ -322,7 +377,11 @@ const Students = () => {
                         <div key={student.id} className="relative">
                           <div 
                             onClick={() => setMobileActionsOpen(student.id)}
-                            className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 sm:cursor-default cursor-pointer hover:border-primary-400 dark:hover:border-primary-600 transition-colors sm:hover:border-gray-200 sm:dark:hover:border-gray-700"
+                            className={`p-2.5 rounded-lg border-2 sm:cursor-default cursor-pointer transition-colors sm:hover:border-gray-200 sm:dark:hover:border-gray-700 ${
+                              student.is_child 
+                                ? 'border-pink-300 dark:border-pink-900 bg-pink-50/40 dark:bg-pink-950/10 hover:border-pink-400' 
+                                : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 hover:border-primary-400 dark:hover:border-primary-600'
+                            }`}
                           >
                             <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
@@ -333,7 +392,7 @@ const Students = () => {
                                   onClick={(e) => { e.stopPropagation(); navigate('/students/' + student.id); }}
                                   className="text-sm font-semibold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1"
                                 >
-                                  {student.name}
+                                  {student.name} {student.is_child && <span className="text-[10px] bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300 px-1.5 py-0.5 rounded-full font-bold">👶 طفل</span>}
                                 </button>
                               </div>
                             </div>
@@ -519,22 +578,29 @@ const Students = () => {
                   </thead>
                   <tbody>
                     {students.map((student, index) => (
-                      <tr key={student.id}>
+                      <tr key={student.id} className={student.is_child ? 'bg-pink-50/30 dark:bg-pink-950/10 border-r-4 border-pink-500' : ''}>
                         <td className="font-semibold">{index + 1}</td>
                         <td>
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-accent-400 flex items-center justify-center">
+                            <div className={`w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center ${student.is_child ? 'from-pink-400 to-orange-400' : 'from-primary-400 to-accent-400'}`}>
                               <span className="text-white font-bold">
                                 {student.name.charAt(0).toUpperCase()}
                               </span>
                             </div>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); navigate('/students/' + student.id); }}
-                              className="font-semibold text-[var(--color-text-primary)] hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1"
-                              title="عرض ملف الطالب"
-                            >
-                              {student.name} <UserCircle className="w-4 h-4 opacity-70" />
-                            </button>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); navigate('/students/' + student.id); }}
+                                className="font-semibold text-[var(--color-text-primary)] hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1"
+                                title="عرض ملف الطالب"
+                              >
+                                {student.name} <UserCircle className="w-4 h-4 opacity-70" />
+                              </button>
+                              {student.is_child && (
+                                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300">
+                                  👶 طفل
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td>
@@ -545,8 +611,8 @@ const Students = () => {
                           )}
                         </td>
                         <td>
-                          {student.lead?.age ? (
-                            <span className="text-sm">{student.lead.age}</span>
+                          {student.age || student.lead?.age ? (
+                            <span className="text-sm">{student.age || student.lead.age} سنة</span>
                           ) : (
                             <span className="text-sm text-gray-400">-</span>
                           )}
@@ -629,6 +695,39 @@ const Students = () => {
               <label htmlFor="directAdd" className="text-xs font-bold text-gray-700 dark:text-slate-300 cursor-pointer select-none">
                 إضافة طالب مباشرة (دون اختيار عميل من مسار العملاء)
               </label>
+            </div>
+          )}
+
+          {(editingStudent || directAdd) && (
+            <div className="flex flex-col gap-3 pb-3 mb-2 border-b border-[var(--color-border)]">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isChild"
+                  checked={formData.is_child}
+                  onChange={(e) => setFormData({ ...formData, is_child: e.target.checked })}
+                  className="checkbox w-4 h-4 text-pink-600 focus:ring-pink-500 rounded cursor-pointer"
+                />
+                <label htmlFor="isChild" className="text-xs font-bold text-gray-700 dark:text-slate-300 cursor-pointer select-none">
+                  تسجيل كطالب طفل 👶
+                </label>
+              </div>
+              
+              {formData.is_child && (
+                <div className="w-full animate-fade-in">
+                  <label className="label text-xs">عمر الطفل بالسنوات *</label>
+                  <input
+                    type="number"
+                    value={formData.age}
+                    onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                    className="input text-sm"
+                    placeholder="مثال: 9"
+                    min="1"
+                    max="17"
+                    required
+                  />
+                </div>
+              )}
             </div>
           )}
 

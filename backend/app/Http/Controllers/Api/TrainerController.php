@@ -535,7 +535,7 @@ class TrainerController extends Controller
             $adultsRevenue = 0;
             foreach ($completedLecturesList as $lecture) {
                 $pkgName = $lecture->course->coursePackage->name ?? '';
-                $isKids = (mb_strpos($pkgName, 'اطفال') !== false || mb_strpos(mb_strtolower($pkgName, 'UTF-8'), 'kids') !== false);
+                $isKids = $lecture->course->is_kids || (mb_strpos($pkgName, 'اطفال') !== false || mb_strpos(mb_strtolower($pkgName, 'UTF-8'), 'kids') !== false);
                 $rate = $isKids ? 6000 : 4000;
                 $basePay += $rate;
                 if ($isKids) {

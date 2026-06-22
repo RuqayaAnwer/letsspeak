@@ -151,6 +151,7 @@ class FinanceController extends Controller
         $completedLecturesRates = \App\Models\Lecture::select(
             \Illuminate\Support\Facades\DB::raw('COALESCE(lectures.trainer_id, courses.trainer_id) as trainer_id'), 
             'courses.course_package_id',
+            'courses.is_kids',
             'course_packages.name as package_name',
             \Illuminate\Support\Facades\DB::raw('count(*) as count')
         )
@@ -160,7 +161,7 @@ class FinanceController extends Controller
             ->where(function ($query) {
                 $query->whereIn('lectures.attendance', ['present', 'partially', 'absent']);
             })
-            ->groupBy(\Illuminate\Support\Facades\DB::raw('COALESCE(lectures.trainer_id, courses.trainer_id)'), 'courses.course_package_id', 'course_packages.name')
+            ->groupBy(\Illuminate\Support\Facades\DB::raw('COALESCE(lectures.trainer_id, courses.trainer_id)'), 'courses.course_package_id', 'courses.is_kids', 'course_packages.name')
             ->get();
 
         $completedLecturesCounts = [];
@@ -172,7 +173,7 @@ class FinanceController extends Controller
         foreach ($completedLecturesRates as $rateRow) {
             $tId = $rateRow->trainer_id;
             $pkgName = $rateRow->package_name ?? '';
-            $isKids = (mb_strpos($pkgName, 'اطفال') !== false || mb_strpos(mb_strtolower($pkgName, 'UTF-8'), 'kids') !== false);
+            $isKids = $rateRow->is_kids || (mb_strpos($pkgName, 'اطفال') !== false || mb_strpos(mb_strtolower($pkgName, 'UTF-8'), 'kids') !== false);
             $rate = $isKids ? 6000 : 4000;
             
             $trainerBasePays[$tId] = ($trainerBasePays[$tId] ?? 0) + ($rateRow->count * $rate);

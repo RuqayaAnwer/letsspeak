@@ -43,6 +43,7 @@ class Course extends Model
         'student_max_postponements_override',
         'trainer_max_postponements_override',
         'renewal_iteration',
+        'is_kids',
     ];
 
     protected $casts = [
@@ -54,6 +55,7 @@ class Course extends Model
         'is_dual' => 'boolean',
         'total_amount' => 'decimal:2',
         'amount_paid' => 'decimal:2',
+        'is_kids' => 'boolean',
     ];
 
     protected $appends = [

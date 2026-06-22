@@ -208,7 +208,7 @@ const StudentProfile = () => {
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden flex flex-col relative border border-gray-200 dark:border-gray-700">
         
         {/* Header */}
-        <div className="flex bg-gradient-to-r from-primary-600 to-primary-800 p-4 sm:p-6 text-white justify-between items-start shrink-0">
+        <div className={`flex p-4 sm:p-6 text-white justify-between items-start shrink-0 bg-gradient-to-r ${profileData?.student?.is_child ? 'from-pink-500 via-purple-500 to-indigo-500' : 'from-primary-600 to-primary-800'}`}>
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30 shadow-inner">
               <User className="w-8 h-8 text-white" />
@@ -216,6 +216,11 @@ const StudentProfile = () => {
             <div>
               <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
                 {profileData?.student?.name || 'جاري التحميل...'}
+                {profileData?.student?.is_child && (
+                  <span className="bg-pink-100 text-pink-800 text-xs px-2 py-0.5 rounded-full font-bold shadow-sm">
+                    👶 طفل
+                  </span>
+                )}
                 {!loading && profileData?.stats?.commitment_score >= 80 && (
                   <span className="bg-amber-400 text-amber-900 text-xs px-2 py-0.5 rounded-full font-bold shadow-sm" title="طالب متميز (تقييم التزام مرتفع)">
                     🌟 متميز
@@ -243,9 +248,9 @@ const StudentProfile = () => {
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> {profileData.student.lead.governorate}
                   </span>
                 )}
-                {profileData?.student?.lead?.age && (
+                {(profileData?.student?.age || profileData?.student?.lead?.age) && (
                   <span className="flex items-center gap-1.5 bg-black/10 px-2 py-1 rounded-md">
-                    <User className="w-4 h-4" /> {profileData.student.lead.age} سنة
+                    <User className="w-4 h-4" /> {profileData.student.age || profileData.student.lead.age} سنة
                   </span>
                 )}
               </div>
