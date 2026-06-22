@@ -19,12 +19,37 @@ const CreateCourse = () => {
   const [trainers, setTrainers] = useState([]);
   const [packages, setPackages] = useState([]);
   const [isDual, setIsDual] = useState(false);
+  const [isKids, setIsKids] = useState(false);
 
   // Add Student Modal State
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [addingStudent, setAddingStudent] = useState(false);
   const [addStudentTarget, setAddStudentTarget] = useState(0); // 0 for Student 1, 1 for Student 2
   const [selectedLeadOption, setSelectedLeadOption] = useState(null);
+  const [directAdd, setDirectAdd] = useState(false);
+  const [newStudentData, setNewStudentData] = useState({
+    name: '',
+    phone: '',
+    level: '',
+    notes: '',
+    is_child: false,
+    age: '',
+  });
+
+  const openAddStudentModal = (targetIndex) => {
+    setAddStudentTarget(targetIndex);
+    setDirectAdd(false);
+    setSelectedLeadOption(null);
+    setNewStudentData({
+      name: '',
+      phone: '',
+      level: '',
+      notes: '',
+      is_child: isKids,
+      age: '',
+    });
+    setIsAddStudentModalOpen(true);
+  };
 
   const loadLeads = async (inputValue) => {
     if (!inputValue || inputValue.length < 2) return [];
@@ -532,6 +557,7 @@ const CreateCourse = () => {
         lecture_time: formData.lecture_time,
         lecture_days: lectureDays,
         is_dual: isDual,
+        is_kids: isKids,
         student_ids: studentIds,
         payment_method: formData.payment_method,
         // Add custom package fields
@@ -578,7 +604,8 @@ const CreateCourse = () => {
   const handleAddStudentSubmit = async (e) => {
     e.preventDefault();
     if (addingStudent) return; // Prevent double submission
-    if (!selectedLeadOption) {
+    
+    if (!directAdd && !selectedLeadOption) {
       alert('يرجى اختيار عميل أولاً');
       return;
     }
@@ -586,13 +613,42 @@ const CreateCourse = () => {
     setAddingStudent(true);
     
     try {
-      const response = await api.post(`/leads/${selectedLeadOption.value}/convert`);
+      let createdStudent = null;
       
-      // StudentController returns the student object directly
-      const createdStudent = response.data.data || response.data.student;
+      if (directAdd) {
+        // Validate required fields
+        if (!newStudentData.name || !newStudentData.phone) {
+          alert('يرجى ملء الاسم ورقم الهاتف');
+          setAddingStudent(false);
+          return;
+        }
+        if (newStudentData.is_child && !newStudentData.age) {
+          alert('يرجى إدخال عمر الطفل');
+          setAddingStudent(false);
+          return;
+        }
+        
+        const response = await api.post('/students', {
+          name: newStudentData.name,
+          phone: newStudentData.phone,
+          level: newStudentData.level || null,
+          notes: newStudentData.notes || '',
+          is_child: newStudentData.is_child,
+          age: newStudentData.is_child ? parseInt(newStudentData.age) : null,
+        });
+        createdStudent = response.data;
+      } else {
+        // Convert Lead and pass child/age if provided
+        const payload = {
+          is_child: newStudentData.is_child,
+          age: newStudentData.is_child && newStudentData.age ? parseInt(newStudentData.age) : null,
+        };
+        const response = await api.post(`/leads/${selectedLeadOption.value}/convert`, payload);
+        createdStudent = response.data.data || response.data.student;
+      }
       
       if (createdStudent && createdStudent.id) {
-        alert('تم تحويل العميل إلى طالب بنجاح');
+        alert(directAdd ? 'تم إضافة الطالب بنجاح' : 'تم تحويل العميل إلى طالب بنجاح');
         
         // Force add the new student to our local state IMMEDIATELY so the dropdown can find them
         setStudents(prev => {
@@ -605,15 +661,17 @@ const CreateCourse = () => {
         newIds[addStudentTarget] = createdStudent.id.toString();
         
         // Check if lead has a package_selected and try to pre-select it
-        const leadPkg = selectedLeadOption.lead?.package_selected;
         let selectedPkgId = formData.course_package_id;
-        if (leadPkg && packages.length > 0) {
-          const matchedPkg = packages.find(p => 
-            p.name.toLowerCase().includes(leadPkg.toLowerCase()) || 
-            leadPkg.toLowerCase().includes(p.name.toLowerCase())
-          );
-          if (matchedPkg) {
-            selectedPkgId = matchedPkg.id.toString();
+        if (!directAdd) {
+          const leadPkg = selectedLeadOption.lead?.package_selected;
+          if (leadPkg && packages.length > 0) {
+            const matchedPkg = packages.find(p => 
+              p.name.toLowerCase().includes(leadPkg.toLowerCase()) || 
+              leadPkg.toLowerCase().includes(p.name.toLowerCase())
+            );
+            if (matchedPkg) {
+              selectedPkgId = matchedPkg.id.toString();
+            }
           }
         }
 
@@ -627,6 +685,7 @@ const CreateCourse = () => {
         // Close modal and reset
         setIsAddStudentModalOpen(false);
         setSelectedLeadOption(null);
+        setDirectAdd(false);
         
         // Quietly refresh the full list from server in the background
         api.get('/students?all=true').then(res => {
@@ -652,10 +711,12 @@ const CreateCourse = () => {
   }
 
   // Prepare options for react-select
-  const studentOptions = students.map(student => ({
-    value: student.id,
-    label: `${student.name} - ${student.phone}`
-  }));
+  const studentOptions = students
+    .filter(student => !isKids || student.is_child)
+    .map(student => ({
+      value: student.id,
+      label: `${student.name} - ${student.phone} ${student.is_child ? '👶' : ''}`
+    }));
 
   const trainerOptions = trainers.map(trainer => ({
     value: trainer.id,
@@ -741,7 +802,7 @@ const CreateCourse = () => {
             <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary-500" />
             نوع الكورس
           </h2>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
             <button
               type="button"
               onClick={() => setIsDual(false)}
@@ -773,6 +834,26 @@ const CreateCourse = () => {
               <span className="text-xs text-[var(--color-text-muted)]">طالبان اثنان</span>
             </button>
           </div>
+
+          {/* Kids Course Toggle */}
+          <div className="p-3 bg-pink-50/50 dark:bg-pink-950/10 rounded-xl border border-pink-200 dark:border-pink-900/30 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">👶</span>
+              <div>
+                <h3 className="text-sm font-bold text-pink-700 dark:text-pink-300">كورس أطفال</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">تفعيل هذا الخيار للكورسات الخاصة بالأطفال لتصفية الطلاب واحتساب أجور المحاضرات للأطفال.</p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={isKids} 
+                onChange={(e) => setIsKids(e.target.checked)} 
+                className="sr-only peer" 
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-500"></div>
+            </label>
+          </div>
         </div>
 
         {/* Student & Trainer Selection */}
@@ -789,7 +870,7 @@ const CreateCourse = () => {
                   <label className="label mb-0">{isDual ? 'الطالب الأول *' : 'الطالب *'}</label>
                   <button 
                     type="button" 
-                    onClick={() => { setAddStudentTarget(0); setIsAddStudentModalOpen(true); }}
+                    onClick={() => openAddStudentModal(0)}
                     className="text-xs text-primary-600 hover:text-primary-800 font-bold flex items-center gap-1"
                   >
                     + إضافة طالب جديد
@@ -818,7 +899,7 @@ const CreateCourse = () => {
                     <label className="label mb-0">الطالب الثاني *</label>
                     <button 
                       type="button" 
-                      onClick={() => { setAddStudentTarget(1); setIsAddStudentModalOpen(true); }}
+                      onClick={() => openAddStudentModal(1)}
                       className="text-xs text-primary-600 hover:text-primary-800 font-bold flex items-center gap-1"
                     >
                       + إضافة طالب جديد
@@ -1230,41 +1311,142 @@ const CreateCourse = () => {
               </button>
             </div>
             
-            <form onSubmit={handleAddStudentSubmit} className="p-4 space-y-4">
-              <div>
-                <label className="label text-sm mb-1">ابحث عن العميل في مسار العملاء *</label>
-                <AsyncSelect
-                  cacheOptions
-                  defaultOptions
-                  loadOptions={loadLeads}
-                  onChange={(selected) => setSelectedLeadOption(selected)}
-                  placeholder="اكتب اسم العميل أو رقمه للبحث..."
-                  noOptionsMessage={({ inputValue }) => !inputValue ? "اكتب للبحث..." : "لا يوجد عملاء مطابقين للبحث"}
-                  loadingMessage={() => "جاري البحث..."}
-                  styles={selectStyles}
-                  className="text-sm"
-                  isClearable
+            <form onSubmit={handleAddStudentSubmit} className="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
+              {/* Direct Add Checkbox */}
+              <div className="flex items-center gap-2 pb-3 mb-2 border-b border-[var(--color-border)]">
+                <input
+                  type="checkbox"
+                  id="directAdd"
+                  checked={directAdd}
+                  onChange={(e) => setDirectAdd(e.target.checked)}
+                  className="checkbox w-4 h-4 text-teal-600 focus:ring-teal-500 rounded cursor-pointer"
                 />
-                <p className="text-xs text-[var(--color-text-muted)] mt-2">
-                  يجب أن يكون الطالب مسجلاً مسبقاً في مسار العملاء (Leads) قبل إضافته للكورس.
-                </p>
+                <label htmlFor="directAdd" className="text-xs font-bold text-gray-300 cursor-pointer select-none">
+                  إضافة طالب مباشرة (دون اختيار عميل من مسار العملاء)
+                </label>
               </div>
+
+              {/* Child and Age Selection */}
+              <div className="flex flex-col gap-3 pb-3 mb-2 border-b border-[var(--color-border)]">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isChild"
+                    checked={newStudentData.is_child}
+                    onChange={(e) => setNewStudentData({ ...newStudentData, is_child: e.target.checked })}
+                    className="checkbox w-4 h-4 text-pink-600 focus:ring-pink-500 rounded cursor-pointer"
+                  />
+                  <label htmlFor="isChild" className="text-xs font-bold text-gray-300 cursor-pointer select-none">
+                    تسجيل كطالب طفل 👶
+                  </label>
+                </div>
+                
+                {newStudentData.is_child && (
+                  <div className="w-full animate-fade-in">
+                    <label className="label text-xs">عمر الطفل بالسنوات *</label>
+                    <input
+                      type="number"
+                      value={newStudentData.age}
+                      onChange={(e) => setNewStudentData({ ...newStudentData, age: e.target.value })}
+                      className="input text-sm"
+                      placeholder="مثال: 9"
+                      min="1"
+                      max="17"
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+
+              {!directAdd ? (
+                <div>
+                  <label className="label text-sm mb-1">ابحث عن العميل في مسار العملاء *</label>
+                  <AsyncSelect
+                    cacheOptions
+                    defaultOptions
+                    loadOptions={loadLeads}
+                    onChange={(selected) => setSelectedLeadOption(selected)}
+                    placeholder="اكتب اسم العميل أو رقمه للبحث..."
+                    noOptionsMessage={({ inputValue }) => !inputValue ? "اكتب للبحث..." : "لا يوجد عملاء مطابقين للبحث"}
+                    loadingMessage={() => "جاري البحث..."}
+                    styles={selectStyles}
+                    className="text-sm"
+                    isClearable
+                  />
+                  <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                    يجب أن يكون الطالب مسجلاً مسبقاً في مسار العملاء (Leads) قبل إضافته للكورس.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="label text-xs">اسم الطالب *</label>
+                    <input
+                      type="text"
+                      value={newStudentData.name}
+                      onChange={(e) => setNewStudentData({ ...newStudentData, name: e.target.value })}
+                      className="input text-sm"
+                      placeholder="أدخل اسم الطالب"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label text-xs">رقم الهاتف *</label>
+                    <input
+                      type="tel"
+                      value={newStudentData.phone}
+                      onChange={(e) => setNewStudentData({ ...newStudentData, phone: e.target.value })}
+                      className="input text-sm"
+                      placeholder="+964 7XX XXX XXXX"
+                      dir="ltr"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label text-xs">المستوى</label>
+                    <select
+                      value={newStudentData.level}
+                      onChange={(e) => setNewStudentData({ ...newStudentData, level: e.target.value })}
+                      className="select text-sm"
+                    >
+                      <option value="">اختر المستوى</option>
+                      {levels.map((level) => (
+                        <option key={level.value} value={level.value}>
+                          {level.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="label text-xs">ملاحظات</label>
+                    <textarea
+                      value={newStudentData.notes}
+                      onChange={(e) => setNewStudentData({ ...newStudentData, notes: e.target.value })}
+                      className="input text-sm min-h-[80px]"
+                      placeholder="ملاحظات إضافية..."
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2 pt-4">
                 <button
                   type="button"
                   onClick={() => setIsAddStudentModalOpen(false)}
-                  className="btn-secondary flex-1"
+                  className="btn-secondary flex-1 text-sm"
                   disabled={addingStudent}
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary flex-1"
-                  disabled={addingStudent || !selectedLeadOption}
+                  className="btn-primary flex-1 text-sm"
+                  disabled={addingStudent || (!directAdd && !selectedLeadOption)}
                 >
-                  {addingStudent ? 'جاري التحويل...' : 'تحويل وإضافة للكورس'}
+                  {addingStudent ? 'جاري الإضافة...' : (directAdd ? 'إضافة للكورس' : 'تحويل وإضافة للكورس')}
                 </button>
               </div>
             </form>
