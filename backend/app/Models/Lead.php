@@ -35,4 +35,12 @@ class Lead extends Model
         'intro_date' => 'datetime',
         'age' => 'integer',
     ];
+
+    /**
+     * Mutator to ensure empty age string is stored as null.
+     */
+    public function setAgeAttribute($value)
+    {
+        $this->attributes['age'] = ($value === '' || $value === null) ? null : (int)$value;
+    }
 }

@@ -28,6 +28,14 @@ class Student extends Model
     ];
 
     /**
+     * Mutator to ensure empty age string is stored as null.
+     */
+    public function setAgeAttribute($value)
+    {
+        $this->attributes['age'] = ($value === '' || $value === null) ? null : (int)$value;
+    }
+
+    /**
      * Get the lead that this student was converted from.
      */
     public function lead()
