@@ -391,8 +391,14 @@ const CourseAlerts = () => {
                             {/* Trainer */}
                             <div className="flex flex-col items-center gap-0.5">
                               <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400">المدرب</span>
-                              <span className="text-[10px] text-gray-800 dark:text-white text-center truncate max-w-full">
-                                {course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'}
+                              <span className="text-[10px] text-gray-800 dark:text-white text-center truncate max-w-full font-semibold">
+                                {course.trainer_id ? (
+                                  <Link to={`/staff-profile/trainer/${course.trainer_id}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+                                    {course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'}
+                                  </Link>
+                                ) : (
+                                  course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'
+                                )}
                               </span>
                             </div>
                             
@@ -537,7 +543,13 @@ const CourseAlerts = () => {
                         )}
                       </td>
                       <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
-                        {course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'}
+                        {course.trainer_id ? (
+                          <Link to={`/staff-profile/trainer/${course.trainer_id}`} className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+                            {course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'}
+                          </Link>
+                        ) : (
+                          course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'
+                        )}
                       </td>
                       <td className="px-2 py-2 text-center">
                         <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">

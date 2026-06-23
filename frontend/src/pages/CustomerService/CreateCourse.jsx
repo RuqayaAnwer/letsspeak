@@ -20,6 +20,22 @@ const CreateCourse = () => {
   const [packages, setPackages] = useState([]);
   const [isDual, setIsDual] = useState(false);
   const [isKids, setIsKids] = useState(false);
+  const [student1InputMode, setStudent1InputMode] = useState('select'); // 'select' or 'manual'
+  const [student2InputMode, setStudent2InputMode] = useState('select'); // 'select' or 'manual'
+  const [manualStudent1, setManualStudent1] = useState({
+    name: '',
+    phone: '',
+    age: '',
+    level: '',
+    notes: '',
+  });
+  const [manualStudent2, setManualStudent2] = useState({
+    name: '',
+    phone: '',
+    age: '',
+    level: '',
+    notes: '',
+  });
 
   // Add Student Modal State
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
@@ -115,8 +131,12 @@ const CreateCourse = () => {
   // Handle pre-fill from location.state (redirected from Pipeline)
   useEffect(() => {
     if (location.state && students.length > 0 && packages.length > 0) {
-      const { studentId, packageSelected } = location.state;
+      const { studentId, packageSelected, isKids: isKidsState } = location.state;
       const newIds = [...formData.student_ids];
+      
+      if (isKidsState !== undefined) {
+        setIsKids(isKidsState);
+      }
       
       let updated = false;
       if (studentId && newIds[0] !== studentId) {
@@ -516,10 +536,72 @@ const CreateCourse = () => {
     setSubmitting(true);
 
     try {
-      // Prepare student_ids based on course type
-      const studentIds = isDual 
-        ? formData.student_ids.filter(id => id).map(id => parseInt(id))
-        : [parseInt(formData.student_ids[0])];
+      // Create manual students if any, else use selected student IDs
+      const studentIds = [];
+
+      // Handle Student 1
+      if (student1InputMode === 'manual') {
+        if (!manualStudent1.name || !manualStudent1.phone) {
+          alert('يرجى ملء الاسم ورقم الهاتف للطالب الأول');
+          setSubmitting(false);
+          return;
+        }
+        if (isKids && !manualStudent1.age) {
+          alert('يرجى إدخال عمر الطفل الأول');
+          setSubmitting(false);
+          return;
+        }
+        const studentRes = await api.post('/students', {
+          name: manualStudent1.name,
+          phone: manualStudent1.phone,
+          is_child: isKids,
+          age: isKids && manualStudent1.age ? parseInt(manualStudent1.age) : null,
+          level: manualStudent1.level || null,
+          notes: manualStudent1.notes || '',
+        });
+        const createdStudent = studentRes.data;
+        studentIds.push(createdStudent.id);
+      } else {
+        if (!formData.student_ids[0]) {
+          alert('يرجى اختيار الطالب الأول');
+          setSubmitting(false);
+          return;
+        }
+        studentIds.push(parseInt(formData.student_ids[0]));
+      }
+
+      // Handle Student 2
+      if (isDual) {
+        if (student2InputMode === 'manual') {
+          if (!manualStudent2.name || !manualStudent2.phone) {
+            alert('يرجى ملء الاسم ورقم الهاتف للطالب الثاني');
+            setSubmitting(false);
+            return;
+          }
+          if (isKids && !manualStudent2.age) {
+            alert('يرجى إدخال عمر الطفل الثاني');
+            setSubmitting(false);
+            return;
+          }
+          const studentRes = await api.post('/students', {
+            name: manualStudent2.name,
+            phone: manualStudent2.phone,
+            is_child: isKids,
+            age: isKids && manualStudent2.age ? parseInt(manualStudent2.age) : null,
+            level: manualStudent2.level || null,
+            notes: manualStudent2.notes || '',
+          });
+          const createdStudent = studentRes.data;
+          studentIds.push(createdStudent.id);
+        } else {
+          if (!formData.student_ids[1]) {
+            alert('يرجى اختيار الطالب الثاني');
+            setSubmitting(false);
+            return;
+          }
+          studentIds.push(parseInt(formData.student_ids[1]));
+        }
+      }
       
       // Convert days from 'Sunday' format to 'sun' format for backend
       const dayMap = {
@@ -798,61 +880,75 @@ const CreateCourse = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Course Type Selection */}
         <div className="card p-4 sm:p-6">
-          <h2 className="text-base sm:text-lg font-bold text-[var(--color-text-primary)] mb-3 sm:mb-4 flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-bold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
             <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary-500" />
-            نوع الكورس
+            تصنيف ونوع الكورس
           </h2>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
-            <button
-              type="button"
-              onClick={() => setIsDual(false)}
-              className={`flex-1 p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
-                !isDual
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
-                  : 'border-[var(--color-border)] hover:border-primary-300'
-              }`}
-            >
-              <User className={`w-8 h-8 ${!isDual ? 'text-primary-600' : 'text-gray-400'}`} />
-              <span className={`font-bold ${!isDual ? 'text-primary-700 dark:text-primary-300' : ''}`}>
-                كورس فردي
-              </span>
-              <span className="text-xs text-[var(--color-text-muted)]">طالب واحد</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsDual(true)}
-              className={`flex-1 p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
-                isDual
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
-                  : 'border-[var(--color-border)] hover:border-primary-300'
-              }`}
-            >
-              <UserPlus className={`w-8 h-8 ${isDual ? 'text-primary-600' : 'text-gray-400'}`} />
-              <span className={`font-bold ${isDual ? 'text-primary-700 dark:text-primary-300' : ''}`}>
-                كورس ثنائي
-              </span>
-              <span className="text-xs text-[var(--color-text-muted)]">طالبان اثنان</span>
-            </button>
-          </div>
-
-          {/* Kids Course Toggle */}
-          <div className="p-3 bg-pink-50/50 dark:bg-pink-950/10 rounded-xl border border-pink-200 dark:border-pink-900/30 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">👶</span>
-              <div>
-                <h3 className="text-sm font-bold text-pink-700 dark:text-pink-300">كورس أطفال</h3>
-                <p className="text-xs text-[var(--color-text-muted)]">تفعيل هذا الخيار للكورسات الخاصة بالأطفال لتصفية الطلاب واحتساب أجور المحاضرات للأطفال.</p>
+          
+          <div className="space-y-4">
+            {/* Category Selector */}
+            <div>
+              <label className="label text-xs sm:text-sm font-bold text-[var(--color-text-muted)] mb-2">فئة الكورس *</label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsKids(false)}
+                  className={`flex-1 p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${
+                    !isKids
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                      : 'border-[var(--color-border)] hover:border-primary-300 text-gray-400'
+                  }`}
+                >
+                  <span className="text-xl">🎓</span>
+                  <span className="font-bold">كورس كبار (عادي)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsKids(true)}
+                  className={`flex-1 p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${
+                    isKids
+                      ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/20 text-pink-700 dark:text-pink-300'
+                      : 'border-[var(--color-border)] hover:border-pink-300 text-gray-400'
+                  }`}
+                >
+                  <span className="text-xl">👶</span>
+                  <span className="font-bold">كورس أطفال</span>
+                </button>
               </div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={isKids} 
-                onChange={(e) => setIsKids(e.target.checked)} 
-                className="sr-only peer" 
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-500"></div>
-            </label>
+
+            {/* Course Attendance Type Selector */}
+            <div>
+              <label className="label text-xs sm:text-sm font-bold text-[var(--color-text-muted)] mb-2">نوع الحضور *</label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsDual(false)}
+                  className={`flex-1 p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${
+                    !isDual
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                      : 'border-[var(--color-border)] hover:border-primary-300 text-gray-400'
+                  }`}
+                >
+                  <User className={`w-5 h-5 ${!isDual ? 'text-primary-600' : 'text-gray-400'}`} />
+                  <span className="font-bold">كورس فردي</span>
+                  <span className="text-xs opacity-75">(طالب واحد)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDual(true)}
+                  className={`flex-1 p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${
+                    isDual
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                      : 'border-[var(--color-border)] hover:border-primary-300 text-gray-400'
+                  }`}
+                >
+                  <UserPlus className={`w-5 h-5 ${isDual ? 'text-primary-600' : 'text-gray-400'}`} />
+                  <span className="font-bold">كورس ثنائي</span>
+                  <span className="text-xs opacity-75">(طالبان اثنان)</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -864,62 +960,232 @@ const CreateCourse = () => {
           </h2>
           <div className="space-y-4">
             {/* Students */}
-            <div className={`grid gap-3 sm:gap-4 ${isDual ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+            <div className={`grid gap-4 ${isDual ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+              {/* Student 1 */}
               <div>
-                <div className="flex justify-between items-center mb-1">
+                <div className="flex justify-between items-center mb-1.5 flex-wrap gap-2">
                   <label className="label mb-0">{isDual ? 'الطالب الأول *' : 'الطالب *'}</label>
-                  <button 
-                    type="button" 
-                    onClick={() => openAddStudentModal(0)}
-                    className="text-xs text-primary-600 hover:text-primary-800 font-bold flex items-center gap-1"
-                  >
-                    + إضافة طالب جديد
-                  </button>
-                </div>
-                <Select
-                  options={studentOptions.filter(o => o.value.toString() !== formData.student_ids[1])}
-                  value={studentOptions.find(o => o.value.toString() === formData.student_ids[0]) || null}
-                  onChange={(selected) => {
-                    const newIds = [...formData.student_ids];
-                    newIds[0] = selected ? selected.value.toString() : '';
-                    setFormData({ ...formData, student_ids: newIds });
-                  }}
-                  isClearable
-                  isSearchable
-                  placeholder="ابحث واختر الطالب الأول..."
-                  noOptionsMessage={() => "لا يوجد طلاب مطابقين للبحث"}
-                  styles={selectStyles}
-                  className="text-sm"
-                />
-              </div>
-
-              {isDual && (
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="label mb-0">الطالب الثاني *</label>
+                  <div className="flex gap-2">
                     <button 
                       type="button" 
-                      onClick={() => openAddStudentModal(1)}
-                      className="text-xs text-primary-600 hover:text-primary-800 font-bold flex items-center gap-1"
+                      onClick={() => setStudent1InputMode(student1InputMode === 'select' ? 'manual' : 'select')}
+                      className="text-xs text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-bold flex items-center gap-1"
                     >
-                      + إضافة طالب جديد
+                      {student1InputMode === 'select' ? '✍️ إدخال يدوي سريع' : '🔍 اختيار من المسجلين'}
                     </button>
+                    {student1InputMode === 'select' && (
+                      <button 
+                        type="button" 
+                        onClick={() => openAddStudentModal(0)}
+                        className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-semibold flex items-center gap-1 border-r pr-2 border-gray-300 dark:border-gray-700"
+                      >
+                        + تحويل عميل
+                      </button>
+                    )}
                   </div>
+                </div>
+
+                {student1InputMode === 'select' ? (
                   <Select
-                    options={studentOptions.filter(o => o.value.toString() !== formData.student_ids[0])}
-                    value={studentOptions.find(o => o.value.toString() === formData.student_ids[1]) || null}
+                    options={studentOptions.filter(o => o.value.toString() !== formData.student_ids[1])}
+                    value={studentOptions.find(o => o.value.toString() === formData.student_ids[0]) || null}
                     onChange={(selected) => {
                       const newIds = [...formData.student_ids];
-                      newIds[1] = selected ? selected.value.toString() : '';
+                      newIds[0] = selected ? selected.value.toString() : '';
                       setFormData({ ...formData, student_ids: newIds });
                     }}
                     isClearable
                     isSearchable
-                    placeholder="ابحث واختر الطالب الثاني..."
-                    noOptionsMessage={() => "لا يوجد طلاب مطابقين للبحث"}
+                    placeholder={isKids ? "ابحث واختر الطفل الأول..." : "ابحث واختر الطالب الأول..."}
+                    noOptionsMessage={() => isKids ? "لا يوجد أطفال مطابقين للبحث" : "لا يوجد طلاب مطابقين للبحث"}
                     styles={selectStyles}
                     className="text-sm"
                   />
+                ) : (
+                  <div className="bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 space-y-3 mt-1 animate-fade-in">
+                    <div className="text-xs font-bold text-teal-600 dark:text-teal-400 mb-1 flex items-center gap-1">
+                      <span>✍️</span> إدخال بيانات الطالب {isDual && 'الأول'} يدوياً
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">الاسم الكامل *</label>
+                        <input
+                          type="text"
+                          value={manualStudent1.name}
+                          onChange={(e) => setManualStudent1({ ...manualStudent1, name: e.target.value })}
+                          className="input text-sm"
+                          placeholder={isKids ? "اسم الطفل" : "اسم الطالب"}
+                          required={student1InputMode === 'manual'}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">رقم الهاتف *</label>
+                        <input
+                          type="tel"
+                          value={manualStudent1.phone}
+                          onChange={(e) => setManualStudent1({ ...manualStudent1, phone: e.target.value })}
+                          className="input text-sm"
+                          placeholder="رقم الهاتف"
+                          dir="ltr"
+                          required={student1InputMode === 'manual'}
+                        />
+                      </div>
+                      {isKids && (
+                        <div>
+                          <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">عمر الطفل *</label>
+                          <input
+                            type="number"
+                            value={manualStudent1.age}
+                            onChange={(e) => setManualStudent1({ ...manualStudent1, age: e.target.value })}
+                            className="input text-sm"
+                            placeholder="مثال: 9"
+                            min="1"
+                            max="17"
+                            required={student1InputMode === 'manual' && isKids}
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">المستوى</label>
+                        <select
+                          value={manualStudent1.level}
+                          onChange={(e) => setManualStudent1({ ...manualStudent1, level: e.target.value })}
+                          className="select text-sm"
+                        >
+                          <option value="">اختر المستوى</option>
+                          {levels.map((level) => (
+                            <option key={level.value} value={level.value}>
+                              {level.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">ملاحظات</label>
+                        <textarea
+                          value={manualStudent1.notes}
+                          onChange={(e) => setManualStudent1({ ...manualStudent1, notes: e.target.value })}
+                          className="input text-sm min-h-[60px]"
+                          placeholder="ملاحظات إضافية..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Student 2 */}
+              {isDual && (
+                <div>
+                  <div className="flex justify-between items-center mb-1.5 flex-wrap gap-2">
+                    <label className="label mb-0">الطالب الثاني *</label>
+                    <div className="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => setStudent2InputMode(student2InputMode === 'select' ? 'manual' : 'select')}
+                        className="text-xs text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-bold flex items-center gap-1"
+                      >
+                        {student2InputMode === 'select' ? '✍️ إدخال يدوي سريع' : '🔍 اختيار من المسجلين'}
+                      </button>
+                      {student2InputMode === 'select' && (
+                        <button 
+                          type="button" 
+                          onClick={() => openAddStudentModal(1)}
+                          className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-semibold flex items-center gap-1 border-r pr-2 border-gray-300 dark:border-gray-700"
+                        >
+                          + تحويل عميل
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {student2InputMode === 'select' ? (
+                    <Select
+                      options={studentOptions.filter(o => o.value.toString() !== formData.student_ids[0])}
+                      value={studentOptions.find(o => o.value.toString() === formData.student_ids[1]) || null}
+                      onChange={(selected) => {
+                        const newIds = [...formData.student_ids];
+                        newIds[1] = selected ? selected.value.toString() : '';
+                        setFormData({ ...formData, student_ids: newIds });
+                      }}
+                      isClearable
+                      isSearchable
+                      placeholder={isKids ? "ابحث واختر الطفل الثاني..." : "ابحث واختر الطالب الثاني..."}
+                      noOptionsMessage={() => isKids ? "لا يوجد أطفال مطابقين للبحث" : "لا يوجد طلاب مطابقين للبحث"}
+                      styles={selectStyles}
+                      className="text-sm"
+                    />
+                  ) : (
+                    <div className="bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 space-y-3 mt-1 animate-fade-in">
+                      <div className="text-xs font-bold text-teal-600 dark:text-teal-400 mb-1 flex items-center gap-1">
+                        <span>✍️</span> إدخال بيانات الطالب الثاني يدوياً
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">الاسم الكامل *</label>
+                          <input
+                            type="text"
+                            value={manualStudent2.name}
+                            onChange={(e) => setManualStudent2({ ...manualStudent2, name: e.target.value })}
+                            className="input text-sm"
+                            placeholder={isKids ? "اسم الطفل" : "اسم الطالب"}
+                            required={student2InputMode === 'manual'}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">رقم الهاتف *</label>
+                          <input
+                            type="tel"
+                            value={manualStudent2.phone}
+                            onChange={(e) => setManualStudent2({ ...manualStudent2, phone: e.target.value })}
+                            className="input text-sm"
+                            placeholder="رقم الهاتف"
+                            dir="ltr"
+                            required={student2InputMode === 'manual'}
+                          />
+                        </div>
+                        {isKids && (
+                          <div>
+                            <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">عمر الطفل *</label>
+                            <input
+                              type="number"
+                              value={manualStudent2.age}
+                              onChange={(e) => setManualStudent2({ ...manualStudent2, age: e.target.value })}
+                              className="input text-sm"
+                              placeholder="مثال: 9"
+                              min="1"
+                              max="17"
+                              required={student2InputMode === 'manual' && isKids}
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">المستوى</label>
+                          <select
+                            value={manualStudent2.level}
+                            onChange={(e) => setManualStudent2({ ...manualStudent2, level: e.target.value })}
+                            className="select text-sm"
+                          >
+                            <option value="">اختر المستوى</option>
+                            {levels.map((level) => (
+                              <option key={level.value} value={level.value}>
+                                {level.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">ملاحظات</label>
+                          <textarea
+                            value={manualStudent2.notes}
+                            onChange={(e) => setManualStudent2({ ...manualStudent2, notes: e.target.value })}
+                            className="input text-sm min-h-[60px]"
+                            placeholder="ملاحظات إضافية..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1282,7 +1548,14 @@ const CreateCourse = () => {
           </button>
           <button
             type="submit"
-            disabled={submitting || formData.lecture_days.length === 0 || (isDual && !formData.student_ids[1])}
+            disabled={
+              submitting || 
+              formData.lecture_days.length === 0 || 
+              (student1InputMode === 'select' && !formData.student_ids[0]) ||
+              (isDual && student2InputMode === 'select' && !formData.student_ids[1]) ||
+              (student1InputMode === 'manual' && (!manualStudent1.name || !manualStudent1.phone || (isKids && !manualStudent1.age))) ||
+              (isDual && student2InputMode === 'manual' && (!manualStudent2.name || !manualStudent2.phone || (isKids && !manualStudent2.age)))
+            }
             className="btn-primary"
           >
             {submitting ? 'جاري الإنشاء...' : 'إنشاء الكورس'}

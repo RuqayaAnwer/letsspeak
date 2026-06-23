@@ -47,6 +47,7 @@ class StaffProfileController extends Controller
         $profile = null;
         $courses = [];
         $payrolls = [];
+        $trainerId = null;
 
         if ($type === 'trainer') {
             $trainer = Trainer::with(['user:id,job_title,role,created_at,base_salary', 'courses.student', 'courses.package'])->find($id);
@@ -56,6 +57,7 @@ class StaffProfileController extends Controller
             }
 
             $userId = $trainer->user_id;
+            $trainerId = $trainer->id;
 
             // Normalize Profile structure
             $profile = [
@@ -168,6 +170,9 @@ class StaffProfileController extends Controller
                     'active_courses' => collect($courses)->where('status', 'active')->count(),
                     'finished_courses' => collect($courses)->where('status', 'finished')->count(),
                     'total_payroll_paid' => $payrolls->where('status', 'paid')->sum('total_pay'),
+                    'courses_this_month' => $trainerId ? \App\Models\Course::where('trainer_id', $trainerId)->whereMonth('start_date', \Carbon\Carbon::now()->month)->whereYear('start_date', \Carbon\Carbon::now()->year)->count() : 0,
+                    'completed_lectures_total' => $trainerId ? \App\Models\Lecture::forTrainer($trainerId)->whereIn('attendance', ['present', 'partially', 'absent'])->count() : 0,
+                    'completed_kids_lectures_total' => $trainerId ? \App\Models\Lecture::forTrainer($trainerId)->whereIn('attendance', ['present', 'partially', 'absent'])->whereHas('course', function ($q) { $q->where('is_kids', true); })->count() : 0,
                 ]
             ]
         ]);

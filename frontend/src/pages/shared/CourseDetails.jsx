@@ -1,7 +1,7 @@
 // Updated: 2025-12-21 - Added trainer payment column in lectures table
 // Status change confirmation modal with logging
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -1748,7 +1748,13 @@ const CourseDetails = () => {
               <GraduationCap className="w-3.5 h-3.5 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span className="text-[var(--color-text-muted)] flex-shrink-0">المدرب:</span>
               <span className="font-semibold text-[var(--color-text-primary)] truncate">
-                {course.trainer?.user?.name || course.trainer?.name || 'غير محدد'}
+                {course.trainer_id ? (
+                  <Link to={`/staff-profile/trainer/${course.trainer_id}`} className="text-blue-600 dark:text-blue-400 hover:underline transition-colors">
+                    {course.trainer?.user?.name || course.trainer?.name || 'غير محدد'}
+                  </Link>
+                ) : (
+                  course.trainer?.user?.name || course.trainer?.name || 'غير محدد'
+                )}
               </span>
               {isCustomerService && (
                 <button

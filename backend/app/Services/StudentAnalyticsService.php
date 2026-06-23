@@ -62,6 +62,7 @@ class StudentAnalyticsService
                     $isDual ? '(ثنائي)' : '(فردي)'
                 ])->filter()->join(' '),
                 'trainer' => $course->trainer ? ($course->trainer->name ?? $course->trainer->user->name ?? 'غير معروف') : 'غير معروف',
+                'trainer_id' => $course->trainer_id,
                 'start_date' => $course->start_date ? $course->start_date->format('Y-m-d') : null,
                 'status' => $course->status,
                 'lectures_count' => $course->lectures_count,

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -582,9 +582,22 @@ const CourseDetails = () => {
                   <td 
                     className="px-0.5 py-0.5 text-center text-[5px] text-purple-700 dark:text-purple-300 font-medium truncate" 
                     title={course.trainer_name}
-                    onClick={() => setSelectedRow(course.id)}
+                    onClick={(e) => {
+                      if (course.trainer_id) {
+                        e.stopPropagation();
+                        navigate(`/staff-profile/trainer/${course.trainer_id}`);
+                      } else {
+                        setSelectedRow(course.id);
+                      }
+                    }}
                   >
-                    {course.trainer_name}
+                    {course.trainer_id ? (
+                      <Link to={`/staff-profile/trainer/${course.trainer_id}`} className="hover:underline text-blue-600 dark:text-blue-400 font-semibold" onClick={(e) => e.stopPropagation()}>
+                        {course.trainer_name}
+                      </Link>
+                    ) : (
+                      course.trainer_name
+                    )}
                   </td>
                   <td 
                     className="px-0.5 py-0.5 text-center text-[5px] text-indigo-700 dark:text-indigo-300 font-medium whitespace-nowrap"
@@ -757,7 +770,13 @@ const CourseDetails = () => {
                     <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded p-2 border-r-2 border-indigo-300 dark:border-indigo-700">
                       <span className="text-[9px] text-gray-500 dark:text-gray-400 block mb-0.5">اسم المدرب</span>
                       <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
-                        {course.trainer_name}
+                        {course.trainer_id ? (
+                          <Link to={`/staff-profile/trainer/${course.trainer_id}`} className="text-blue-600 dark:text-blue-400 hover:underline font-semibold" onClick={(e) => e.stopPropagation()}>
+                            {course.trainer_name}
+                          </Link>
+                        ) : (
+                          course.trainer_name
+                        )}
                       </span>
                     </div>
                     <div className="bg-teal-50 dark:bg-teal-900/20 rounded p-2 border-r-2 border-teal-300 dark:border-teal-700">

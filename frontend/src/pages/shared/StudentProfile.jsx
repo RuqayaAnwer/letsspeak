@@ -11,7 +11,7 @@ import {
 import Modal from '../../components/Modal';
 import StudentAssessmentModal from '../../components/StudentAssessmentModal';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 
 const StudentProfile = () => {
   const { id: studentId } = useParams();
@@ -472,7 +472,16 @@ const StudentProfile = () => {
                                     {course.title} {getPaymentMethodBadge(course.payment_method)}
                                   </h4>
                                   <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1 opacity-80 group-hover:opacity-100">
-                                    <span className="flex items-center gap-1"><User className="w-3 h-3"/> المدرب: {course.trainer}</span>
+                                    <span className="flex items-center gap-1">
+                                      <User className="w-3 h-3"/> المدرب:{' '}
+                                      {course.trainer_id ? (
+                                        <Link to={`/staff-profile/trainer/${course.trainer_id}`} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors font-semibold" onClick={(e) => e.stopPropagation()}>
+                                          {course.trainer}
+                                        </Link>
+                                      ) : (
+                                        course.trainer
+                                      )}
+                                    </span>
                                     <span>•</span>
                                     <span className="flex items-center gap-1"><Calendar className="w-3 h-3"/> تسجيل: {course.start_date || 'غير محدد'}</span>
                                   </div>

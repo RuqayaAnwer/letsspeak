@@ -6,7 +6,8 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   User, Phone, Mail, Briefcase, DollarSign, 
   BookOpen, ChevronDown, ChevronUp, CheckCircle,
-  X, RefreshCw, AlertCircle, Activity, Star
+  X, RefreshCw, AlertCircle, Activity, Star,
+  Calendar, Smile
 } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
@@ -186,8 +187,8 @@ const StaffProfile = () => {
       </div>
 
       {isTrainer && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4 animate-fade-in">
               <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
                   <BookOpen className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
               </div>
@@ -196,7 +197,7 @@ const StaffProfile = () => {
                   <p className="text-xl font-bold text-gray-800 dark:text-gray-200">{summary.active_courses}</p>
               </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4 animate-fade-in">
               <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
                   <CheckCircle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
@@ -205,9 +206,38 @@ const StaffProfile = () => {
                   <p className="text-xl font-bold text-gray-800 dark:text-gray-200">{summary.finished_courses}</p>
               </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4 animate-fade-in">
+              <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                  <Calendar className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">كورسات هذا الشهر</p>
+                  <p className="text-xl font-bold text-gray-800 dark:text-gray-200">{summary.courses_this_month ?? 0}</p>
+              </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4 animate-fade-in">
+              <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
+                  <Activity className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">محاضرات مكتملة (إجمالي)</p>
+                  <p className="text-xl font-bold text-gray-800 dark:text-gray-200">{summary.completed_lectures_total ?? 0}</p>
+              </div>
+          </div>
+          {summary.completed_kids_lectures_total > 0 && (
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4 animate-fade-in">
+                <div className="w-12 h-12 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center shrink-0">
+                    <Smile className="w-6 h-6 text-pink-600 dark:text-pink-400" />
+                </div>
+                <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">محاضرات الأطفال المكتملة</p>
+                    <p className="text-xl font-bold text-gray-800 dark:text-gray-200">{summary.completed_kids_lectures_total}</p>
+                </div>
+            </div>
+          )}
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4 animate-fade-in">
               <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
-                  <Activity className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                  <DollarSign className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">إجمالي المستلم (الرواتب)</p>
@@ -295,25 +325,29 @@ const StaffProfile = () => {
                                         <div>
                                             <label className="block text-xs text-amber-700 dark:text-amber-400 mb-1">من مستوى</label>
                                             <select className="input-field" value={formData.min_level} onChange={e => setFormData({...formData, min_level: e.target.value})}>
-                                                <option value="A0">A0</option>
-                                                <option value="A1">A1</option>
-                                                <option value="A2">A2</option>
-                                                <option value="B1">B1</option>
-                                                <option value="B2">B2</option>
-                                                <option value="C1">C1</option>
-                                                <option value="C2">C2</option>
+                                                <option value="">اختر المستوى</option>
+                                                <option value="L1">L1</option>
+                                                <option value="L2">L2</option>
+                                                <option value="L3">L3</option>
+                                                <option value="L4">L4</option>
+                                                <option value="L5">L5</option>
+                                                <option value="L6">L6</option>
+                                                <option value="L7">L7</option>
+                                                <option value="L8">L8</option>
                                             </select>
                                         </div>
                                         <div>
                                             <label className="block text-xs text-amber-700 dark:text-amber-400 mb-1">إلى مستوى</label>
                                             <select className="input-field" value={formData.max_level} onChange={e => setFormData({...formData, max_level: e.target.value})}>
-                                                <option value="A0">A0</option>
-                                                <option value="A1">A1</option>
-                                                <option value="A2">A2</option>
-                                                <option value="B1">B1</option>
-                                                <option value="B2">B2</option>
-                                                <option value="C1">C1</option>
-                                                <option value="C2">C2</option>
+                                                <option value="">اختر المستوى</option>
+                                                <option value="L1">L1</option>
+                                                <option value="L2">L2</option>
+                                                <option value="L3">L3</option>
+                                                <option value="L4">L4</option>
+                                                <option value="L5">L5</option>
+                                                <option value="L6">L6</option>
+                                                <option value="L7">L7</option>
+                                                <option value="L8">L8</option>
                                             </select>
                                         </div>
                                     </div>
@@ -350,6 +384,22 @@ const StaffProfile = () => {
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">المسمى الوظيفي والدور</p>
                                 <p className="font-semibold text-gray-800 dark:text-gray-200">{profile.job_title} ({profile.role})</p>
                             </div>
+                            {isTrainer && (
+                                <>
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-800/30 rounded-lg animate-fade-in">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">مستويات التدريب المسموحة</p>
+                                        <p className="font-semibold text-gray-800 dark:text-gray-200">
+                                            {profile.min_level && profile.max_level
+                                                ? `${profile.min_level} ← ${profile.max_level}`
+                                                : profile.min_level || profile.max_level || 'غير محدد'}
+                                        </p>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-800/30 rounded-lg animate-fade-in">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">الراتب الثابت</p>
+                                        <p className="font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(profile.base_salary || 0)}</p>
+                                    </div>
+                                </>
+                            )}
                         </div>
                         {isTrainer && profile.notes && (
                             <div className="p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-lg">

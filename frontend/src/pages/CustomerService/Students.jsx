@@ -162,7 +162,10 @@ const Students = () => {
           setSubmitting(false);
           return;
         }
-        await api.post(`/leads/${selectedLeadId}/convert`);
+        await api.post(`/leads/${selectedLeadId}/convert`, {
+          is_child: formData.is_child,
+          age: formData.is_child && formData.age ? parseInt(formData.age) : null,
+        });
       }
       fetchStudents();
       closeModal();

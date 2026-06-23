@@ -126,7 +126,11 @@ const Pipeline = () => {
   const convertLeadToStudent = async (lead) => {
     if(!confirm(`هل أنت متأكد من تحويل "${lead.name}" إلى طالب رسمي؟`)) return;
     try {
-      const res = await api.post(`/leads/${lead.id}/convert`);
+      const isChild = isKidsLead(lead);
+      const res = await api.post(`/leads/${lead.id}/convert`, {
+        is_child: isChild,
+        age: lead.age ? parseInt(lead.age) : null
+      });
       fetchLeads(pagination.current_page, activeTab);
       
       const createdStudent = res.data.data || res.data.student;
@@ -134,7 +138,8 @@ const Pipeline = () => {
         navigate('/customer-service/create-course', {
           state: {
             studentId: createdStudent ? createdStudent.id.toString() : '',
-            packageSelected: lead.package_selected
+            packageSelected: lead.package_selected,
+            isKids: isChild
           }
         });
       }
