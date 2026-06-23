@@ -59,14 +59,29 @@ const Students = () => {
     { value: 'L8', label: 'المستوى 8' },
   ];
   const [submitting, setSubmitting] = useState(false);
-  const [studentsPage, setStudentsPage] = useState(1); // Pagination for mobile cards
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalStudents, setTotalStudents] = useState(0);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(null); // Track which card's actions are open
   // Profile Modal State
   
   useEffect(() => {
-    fetchStudents();
     fetchPackages();
     fetchCourses();
+  }, []);
+
+  // Fetch whenever page, search, or filterType changes with debounce
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchStudents(false, page);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search, filterType, page]);
+
+  // Reset page to 1 whenever filters change
+  useEffect(() => {
+    setPage(1);
   }, [search, filterType]);
 
   const fetchPackages = async () => {
@@ -121,26 +136,40 @@ const Students = () => {
     });
   };
 
-  // Reset pagination when students change
-  useEffect(() => {
-    setStudentsPage(1);
-  }, [students]);
-
-  const fetchStudents = async () => {
+  const fetchStudents = async (showLoading = true, pageToFetch = page) => {
+    if (showLoading) setLoading(true);
     try {
-      const params = { search };
+      const params = { page: pageToFetch };
+      if (search) params.search = search;
       if (filterType === 'child') {
         params.is_child = true;
       } else if (filterType === 'adult') {
         params.is_child = false;
       }
       const response = await api.get('/students', { params });
-      setStudents(response.data.data || []);
+      
+      const studentsData = response.data?.data || response.data || [];
+      if (!Array.isArray(studentsData)) {
+        console.error('Invalid students data format:', studentsData);
+        setStudents([]);
+        setTotalPages(1);
+        setTotalStudents(0);
+      } else {
+        setStudents(studentsData);
+        setTotalPages(response.data?.last_page || 1);
+        setTotalStudents(response.data?.total || studentsData.length);
+      }
     } catch (error) {
       console.error('Error fetching students:', error);
       if (import.meta.env.DEV) {
         const { sampleStudents } = await import('../../data/sampleDashboardData');
         setStudents(sampleStudents);
+        setTotalPages(1);
+        setTotalStudents(sampleStudents.length);
+      } else {
+        setStudents([]);
+        setTotalPages(1);
+        setTotalStudents(0);
       }
     } finally {
       setLoading(false);
@@ -167,7 +196,7 @@ const Students = () => {
           age: formData.is_child && formData.age ? parseInt(formData.age) : null,
         });
       }
-      fetchStudents();
+      fetchStudents(false, page);
       closeModal();
     } catch (error) {
       console.error('Error saving student:', error);
@@ -181,7 +210,7 @@ const Students = () => {
 
     try {
       await api.delete(`/students/${id}`);
-      fetchStudents();
+      fetchStudents(false, page);
     } catch (error) {
       console.error('Error deleting student:', error);
     }
@@ -364,225 +393,178 @@ const Students = () => {
         <div className="card">
           {/* Mobile Cards View */}
           <div className="md:hidden">
-            {(() => {
-              const itemsPerPage = 5;
-              const totalPages = Math.ceil(students.length / itemsPerPage);
-              const startIndex = (studentsPage - 1) * itemsPerPage;
-              const endIndex = startIndex + itemsPerPage;
-              const currentStudents = students.slice(startIndex, endIndex);
-              
-              return (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
-                    {currentStudents.map((student, index) => {
-                      const displayIndex = startIndex + index + 1;
-                      return (
-                        <div key={student.id} className="relative">
-                          <div 
-                            onClick={() => setMobileActionsOpen(student.id)}
-                            className={`p-2.5 rounded-lg border-2 sm:cursor-default cursor-pointer transition-colors sm:hover:border-gray-200 sm:dark:hover:border-gray-700 ${
-                              student.is_child 
-                                ? 'border-pink-300 dark:border-pink-900 bg-pink-50/40 dark:bg-pink-950/10 hover:border-pink-400' 
-                                : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 hover:border-primary-400 dark:hover:border-primary-600'
-                            }`}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
+              {students.map((student, index) => {
+                const displayIndex = (page - 1) * 15 + index + 1;
+                return (
+                  <div key={student.id} className="relative">
+                    <div 
+                      onClick={() => setMobileActionsOpen(student.id)}
+                      className={`p-2.5 rounded-lg border-2 sm:cursor-default cursor-pointer transition-colors sm:hover:border-gray-200 sm:dark:hover:border-gray-700 ${
+                        student.is_child 
+                          ? 'border-pink-300 dark:border-pink-900 bg-pink-50/40 dark:bg-pink-950/10 hover:border-pink-400' 
+                          : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 hover:border-primary-400 dark:hover:border-primary-600'
+                      }`}
+                    >
+                      <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">اسم الطالب</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); navigate('/students/' + student.id); }}
+                            className="text-sm font-semibold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1"
                           >
-                            <div className="space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">اسم الطالب</span>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); navigate('/students/' + student.id); }}
-                                  className="text-sm font-semibold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors flex items-center gap-1"
-                                >
-                                  {student.name} {student.is_child && <span className="text-[10px] bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300 px-1.5 py-0.5 rounded-full font-bold">👶 طفل</span>}
-                                </button>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">رقم الهاتف</span>
-                              <div className="flex items-center gap-1.5">
-                                <Phone className="w-3.5 h-3.5 text-gray-400" />
-                                <span dir="ltr" className="text-sm text-gray-800 dark:text-white">{student.phone}</span>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">المستوى</span>
-                              {student.level ? (
-                                <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold ${getLevelBadgeColor(student.level)}`}>
-                                  <GraduationCap className="w-3 h-3" />
-                                  {student.level}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-gray-400 dark:text-gray-500">غير محدد</span>
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">عدد الكورسات</span>
-                              <div className="flex items-center gap-1">
-                                <span className="badge badge-info text-xs px-1.5 py-0.5">
-                                  {student.courses_count || 0} كورس
-                                </span>
-                                {hasDualCourses(student.id) && (
-                                  <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
-                                    ثنائي
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-start justify-between">
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">ملاحظات</span>
-                              <span className="text-xs text-gray-600 dark:text-gray-400 text-right max-w-[65%] leading-relaxed">
-                                {student.notes || '-'}
-                              </span>
-                            </div>
-                            
-                            {/* Actions - Hidden on mobile, shown on larger screens */}
-                            <div className="hidden sm:flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الإجراءات</span>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openModal(student);
-                                  }}
-                                  className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 hover:text-primary-600"
-                                  title="تعديل"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDelete(student.id);
-                                    }}
-                                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600"
-                                    title="حذف"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Mobile Actions Menu */}
-                          {mobileActionsOpen === student.id && (
-                            <>
-                              {/* Backdrop */}
-                              <div 
-                                className="sm:hidden fixed inset-0 bg-black/50 z-40"
-                                onClick={() => setMobileActionsOpen(null)}
-                              />
-                              
-                              {/* Actions Menu */}
-                              <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl z-50 p-4 space-y-2">
-                                <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-4" />
-                                
-                                <div className="text-center mb-4">
-                                  <h3 className="text-lg font-bold text-gray-800 dark:text-white">{student.name}</h3>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400" dir="ltr">{student.phone}</p>
-                                </div>
-                                
-                                <button
-                                  onClick={() => {
-                                    setMobileActionsOpen(null);
-                                    openModal(student);
-                                  }}
-                                  className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-semibold transition-colors"
-                                >
-                                  <Edit2 className="w-5 h-5" />
-                                  تعديل الطالب
-                                </button>
-                                
-                                <button
-                                  onClick={() => {
-                                    setMobileActionsOpen(null);
-                                    handleDelete(student.id);
-                                  }}
-                                  className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors"
-                                >
-                                  <Trash2 className="w-5 h-5" />
-                                  حذف الطالب
-                                </button>
-                                
-                                <button
-                                  onClick={() => setMobileActionsOpen(null)}
-                                  className="w-full p-3 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                                >
-                                  إلغاء
-                                </button>
-                              </div>
-                            </>
+                            {student.name} {student.is_child && <span className="text-[10px] bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300 px-1.5 py-0.5 rounded-full font-bold">👶 طفل</span>}
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">رقم الهاتف</span>
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-gray-400" />
+                          <span dir="ltr" className="text-sm text-gray-800 dark:text-white">{student.phone}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">المستوى</span>
+                        {student.level ? (
+                          <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold ${getLevelBadgeColor(student.level)}`}>
+                            <GraduationCap className="w-3 h-3" />
+                            {student.level}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400 dark:text-gray-500">غير مححدد</span>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">عدد الكورسات</span>
+                        <div className="flex items-center gap-1">
+                          <span className="badge badge-info text-xs px-1.5 py-0.5">
+                            {student.courses_count || 0} كورس
+                          </span>
+                          {hasDualCourses(student.id) && (
+                            <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
+                              ثنائي
+                            </span>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* Pagination Controls */}
-                  {totalPages > 1 && (
-                    <div className="flex items-center justify-between p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                      <button
-                        onClick={() => setStudentsPage(prev => Math.max(1, prev - 1))}
-                        disabled={studentsPage === 1}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
-                          studentsPage === 1
-                            ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
-                            : 'bg-blue-500 text-white hover:bg-blue-600'
-                        }`}
-                      >
-                        <ChevronRight className="w-3 h-3" />
-                        السابق
-                      </button>
-
-                      <span className="text-[9px] text-gray-600 dark:text-gray-400">
-                        صفحة {studentsPage} من {totalPages}
-                      </span>
-
-                      <button
-                        onClick={() => setStudentsPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={studentsPage === totalPages}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
-                          studentsPage === totalPages
-                            ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
-                            : 'bg-blue-500 text-white hover:bg-blue-600'
-                        }`}
-                      >
-                        التالي
-                        <ChevronLeft className="w-3 h-3" />
-                      </button>
+                      </div>
+                      
+                      <div className="flex items-start justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">ملاحظات</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400 text-right max-w-[65%] leading-relaxed">
+                          {student.notes || '-'}
+                        </span>
+                      </div>
+                      
+                      {/* Actions - Hidden on mobile, shown on larger screens */}
+                      <div className="hidden sm:flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-600">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الإجراءات</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openModal(student);
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 hover:text-primary-600"
+                            title="تعديل"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(student.id);
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600"
+                              title="حذف"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </>
-              );
-            })()}
+                    
+                    {/* Mobile Actions Menu */}
+                    {mobileActionsOpen === student.id && (
+                      <>
+                        {/* Backdrop */}
+                        <div 
+                          className="sm:hidden fixed inset-0 bg-black/50 z-40"
+                          onClick={() => setMobileActionsOpen(null)}
+                        />
+                        
+                        {/* Actions Menu */}
+                        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl z-50 p-4 space-y-2">
+                          <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-4" />
+                          
+                          <div className="text-center mb-4">
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-white">{student.name}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400" dir="ltr">{student.phone}</p>
+                          </div>
+                          
+                          <button
+                            onClick={() => {
+                              setMobileActionsOpen(null);
+                              openModal(student);
+                            }}
+                            className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-semibold transition-colors"
+                          >
+                            <Edit2 className="w-5 h-5" />
+                            تعديل الطالب
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              setMobileActionsOpen(null);
+                              handleDelete(student.id);
+                            }}
+                            className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                            حذف الطالب
+                          </button>
+                          
+                          <button
+                            onClick={() => setMobileActionsOpen(null)}
+                            className="w-full p-3 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                          >
+                            إلغاء
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>اسم الطالب</th>
-                      <th>المحافظة</th>
-                      <th>العمر</th>
-                      <th>رقم الهاتف</th>
-                      <th>المستوى</th>
-                      <th>عدد الكورسات</th>
-                      <th>ملاحظات</th>
-                      <th>الإجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {students.map((student, index) => (
-                      <tr key={student.id} className={student.is_child ? 'bg-pink-50/30 dark:bg-pink-950/10 border-r-4 border-pink-500' : ''}>
-                        <td className="font-semibold">{index + 1}</td>
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>اسم الطالب</th>
+                    <th>المحافظة</th>
+                    <th>العمر</th>
+                    <th>رقم الهاتف</th>
+                    <th>المستوى</th>
+                    <th>عدد الكورسات</th>
+                    <th>ملاحظات</th>
+                    <th>الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.map((student, index) => (
+                    <tr key={student.id} className={student.is_child ? 'bg-pink-50/30 dark:bg-pink-950/10 border-r-4 border-pink-500' : ''}>
+                      <td className="font-semibold">{(page - 1) * 15 + index + 1}</td>
                         <td>
                           <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center ${student.is_child ? 'from-pink-400 to-orange-400' : 'from-primary-400 to-accent-400'}`}>
@@ -674,6 +656,41 @@ const Students = () => {
                   </tbody>
                 </table>
               </div>
+
+          {/* API Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-xl">
+              <button
+                onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                disabled={page === 1}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors text-xs ${
+                  page === 1
+                    ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                <ChevronRight className="w-4 h-4" />
+                السابق
+              </button>
+
+              <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                صفحة {page} من {totalPages}
+              </span>
+
+              <button
+                onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={page === totalPages}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors text-xs ${
+                  page === totalPages
+                    ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                التالي
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
