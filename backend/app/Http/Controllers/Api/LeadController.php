@@ -136,7 +136,7 @@ class LeadController extends Controller
         $student = \App\Models\Student::create([
             'name' => $lead->name,
             'phone' => $lead->phone_whatsapp,
-            'level' => $level,
+            'level' => $isChild ? 'أطفال' : $level,
             'notes' => "المستوى التقييمي: " . ($lead->current_level ?? 'غير محدد') . "\n" .
                        "الباقة المطلوبة: " . ($lead->package_selected ?? 'غير محدد') . "\n" . 
                        $lead->notes . "\n(تم التحويل من مسار العملاء)",

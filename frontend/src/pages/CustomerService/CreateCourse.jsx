@@ -272,6 +272,24 @@ const CreateCourse = () => {
     return 0;
   };
 
+  const handleCategoryChange = (kidsValue) => {
+    setIsKids(kidsValue);
+    setFormData(prev => ({
+      ...prev,
+      course_package_id: '',
+      is_custom: false,
+      custom_total_amount: '',
+      lectures_count: '',
+      paid_amount: '',
+      discount: '',
+      remaining_amount: '',
+      student_payments: [
+        { paid_amount: '', discount: '', remaining_amount: '' },
+        { paid_amount: '', discount: '', remaining_amount: '' },
+      ]
+    }));
+  };
+
   const handlePackageChange = (packageId) => {
     const isCustom = packageId === 'custom';
     
@@ -556,7 +574,7 @@ const CreateCourse = () => {
           phone: manualStudent1.phone,
           is_child: isKids,
           age: isKids && manualStudent1.age ? parseInt(manualStudent1.age) : null,
-          level: manualStudent1.level || null,
+          level: isKids ? 'أطفال' : (manualStudent1.level || null),
           notes: manualStudent1.notes || '',
         });
         const createdStudent = studentRes.data;
@@ -588,7 +606,7 @@ const CreateCourse = () => {
             phone: manualStudent2.phone,
             is_child: isKids,
             age: isKids && manualStudent2.age ? parseInt(manualStudent2.age) : null,
-            level: manualStudent2.level || null,
+            level: isKids ? 'أطفال' : (manualStudent2.level || null),
             notes: manualStudent2.notes || '',
           });
           const createdStudent = studentRes.data;
@@ -713,7 +731,7 @@ const CreateCourse = () => {
         const response = await api.post('/students', {
           name: newStudentData.name,
           phone: newStudentData.phone,
-          level: newStudentData.level || null,
+          level: newStudentData.is_child ? 'أطفال' : (newStudentData.level || null),
           notes: newStudentData.notes || '',
           is_child: newStudentData.is_child,
           age: newStudentData.is_child ? parseInt(newStudentData.age) : null,
@@ -724,6 +742,7 @@ const CreateCourse = () => {
         const payload = {
           is_child: newStudentData.is_child,
           age: newStudentData.is_child && newStudentData.age ? parseInt(newStudentData.age) : null,
+          level: newStudentData.is_child ? 'أطفال' : undefined,
         };
         const response = await api.post(`/leads/${selectedLeadOption.value}/convert`, payload);
         createdStudent = response.data.data || response.data.student;
@@ -794,11 +813,24 @@ const CreateCourse = () => {
 
   // Prepare options for react-select
   const studentOptions = students
-    .filter(student => !isKids || student.is_child)
+    .filter(student => isKids ? student.is_child : !student.is_child)
     .map(student => ({
       value: student.id,
       label: `${student.name} - ${student.phone} ${student.is_child ? '👶' : ''}`
     }));
+
+  const isKidsPackage = (pkg) => {
+    const name = (pkg.name || '').toLowerCase();
+    return name.includes('kids') || name.includes('أطفال') || name.includes('اطفال') || name.includes('طفل');
+  };
+
+  const filteredPackages = packages.filter(pkg => {
+    if (isKids) {
+      return isKidsPackage(pkg);
+    } else {
+      return !isKidsPackage(pkg);
+    }
+  });
 
   const trainerOptions = trainers.map(trainer => ({
     value: trainer.id,
@@ -892,7 +924,7 @@ const CreateCourse = () => {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsKids(false)}
+                  onClick={() => handleCategoryChange(false)}
                   className={`flex-1 p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${
                     !isKids
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
@@ -904,7 +936,7 @@ const CreateCourse = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsKids(true)}
+                  onClick={() => handleCategoryChange(true)}
                   className={`flex-1 p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${
                     isKids
                       ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/20 text-pink-700 dark:text-pink-300'
@@ -1047,18 +1079,28 @@ const CreateCourse = () => {
                       )}
                       <div>
                         <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">المستوى</label>
-                        <select
-                          value={manualStudent1.level}
-                          onChange={(e) => setManualStudent1({ ...manualStudent1, level: e.target.value })}
-                          className="select text-sm"
-                        >
-                          <option value="">اختر المستوى</option>
-                          {levels.map((level) => (
-                            <option key={level.value} value={level.value}>
-                              {level.label}
-                            </option>
-                          ))}
-                        </select>
+                        {isKids ? (
+                          <input
+                            type="text"
+                            value="أطفال"
+                            className="input text-sm bg-[var(--color-bg-secondary)] cursor-not-allowed"
+                            readOnly
+                            disabled
+                          />
+                        ) : (
+                          <select
+                            value={manualStudent1.level}
+                            onChange={(e) => setManualStudent1({ ...manualStudent1, level: e.target.value })}
+                            className="select text-sm"
+                          >
+                            <option value="">اختر المستوى</option>
+                            {levels.map((level) => (
+                              <option key={level.value} value={level.value}>
+                                {level.label}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                       <div className="sm:col-span-2">
                         <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">ملاحظات</label>
@@ -1161,18 +1203,28 @@ const CreateCourse = () => {
                         )}
                         <div>
                           <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">المستوى</label>
-                          <select
-                            value={manualStudent2.level}
-                            onChange={(e) => setManualStudent2({ ...manualStudent2, level: e.target.value })}
-                            className="select text-sm"
-                          >
-                            <option value="">اختر المستوى</option>
-                            {levels.map((level) => (
-                              <option key={level.value} value={level.value}>
-                                {level.label}
-                              </option>
-                            ))}
-                          </select>
+                          {isKids ? (
+                            <input
+                              type="text"
+                              value="أطفال"
+                              className="input text-sm bg-[var(--color-bg-secondary)] cursor-not-allowed"
+                              readOnly
+                              disabled
+                            />
+                          ) : (
+                            <select
+                              value={manualStudent2.level}
+                              onChange={(e) => setManualStudent2({ ...manualStudent2, level: e.target.value })}
+                              className="select text-sm"
+                            >
+                              <option value="">اختر المستوى</option>
+                              {levels.map((level) => (
+                                <option key={level.value} value={level.value}>
+                                  {level.label}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                         </div>
                         <div className="sm:col-span-2">
                           <label className="text-xs font-semibold block text-gray-600 dark:text-gray-400 mb-1">ملاحظات</label>
@@ -1227,7 +1279,7 @@ const CreateCourse = () => {
                 >
                   <option value="">اختر الباقة</option>
                   <option value="custom">مخصص</option>
-                  {packages.map((pkg) => (
+                  {filteredPackages.map((pkg) => (
                     <option key={pkg.id} value={pkg.id}>
                       {pkg.name} {pkg.lectures_count > 0 ? `- ${pkg.lectures_count} محاضرة` : '- (عدد مفتوح)'} {pkg.price > 0 ? `(${pkg.price} د.ع)` : ''}
                     </option>
@@ -1679,18 +1731,28 @@ const CreateCourse = () => {
 
                   <div>
                     <label className="label text-xs">المستوى</label>
-                    <select
-                      value={newStudentData.level}
-                      onChange={(e) => setNewStudentData({ ...newStudentData, level: e.target.value })}
-                      className="select text-sm"
-                    >
-                      <option value="">اختر المستوى</option>
-                      {levels.map((level) => (
-                        <option key={level.value} value={level.value}>
-                          {level.label}
-                        </option>
-                      ))}
-                    </select>
+                    {newStudentData.is_child ? (
+                      <input
+                        type="text"
+                        value="أطفال"
+                        className="input text-sm bg-[var(--color-bg-secondary)] cursor-not-allowed"
+                        readOnly
+                        disabled
+                      />
+                    ) : (
+                      <select
+                        value={newStudentData.level}
+                        onChange={(e) => setNewStudentData({ ...newStudentData, level: e.target.value })}
+                        className="select text-sm"
+                      >
+                        <option value="">اختر المستوى</option>
+                        {levels.map((level) => (
+                          <option key={level.value} value={level.value}>
+                            {level.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div>
