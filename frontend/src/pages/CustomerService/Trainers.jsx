@@ -25,53 +25,63 @@ const Trainers = () => {
   });
   const [newTrainerCredentials, setNewTrainerCredentials] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [trainersPage, setTrainersPage] = useState(1); // Pagination for mobile cards
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTrainers, setTotalTrainers] = useState(0);
 
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      // Only show loading screen on the very first mount or filter changes that we want,
-      // but avoid hiding the search input on every keystroke.
-      fetchTrainers(false);
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [search, weeklyFilter]);
-
-  // Reset pagination when trainers change
-  useEffect(() => {
-    setTrainersPage(1);
-  }, [trainers]);
-
-  const fetchTrainers = async (showLoading = true) => {
+  // Fetch trainers function passing the page parameter to the API
+  const fetchTrainers = async (showLoading = true, pageToFetch = page) => {
     if (showLoading) setLoading(true);
     try {
-      const params = {};
+      const params = { page: pageToFetch };
       if (search) params.search = search;
       if (weeklyFilter) params.weekly_lectures = weeklyFilter;
       
       const response = await api.get('/trainers', { params });
       
-      // Handle paginated response - API returns { data: [...], current_page, ... }
+      // Handle paginated response - API returns { data: [...], current_page, last_page, total }
       const trainersData = response.data?.data || response.data || [];
       
       if (!Array.isArray(trainersData)) {
         console.error('Invalid trainers data format:', trainersData);
         setTrainers([]);
+        setTotalPages(1);
+        setTotalTrainers(0);
       } else {
         setTrainers(trainersData);
+        setTotalPages(response.data?.last_page || 1);
+        setTotalTrainers(response.data?.total || trainersData.length);
       }
     } catch (error) {
       console.error('Error fetching trainers:', error);
       if (import.meta.env.DEV) {
         const { sampleTrainers } = await import('../../data/sampleDashboardData');
         setTrainers(sampleTrainers);
+        setTotalPages(1);
+        setTotalTrainers(sampleTrainers.length);
       } else {
         setTrainers([]);
+        setTotalPages(1);
+        setTotalTrainers(0);
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // Fetch whenever page, search, or weeklyFilter changes with debounce
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchTrainers(false, page);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search, weeklyFilter, page]);
+
+  // Reset page to 1 whenever filters change
+  useEffect(() => {
+    setPage(1);
+  }, [search, weeklyFilter]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,11 +99,11 @@ const Trainers = () => {
         };
         if (formData.password) payload.password = formData.password;
         await api.put(`/trainers/${editingTrainer.id}`, payload);
-        fetchTrainers(false);
+        fetchTrainers(false, page);
         closeModal();
       } else {
         const res = await api.post('/trainers', formData);
-        fetchTrainers(false);
+        fetchTrainers(false, page);
         closeModal();
         // Show login credentials to the user creating the trainer
         const data = res.data;
@@ -116,7 +126,7 @@ const Trainers = () => {
 
     try {
       await api.delete(`/trainers/${id}`);
-      fetchTrainers(false);
+      fetchTrainers(false, page);
     } catch (error) {
       console.error('Error deleting trainer:', error);
     }
@@ -207,245 +217,233 @@ const Trainers = () => {
         <div className="card">
           {/* Mobile Cards View */}
           <div className="md:hidden">
-            {(() => {
-              const itemsPerPage = 5;
-              const totalPages = Math.ceil(trainers.length / itemsPerPage);
-              const startIndex = (trainersPage - 1) * itemsPerPage;
-              const endIndex = startIndex + itemsPerPage;
-              const currentTrainers = trainers.slice(startIndex, endIndex);
-              
-              return (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
-                    {currentTrainers.map((trainer, index) => {
-                      const displayIndex = startIndex + index + 1;
-                      return (
-                        <div
-                          key={trainer.id}
-                          onClick={() => openModal(trainer)}
-                          className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all active:scale-[0.98]"
-                        >
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">اسم المدرب</span>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
-                                <Link to={`/staff-profile/trainer/${trainer.id}`} className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline" onClick={(e) => e.stopPropagation()}>
-                                  {trainer.user?.name || trainer.name}
-                                </Link>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">رقم الهاتف</span>
-                              <div className="flex items-center gap-1.5">
-                                <Phone className="w-3.5 h-3.5 text-gray-400" />
-                                <span dir="ltr" className="text-sm text-gray-800 dark:text-white">{trainer.phone || '-'}</span>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">البريد الإلكتروني</span>
-                              <span dir="ltr" className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[60%]">{trainer.user?.email || trainer.email || '-'}</span>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">المستوى</span>
-                              <span className="text-xs text-gray-800 dark:text-white font-medium">
-                                {trainer.min_level && trainer.max_level
-                                  ? `${trainer.min_level} - ${trainer.max_level}`
-                                  : trainer.min_level || trainer.max_level || '-'}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الكورسات</span>
-                              <span className="badge badge-info text-xs px-1.5 py-0.5">
-                                {trainer.courses_count || 0}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">محاضرات الأسبوع</span>
-                              <span className={`badge text-xs px-1.5 py-0.5 ${
-                                trainer.weekly_lectures_count >= 3
-                                  ? 'badge-success'
-                                  : trainer.weekly_lectures_count > 0
-                                    ? 'badge-warning'
-                                    : 'badge-gray'
-                              }`}>
-                                {trainer.weekly_lectures_count || 0}
-                              </span>
-                            </div>
-
-                            {trainer.notes && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">ملاحظات</span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setNotesPopup({
-                                      open: true,
-                                      notes: trainer.notes,
-                                      trainerName: trainer.user?.name || trainer.name || 'المدرب'
-                                    });
-                                  }}
-                                  className="p-1 rounded-lg text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors"
-                                  title={trainer.notes}
-                                >
-                                  <MessageSquare className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* Pagination Controls */}
-                  {totalPages > 1 && (
-                    <div className="flex items-center justify-between p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                      <button
-                        onClick={() => setTrainersPage(prev => Math.max(1, prev - 1))}
-                        disabled={trainersPage === 1}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
-                          trainersPage === 1
-                            ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
-                            : 'bg-blue-500 text-white hover:bg-blue-600'
-                        }`}
-                      >
-                        <ChevronRight className="w-3 h-3" />
-                        السابق
-                      </button>
-
-                      <span className="text-[9px] text-gray-600 dark:text-gray-400">
-                        صفحة {trainersPage} من {totalPages}
-                      </span>
-
-                      <button
-                        onClick={() => setTrainersPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={trainersPage === totalPages}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
-                          trainersPage === totalPages
-                            ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
-                            : 'bg-blue-500 text-white hover:bg-blue-600'
-                        }`}
-                      >
-                        التالي
-                        <ChevronLeft className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="table text-xs">
-                <thead>
-                  <tr>
-                    <th className="py-2 px-2 text-center">#</th>
-                    <th className="py-2 px-2 text-center">اسم المدرب</th>
-                    <th className="py-2 px-2 text-center">رقم الهاتف</th>
-                    <th className="py-2 px-2 text-center">البريد الإلكتروني</th>
-                    <th className="py-2 px-2 text-center">المستوى</th>
-                    <th className="py-2 px-2 text-center">الكورسات</th>
-                    <th className="py-2 px-2 text-center">محاضرات الأسبوع</th>
-                    <th className="py-2 px-2 text-center">ملاحظات</th>
-                    <th className="py-2 px-2 text-center">الإجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trainers.map((trainer, index) => (
-                    <tr key={trainer.id}>
-                      <td className="py-2 px-2 text-center font-semibold">{index + 1}</td>
-                      <td className="py-2 px-2 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
-                            <span className="text-white font-bold text-[9px]">
-                              {(trainer.user?.name || trainer.name)?.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <Link to={`/staff-profile/trainer/${trainer.id}`} className="font-medium text-[11px] text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
+              {trainers.map((trainer, index) => {
+                const displayIndex = (page - 1) * 15 + index + 1;
+                return (
+                  <div
+                    key={trainer.id}
+                    onClick={() => openModal(trainer)}
+                    className="p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all active:scale-[0.98]"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">اسم المدرب</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{displayIndex}</span>
+                          <Link to={`/staff-profile/trainer/${trainer.id}`} className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline" onClick={(e) => e.stopPropagation()}>
                             {trainer.user?.name || trainer.name}
                           </Link>
                         </div>
-                      </td>
-                      <td className="py-2 px-2 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Phone className="w-3 h-3 text-[var(--color-text-muted)]" />
-                          <span dir="ltr" className="text-[11px]">{trainer.phone || '-'}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">رقم الهاتف</span>
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-gray-400" />
+                          <span dir="ltr" className="text-sm text-gray-800 dark:text-white">{trainer.phone || '-'}</span>
                         </div>
-                      </td>
-                      <td className="py-2 px-2 text-center">
-                        <span dir="ltr" className="text-[11px]">{trainer.user?.email || trainer.email || '-'}</span>
-                      </td>
-                      <td className="py-2 px-2 text-center">
-                        <span className="text-[10px] text-[var(--color-text-secondary)] whitespace-nowrap font-medium">
-                          {trainer.min_level && trainer.max_level 
-                            ? `${trainer.min_level} - ${trainer.max_level}` 
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">البريد الإلكتروني</span>
+                        <span dir="ltr" className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[60%]">{trainer.user?.email || trainer.email || '-'}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">المستوى</span>
+                        <span className="text-xs text-gray-800 dark:text-white font-medium">
+                          {trainer.min_level && trainer.max_level
+                            ? `${trainer.min_level} - ${trainer.max_level}`
                             : trainer.min_level || trainer.max_level || '-'}
                         </span>
-                      </td>
-                      <td className="py-2 px-2 text-center">
-                        <span className="badge badge-info text-[10px] px-1.5 py-0.5">
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الكورسات</span>
+                        <span className="badge badge-info text-xs px-1.5 py-0.5">
                           {trainer.courses_count || 0}
                         </span>
-                      </td>
-                      <td className="py-2 px-2 text-center">
-                        <span className={`badge text-[10px] px-1.5 py-0.5 ${
-                          trainer.weekly_lectures_count >= 3 
-                            ? 'badge-success' 
-                            : trainer.weekly_lectures_count > 0 
-                              ? 'badge-warning' 
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">محاضرات الأسبوع</span>
+                        <span className={`badge text-xs px-1.5 py-0.5 ${
+                          trainer.weekly_lectures_count >= 3
+                            ? 'badge-success'
+                            : trainer.weekly_lectures_count > 0
+                              ? 'badge-warning'
                               : 'badge-gray'
                         }`}>
                           {trainer.weekly_lectures_count || 0}
                         </span>
-                      </td>
-                      <td className="py-2 px-2 text-center">
-                        {trainer.notes ? (
+                      </div>
+
+                      {trainer.notes && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">ملاحظات</span>
                           <button
-                            onClick={() => setNotesPopup({
-                              open: true,
-                              notes: trainer.notes,
-                              trainerName: trainer.user?.name || trainer.name || 'المدرب'
-                            })}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNotesPopup({
+                                open: true,
+                                notes: trainer.notes,
+                                trainerName: trainer.user?.name || trainer.name || 'المدرب'
+                              });
+                            }}
                             className="p-1 rounded-lg text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors"
                             title={trainer.notes}
                           >
                             <MessageSquare className="w-3.5 h-3.5" />
                           </button>
-                        ) : (
-                          <span className="text-gray-300 dark:text-gray-600">-</span>
-                        )}
-                      </td>
-                      <td className="py-2 px-2 text-center">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <button
-                            onClick={() => openModal(trainer)}
-                            className="p-1.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
-                            title="تعديل"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(trainer.id)}
-                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[var(--color-text-muted)] hover:text-red-600"
-                            title="حذف"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="table text-xs">
+              <thead>
+                <tr>
+                  <th className="py-2 px-2 text-center">#</th>
+                  <th className="py-2 px-2 text-center">اسم المدرب</th>
+                  <th className="py-2 px-2 text-center">رقم الهاتف</th>
+                  <th className="py-2 px-2 text-center">البريد الإلكتروني</th>
+                  <th className="py-2 px-2 text-center">المستوى</th>
+                  <th className="py-2 px-2 text-center">الكورسات</th>
+                  <th className="py-2 px-2 text-center">محاضرات الأسبوع</th>
+                  <th className="py-2 px-2 text-center">ملاحظات</th>
+                  <th className="py-2 px-2 text-center">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trainers.map((trainer, index) => (
+                  <tr key={trainer.id}>
+                    <td className="py-2 px-2 text-center font-semibold">{(page - 1) * 15 + index + 1}</td>
+                    <td className="py-2 px-2 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-bold text-[9px]">
+                            {(trainer.user?.name || trainer.name)?.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <Link to={`/staff-profile/trainer/${trainer.id}`} className="font-medium text-[11px] text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
+                          {trainer.user?.name || trainer.name}
+                        </Link>
+                      </div>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Phone className="w-3 h-3 text-[var(--color-text-muted)]" />
+                        <span dir="ltr" className="text-[11px]">{trainer.phone || '-'}</span>
+                      </div>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <span dir="ltr" className="text-[11px]">{trainer.user?.email || trainer.email || '-'}</span>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <span className="text-[10px] text-[var(--color-text-secondary)] whitespace-nowrap font-medium">
+                        {trainer.min_level && trainer.max_level 
+                          ? `${trainer.min_level} - ${trainer.max_level}` 
+                          : trainer.min_level || trainer.max_level || '-'}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <span className="badge badge-info text-[10px] px-1.5 py-0.5">
+                        {trainer.courses_count || 0}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <span className={`badge text-[10px] px-1.5 py-0.5 ${
+                        trainer.weekly_lectures_count >= 3 
+                          ? 'badge-success' 
+                          : trainer.weekly_lectures_count > 0 
+                            ? 'badge-warning' 
+                            : 'badge-gray'
+                      }`}>
+                        {trainer.weekly_lectures_count || 0}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      {trainer.notes ? (
+                        <button
+                          onClick={() => setNotesPopup({
+                            open: true,
+                            notes: trainer.notes,
+                            trainerName: trainer.user?.name || trainer.name || 'المدرب'
+                          })}
+                          className="p-1 rounded-lg text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors"
+                          title={trainer.notes}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <span className="text-gray-300 dark:text-gray-600">-</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <div className="flex items-center justify-center gap-0.5">
+                        <button
+                          onClick={() => openModal(trainer)}
+                          className="p-1.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
+                          title="تعديل"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(trainer.id)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[var(--color-text-muted)] hover:text-red-600"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
+
+          {/* API Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-xl">
+              <button
+                onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                disabled={page === 1}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors text-xs ${
+                  page === 1
+                    ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                <ChevronRight className="w-4 h-4" />
+                السابق
+              </button>
+
+              <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                صفحة {page} من {totalPages}
+              </span>
+
+              <button
+                onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={page === totalPages}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors text-xs ${
+                  page === totalPages
+                    ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                التالي
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
