@@ -143,9 +143,16 @@ class Course extends Model
     /**
      * Get the primary student (for single-student courses).
      */
-    public function student(): BelongsTo
+    public function student()
     {
-        return $this->belongsTo(Student::class, 'student_id');
+        return $this->hasOneThrough(
+            Student::class,
+            CourseStudent::class,
+            'course_id', // Foreign key on course_students table
+            'id',        // Foreign key on students table
+            'id',        // Local key on courses table
+            'student_id' // Local key on course_students table
+        )->where('course_students.is_primary', true);
     }
 
     /**
