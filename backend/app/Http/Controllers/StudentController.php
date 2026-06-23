@@ -50,7 +50,7 @@ class StudentController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
-            'level' => 'nullable|string|max:10',
+            'level' => 'nullable|string|max:50',
             'notes' => 'nullable|string',
             'is_child' => 'sometimes|boolean',
             'age' => 'nullable|integer|min:0|max:120',
@@ -79,7 +79,7 @@ class StudentController extends Controller
         $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'phone' => 'sometimes|required|string|max:20',
-            'level' => 'nullable|string|max:10',
+            'level' => 'nullable|string|max:50',
             'notes' => 'nullable|string',
             'is_child' => 'sometimes|boolean',
             'age' => 'nullable|integer|min:0|max:120',
