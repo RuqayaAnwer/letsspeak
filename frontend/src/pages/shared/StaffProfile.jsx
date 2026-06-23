@@ -133,7 +133,7 @@ const StaffProfile = () => {
                 </div>
             </div>
             <div className="mt-4 sm:flex-1 sm:min-w-0 sm:flex sm:items-center sm:justify-end sm:space-x-6 sm:pb-1 rtl:space-x-reverse">
-                <div className="sm:hidden md:block mt-2 min-w-0 flex-1">
+                <div className="mt-2 min-w-0 flex-1">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate flex items-center gap-3">
                         {profile.name}
                         {profile.status === 'active' ? (
@@ -430,8 +430,9 @@ const StaffProfile = () => {
                                     <div className="flex items-center gap-3">
                                         <div className={`w-1.5 h-10 rounded-full ${course.status === 'active' ? 'bg-green-500' : course.status === 'finished' ? 'bg-blue-500' : 'bg-gray-400'}`}></div>
                                         <div>
-                                            <h4 className="font-bold text-gray-800 dark:text-gray-100 text-sm sm:text-base">
+                                            <h4 className="font-bold text-gray-800 dark:text-gray-100 text-sm sm:text-base flex items-center gap-1.5 flex-wrap">
                                                 {course.title || 'كورس مخصص'}
+                                                {course.is_kids && <span className="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 text-xs px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1">كورس أطفال 👶</span>}
                                             </h4>
                                             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
                                                 <span className="flex items-center gap-1"><User className="w-3 h-3"/> الطالب: {course.student?.name}</span>
