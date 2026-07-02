@@ -1198,13 +1198,14 @@ const CourseDetails = () => {
             ? [course.students[0].id]
             : [];
 
+    const isKids = isKidsCourse();
     const initialLevels = {};
     if (course.students && course.students.length > 0) {
       course.students.forEach(s => {
-        initialLevels[s.id] = s.level || 'L1';
+        initialLevels[s.id] = isKids ? 'أطفال' : (s.level || 'L1');
       });
     } else if (course.student) {
-      initialLevels[course.student.id] = course.student.level || 'L1';
+      initialLevels[course.student.id] = isKids ? 'أطفال' : (course.student.level || 'L1');
     }
 
     setRenewalResetModal({
@@ -3155,22 +3156,28 @@ const CourseDetails = () => {
               {(course.students && course.students.length > 0 ? course.students : (course.student ? [course.student] : [])).map(s => (
                 <div key={s.id}>
                   <label className="label text-[10px] sm:text-sm">المستوى الجديد للطالب ({s.name}) *</label>
-                  <select
-                    value={renewalResetModal.student_levels?.[s.id] || 'L1'}
-                    onChange={(e) => setRenewalResetModal(prev => ({
-                      ...prev,
-                      student_levels: {
-                        ...prev.student_levels,
-                        [s.id]: e.target.value
-                      }
-                    }))}
-                    className="select text-xs sm:text-sm py-2 sm:py-2.5"
-                    required
-                  >
-                    {['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8'].map(level => (
-                      <option key={level} value={level}>{level}</option>
-                    ))}
-                  </select>
+                  {renewalResetModal.is_kids ? (
+                    <div className="input bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-xs sm:text-sm py-2 sm:py-2.5">
+                      أطفال
+                    </div>
+                  ) : (
+                    <select
+                      value={renewalResetModal.student_levels?.[s.id] || 'L1'}
+                      onChange={(e) => setRenewalResetModal(prev => ({
+                        ...prev,
+                        student_levels: {
+                          ...prev.student_levels,
+                          [s.id]: e.target.value
+                        }
+                      }))}
+                      className="select text-xs sm:text-sm py-2 sm:py-2.5"
+                      required
+                    >
+                      {['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8'].map(level => (
+                        <option key={level} value={level}>{level}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               ))}
 
@@ -3180,7 +3187,18 @@ const CourseDetails = () => {
                 <div className="flex gap-3">
                   <button
                     type="button"
-                    onClick={() => setRenewalResetModal(prev => ({ ...prev, is_kids: false, course_package_id: '' }))}
+                    onClick={() => {
+                      const updatedLevels = {};
+                      (course.students && course.students.length > 0 ? course.students : (course.student ? [course.student] : [])).forEach(s => {
+                        updatedLevels[s.id] = s.level || 'L1';
+                      });
+                      setRenewalResetModal(prev => ({ 
+                        ...prev, 
+                        is_kids: false, 
+                        course_package_id: '',
+                        student_levels: updatedLevels
+                      }));
+                    }}
                     className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold ${
                       !renewalResetModal.is_kids
                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
@@ -3192,7 +3210,18 @@ const CourseDetails = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setRenewalResetModal(prev => ({ ...prev, is_kids: true, course_package_id: '' }))}
+                    onClick={() => {
+                      const updatedLevels = {};
+                      (course.students && course.students.length > 0 ? course.students : (course.student ? [course.student] : [])).forEach(s => {
+                        updatedLevels[s.id] = 'أطفال';
+                      });
+                      setRenewalResetModal(prev => ({ 
+                        ...prev, 
+                        is_kids: true, 
+                        course_package_id: '',
+                        student_levels: updatedLevels
+                      }));
+                    }}
                     className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold ${
                       renewalResetModal.is_kids
                         ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/20 text-pink-700 dark:text-pink-300'

@@ -234,7 +234,7 @@ class CourseController extends Controller
             'custom_total_amount' => $isCustom ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
             'discount' => 'sometimes|numeric|min:0',
             'student_levels' => 'sometimes|array',
-            'student_levels.*' => 'in:L1,L2,L3,L4,L5,L6,L7,L8',
+            'student_levels.*' => 'nullable|string|max:50',
             'is_kids' => 'sometimes|boolean',
         ]);
 
