@@ -3530,8 +3530,8 @@ const CourseDetails = () => {
                   type="date"
                   value={startCourseModal.date}
                   onChange={(e) => setStartCourseModal({ ...startCourseModal, date: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-900/50 dark:border-gray-700 dark:focus:ring-green-500 dark:text-white transition-all outline-none"
-                  dir="ltr"
+                  className="input text-xs sm:text-sm py-2 sm:py-2.5"
+                  required
                 />
               </div>
             </div>
