@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Trophy, RefreshCcw, BarChart3, Gift, ChevronLeft, ChevronRight, Loader2, Info, X, AlertCircle } from 'lucide-react';
 import api from '../../api/axios';
+import { formatDateShort } from '../../utils/dateFormat';
 
 const BonusesReport = () => {
   const [loading, setLoading] = useState(true);
@@ -528,7 +529,7 @@ const BonusesReport = () => {
                                   )}
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  الطلاب: <span className="font-medium text-gray-700 dark:text-gray-300">
+                                  الطالب: <span className="font-medium text-gray-700 dark:text-gray-300">
                                     {course.students.map(s => s.name).join(' و ')}
                                   </span>
                                 </div>
@@ -536,7 +537,7 @@ const BonusesReport = () => {
                               <div className="text-left sm:self-center">
                                 <span className="text-[10px] text-gray-400 block">تاريخ البدء</span>
                                 <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
-                                  {course.start_date}
+                                  {formatDateShort(course.start_date)}
                                 </span>
                               </div>
                             </div>
@@ -565,11 +566,11 @@ const BonusesReport = () => {
                                   </span>
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  الطلاب: {lecture.students.join(' و ')}
+                                  الطالب: {lecture.students.join(' و ')}
                                 </div>
                               </div>
                               <div className="text-left text-xs">
-                                <span className="font-bold text-gray-700 dark:text-gray-300 block">{lecture.date}</span>
+                                <span className="font-bold text-gray-700 dark:text-gray-300 block">{formatDateShort(lecture.date)}</span>
                                 <span className="text-gray-400 text-[10px]">{lecture.time}</span>
                               </div>
                             </div>
