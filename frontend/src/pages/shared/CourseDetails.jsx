@@ -1258,6 +1258,20 @@ const CourseDetails = () => {
     return 0;
   };
 
+  // Helper function to parse amount input (handles 100.000 format)
+  const parseAmountInput = (value) => {
+    if (!value) return '';
+    return value.replace(/[^\d]/g, '');
+  };
+
+  // Helper function to format amount for display in input (100000 -> 100.000)
+  const formatAmountForInput = (value) => {
+    if (!value && value !== 0) return '';
+    const num = parseFloat(value);
+    if (isNaN(num)) return '';
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
   // Handle package change in renewal reset modal
   const handleRenewalPackageChange = (packageId) => {
     if (packageId === 'custom') {
@@ -1286,26 +1300,27 @@ const CourseDetails = () => {
         : (selectedPackage ? (selectedPackage.price || 0) : 0);
     }
     
-    const paidAmount = parseFloat(renewalResetModal.paid_amount) || 0;
+    const paidAmount = parseFloat(parseAmountInput(renewalResetModal.paid_amount)) || 0;
     const remainingAmount = packagePrice - paidAmount;
     
     setRenewalResetModal(prev => ({
       ...prev,
       course_package_id: packageId,
       lectures_count: lecturesCount,
-      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toString() : '0',
     }));
   };
 
   // Handle paid amount change in renewal reset modal
   const handleRenewalPaidAmountChange = (value) => {
-    const paidAmount = parseFloat(value) || 0;
+    const parsedVal = parseAmountInput(value);
+    const paidAmount = parseFloat(parsedVal) || 0;
     const selectedPackage = packages.find((p) => p.id.toString() === renewalResetModal.course_package_id);
     const isDual = course?.is_dual || false;
     
     let packagePrice = 0;
     if (renewalResetModal.course_package_id === 'custom') {
-      packagePrice = parseFloat(renewalResetModal.custom_total_amount) || 0;
+      packagePrice = parseFloat(parseAmountInput(renewalResetModal.custom_total_amount)) || 0;
     } else {
       const studentPrice = getStudentPriceForPackage(selectedPackage?.name, isDual);
       packagePrice = isDual && studentPrice > 0 
@@ -1317,8 +1332,8 @@ const CourseDetails = () => {
     
     setRenewalResetModal(prev => ({
       ...prev,
-      paid_amount: value,
-      remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00',
+      paid_amount: parsedVal,
+      remaining_amount: remainingAmount > 0 ? remainingAmount.toString() : '0',
     }));
   };
 
@@ -3152,32 +3167,26 @@ const CourseDetails = () => {
                 </div>
               </div>
 
-              {/* Student Levels */}
-              {(course.students && course.students.length > 0 ? course.students : (course.student ? [course.student] : [])).map(s => (
+              {/* Student Levels (Only show for adults) */}
+              {!renewalResetModal.is_kids && (course.students && course.students.length > 0 ? course.students : (course.student ? [course.student] : [])).map(s => (
                 <div key={s.id}>
                   <label className="label text-[10px] sm:text-sm">المستوى الجديد للطالب ({s.name}) *</label>
-                  {renewalResetModal.is_kids ? (
-                    <div className="input bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-xs sm:text-sm py-2 sm:py-2.5">
-                      أطفال
-                    </div>
-                  ) : (
-                    <select
-                      value={renewalResetModal.student_levels?.[s.id] || 'L1'}
-                      onChange={(e) => setRenewalResetModal(prev => ({
-                        ...prev,
-                        student_levels: {
-                          ...prev.student_levels,
-                          [s.id]: e.target.value
-                        }
-                      }))}
-                      className="select text-xs sm:text-sm py-2 sm:py-2.5"
-                      required
-                    >
-                      {['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8'].map(level => (
-                        <option key={level} value={level}>{level}</option>
-                      ))}
-                    </select>
-                  )}
+                  <select
+                    value={renewalResetModal.student_levels?.[s.id] || 'L1'}
+                    onChange={(e) => setRenewalResetModal(prev => ({
+                      ...prev,
+                      student_levels: {
+                        ...prev.student_levels,
+                        [s.id]: e.target.value
+                      }
+                    }))}
+                    className="select text-xs sm:text-sm py-2 sm:py-2.5"
+                    required
+                  >
+                    {['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8'].map(level => (
+                      <option key={level} value={level}>{level}</option>
+                    ))}
+                  </select>
                 </div>
               ))}
 
@@ -3275,25 +3284,27 @@ const CourseDetails = () => {
               {/* Custom Total Amount */}
               {renewalResetModal.course_package_id === 'custom' && (
                 <div>
-                  <label className="label text-[10px] sm:text-sm">?????? ???????? ?????? (?.?) *</label>
+                  <label className="label text-[10px] sm:text-sm">المبلغ الإجمالي المخصص (د.ع) *</label>
                   <input
-                    type="number"
-                    value={renewalResetModal.custom_total_amount}
+                    type="text"
+                    value={formatAmountForInput(renewalResetModal.custom_total_amount)}
                     onChange={(e) => {
                       const val = e.target.value;
-                      const totalAmount = parseFloat(val) || 0;
-                      const paidAmount = parseFloat(renewalResetModal.paid_amount) || 0;
-                      const remainingAmount = totalAmount - paidAmount;
-                      
-                      setRenewalResetModal(prev => ({ 
-                        ...prev, 
-                        custom_total_amount: val,
-                        remaining_amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : '0.00'
-                      }));
+                      if (val === '' || /^[\d.]+$/.test(val)) {
+                        const parsedVal = parseAmountInput(val);
+                        const totalAmount = parseFloat(parsedVal) || 0;
+                        const paidAmount = parseFloat(parseAmountInput(renewalResetModal.paid_amount)) || 0;
+                        const remainingAmount = totalAmount - paidAmount;
+                        
+                        setRenewalResetModal(prev => ({ 
+                          ...prev, 
+                          custom_total_amount: parsedVal,
+                          remaining_amount: remainingAmount > 0 ? remainingAmount.toString() : '0'
+                        }));
+                      }
                     }}
                     className="input text-xs sm:text-sm py-2 sm:py-2.5"
-                    min="0"
-                    step="0.01"
+                    placeholder="0"
                     required
                   />
                 </div>
@@ -3359,22 +3370,25 @@ const CourseDetails = () => {
               <div>
                 <label className="label text-[10px] sm:text-sm">مبلغ الدفع (د.ع)</label>
                 <input
-                  type="number"
-                  value={renewalResetModal.paid_amount}
-                  onChange={(e) => handleRenewalPaidAmountChange(e.target.value)}
+                  type="text"
+                  value={formatAmountForInput(renewalResetModal.paid_amount)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^[\d.]+$/.test(value)) {
+                      handleRenewalPaidAmountChange(value);
+                    }
+                  }}
                   className="input text-xs sm:text-sm py-2 sm:py-2.5"
-                  min="0"
-                  step="0.01"
                   placeholder="0"
                 />
               </div>
 
               {/* Remaining Amount (Read-only) */}
-              {renewalResetModal.remaining_amount && parseFloat(renewalResetModal.remaining_amount) > 0 && (
+              {renewalResetModal.remaining_amount && parseFloat(parseAmountInput(renewalResetModal.remaining_amount)) > 0 && (
                 <div>
                   <label className="label text-[10px] sm:text-sm">المتبقي (د.ع)</label>
                   <div className="input bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-xs sm:text-sm py-2 sm:py-2.5">
-                    {renewalResetModal.remaining_amount} د.ع
+                    {formatAmountForInput(renewalResetModal.remaining_amount)} د.ع
                   </div>
                 </div>
               )}
