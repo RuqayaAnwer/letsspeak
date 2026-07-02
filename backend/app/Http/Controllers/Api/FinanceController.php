@@ -1744,6 +1744,143 @@ class FinanceController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get details for a trainer's bonus report
+     */
+    public function bonusesReportDetails(Request $request): JsonResponse
+    {
+        try {
+            if (!$this->isAuthorized($request)) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            }
+
+            $request->validate([
+                'trainer_id' => 'required|integer|exists:trainers,id',
+                'month' => 'required|integer|min:1|max:12',
+                'year' => 'required|integer|min:2020',
+            ]);
+
+            $trainerId = (int) $request->input('trainer_id');
+            $month = (int) $request->input('month');
+            $year = (int) $request->input('year');
+
+            $startDate = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth()->format('Y-m-d');
+            $endDate = \Carbon\Carbon::createFromDate($year, $month, 1)->endOfMonth()->format('Y-m-d');
+
+            $trainer = \App\Models\Trainer::findOrFail($trainerId);
+
+            // 1. Get renewed courses details
+            $renewedCourses = \App\Models\Course::with(['students', 'coursePackage'])
+                ->where('trainer_id', $trainerId)
+                ->where('renewed_with_trainer', true)
+                ->whereMonth('start_date', $month)
+                ->whereYear('start_date', $year)
+                ->get()
+                ->filter(function ($course) {
+                    $studentIds = $course->students->pluck('id')->toArray();
+                    if (empty($studentIds)) return false;
+                    
+                    $previousCourse = \App\Models\Course::whereHas('students', function ($query) use ($studentIds) {
+                        $query->whereIn('students.id', $studentIds);
+                    })
+                    ->where('id', '!=', $course->id)
+                    ->where('start_date', '<', $course->start_date)
+                    ->orderBy('start_date', 'desc')
+                    ->first();
+                    
+                    if ($previousCourse) {
+                        return $previousCourse->trainer_id === $course->trainer_id;
+                    }
+                    return false;
+                })
+                ->map(function ($course) {
+                    return [
+                        'id' => $course->id,
+                        'package_name' => $course->coursePackage->name ?? ($course->is_custom ? 'مخصص' : 'غير محدد'),
+                        'start_date' => $course->start_date,
+                        'is_kids' => $course->is_kids,
+                        'students' => $course->students->map(function ($s) {
+                            return [
+                                'id' => $s->id,
+                                'name' => $s->name,
+                                'level' => $s->level,
+                            ];
+                        }),
+                    ];
+                })
+                ->values();
+
+            // 2. Get completed lectures details
+            $completedLectures = \App\Models\Lecture::with(['course.coursePackage', 'course.students'])
+                ->whereHas('course', function ($query) use ($trainerId) {
+                    $query->where('trainer_id', $trainerId);
+                })
+                ->whereBetween('date', [$startDate, $endDate])
+                ->get()
+                ->filter(function ($lecture) {
+                    if ($lecture->student_attendance && is_array($lecture->student_attendance)) {
+                        foreach ($lecture->student_attendance as $studentData) {
+                            if (is_array($studentData)) {
+                                $attendance = $studentData['attendance'] ?? null;
+                                if ($attendance === 'present' || $attendance === 'absent') {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    return $lecture->is_completed || in_array($lecture->attendance, ['present', 'partially', 'absent']);
+                })
+                ->map(function ($lecture) {
+                    return [
+                        'id' => $lecture->id,
+                        'date' => $lecture->date,
+                        'time' => $lecture->time,
+                        'attendance' => $lecture->attendance,
+                        'course_id' => $lecture->course_id,
+                        'package_name' => $lecture->course->coursePackage->name ?? ($lecture->course->is_custom ? 'مخصص' : 'غير محدد'),
+                        'students' => $lecture->course->students->pluck('name')->toArray(),
+                    ];
+                })
+                ->sortBy('date')
+                ->values();
+
+            // 3. Get Manual Bonus details
+            $payroll = \App\Models\TrainerPayroll::where('trainer_id', $trainerId)
+                ->where('month', $month)
+                ->where('year', $year)
+                ->first();
+
+            $manualBonus = null;
+            if ($payroll && $payroll->bonus_deduction > 0) {
+                $manualBonus = [
+                    'amount' => $payroll->bonus_deduction,
+                    'notes' => $payroll->bonus_deduction_notes ?: 'مكافأة إدارية مخصصة',
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'trainer_id' => $trainerId,
+                    'trainer_name' => $trainer->name,
+                    'renewals_count' => $renewedCourses->count(),
+                    'renewed_courses' => $renewedCourses,
+                    'lectures_count' => $completedLectures->count(),
+                    'completed_lectures' => $completedLectures,
+                    'manual_bonus' => $manualBonus,
+                ],
+            ]);
+
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('bonusesReportDetails Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ في تحميل تفاصيل المكافأة',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }
 
 

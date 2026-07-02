@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/statistics', [FinanceController::class, 'statistics']);
     Route::get('/payments-statistics', [FinanceController::class, 'paymentStatistics']);
     Route::get('/finance/bonuses-report', [FinanceController::class, 'bonusesReport']);
+    Route::get('/finance/bonuses-report/details', [FinanceController::class, 'bonusesReportDetails']);
 
     // Students
     Route::get('/students/{student}/profile', [StudentController::class, 'profile']);
