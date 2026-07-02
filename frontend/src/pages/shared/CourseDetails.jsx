@@ -163,6 +163,13 @@ const CourseDetails = () => {
   const isKidsCourse = (courseObj = course) => {
     if (!courseObj) return false;
     
+    // Check is_kids attribute directly
+    if (courseObj.is_kids) return true;
+    
+    // Check if any student has is_child flagged
+    if (courseObj.students?.some(s => s.is_child)) return true;
+    if (courseObj.student?.is_child) return true;
+    
     // Check package name
     const pkgName = getPackageName(courseObj).toLowerCase();
     if (pkgName.includes('اطفال') || pkgName.includes('kids')) return true;
@@ -171,7 +178,7 @@ const CourseDetails = () => {
     const hasKidsStudent = courseObj.students?.some(student => {
       const studentNotes = (student.notes || '').toLowerCase();
       const studentLevel = (student.pivot?.student_level || student.level || '').toLowerCase();
-      return studentNotes.includes('اطفال') || studentNotes.includes('kids') || 
+      return student.is_child || studentNotes.includes('اطفال') || studentNotes.includes('kids') || 
              studentNotes.includes('استمارة الاطفال') || 
              studentLevel.includes('اطفال') || studentLevel.includes('kids');
     });
@@ -1203,6 +1210,7 @@ const CourseDetails = () => {
     setRenewalResetModal({
       open: true,
       start_date: '',
+      is_kids: isKidsCourse(),
       course_package_id: course.is_custom ? 'custom' : (course.course_package_id?.toString() || ''),
       lectures_count: course.lectures_count || '',
       lecture_time: course.lecture_time ? course.lecture_time.substring(0, 5) : '',
@@ -1220,6 +1228,7 @@ const CourseDetails = () => {
     setRenewalResetModal({
       open: false,
       start_date: '',
+      is_kids: false,
       course_package_id: '',
       lectures_count: '',
       lecture_time: '',
@@ -1371,6 +1380,7 @@ const CourseDetails = () => {
         remaining_amount: renewalResetModal.remaining_amount ? parseFloat(renewalResetModal.remaining_amount) : 0,
         previous_course_id: course.id, // Pass the previous course ID to help identify it as a renewal
         student_levels: renewalResetModal.student_levels || {},
+        is_kids: renewalResetModal.is_kids,
       };
 
       const response = await api.post('/courses', courseData);
@@ -3164,6 +3174,37 @@ const CourseDetails = () => {
                 </div>
               ))}
 
+              {/* Category (Kids vs Adults) */}
+              <div>
+                <label className="label text-[10px] sm:text-sm font-bold mb-2">فئة الكورس *</label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRenewalResetModal(prev => ({ ...prev, is_kids: false, course_package_id: '' }))}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold ${
+                      !renewalResetModal.is_kids
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                        : 'border-gray-300 dark:border-gray-600 text-gray-400'
+                    }`}
+                  >
+                    <span>🎓</span>
+                    <span>كورس كبار</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRenewalResetModal(prev => ({ ...prev, is_kids: true, course_package_id: '' }))}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold ${
+                      renewalResetModal.is_kids
+                        ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/20 text-pink-700 dark:text-pink-300'
+                        : 'border-gray-300 dark:border-gray-600 text-gray-400'
+                    }`}
+                  >
+                    <span>👶</span>
+                    <span>كورس أطفال</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Start Date */}
               <div>
                 <label className="label text-[10px] sm:text-sm">تاريخ البدء *</label>
@@ -3186,11 +3227,19 @@ const CourseDetails = () => {
                   required
                 >
                   <option value="">اختر الباقة</option>
-                  {packages.map((pkg) => (
-                    <option key={pkg.id} value={pkg.id}>
-                      {pkg.name} ({pkg.price} د.ع - {pkg.lectures_count} محاضرة)
-                    </option>
-                  ))}
+                  <option value="custom">مخصص (سعر وتفاصيل مخصصة)</option>
+                  {packages
+                    .filter(pkg => {
+                      const name = (pkg.name || '').toLowerCase();
+                      const isKidsPkg = name.includes('kids') || name.includes('أطفال') || name.includes('اطفال') || name.includes('طفل');
+                      return renewalResetModal.is_kids ? isKidsPkg : !isKidsPkg;
+                    })
+                    .map((pkg) => (
+                      <option key={pkg.id} value={pkg.id}>
+                        {pkg.name} ({pkg.price} د.ع - {pkg.lectures_count} محاضرة)
+                      </option>
+                    ))
+                  }
                 </select>
               </div>
 

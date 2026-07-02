@@ -254,9 +254,29 @@ class CourseController extends Controller
             return response()->json(['message' => 'يجب تحديد طالب واحد على الأقل'], 422);
         }
 
-        $isKids = $request->input('is_kids', false);
-        if (!$isKids) {
-            $isKids = Student::whereIn('id', $studentIds)->where('is_child', true)->exists();
+        $isKids = $request->input('is_kids');
+        if ($isKids === null) {
+            // Check if there is a previous course and it was kids course
+            $previousCourse = null;
+            $previousCourseId = $request->input('previous_course_id');
+            if ($previousCourseId) {
+                $previousCourse = Course::find($previousCourseId);
+            } elseif (!empty($studentIds)) {
+                $previousCourse = Course::whereHas('students', function ($query) use ($studentIds) {
+                    $query->whereIn('students.id', $studentIds);
+                })
+                ->where('start_date', '<', $request->start_date)
+                ->orderBy('start_date', 'desc')
+                ->first();
+            }
+
+            if ($previousCourse && $previousCourse->is_kids) {
+                $isKids = true;
+            } else {
+                $isKids = Student::whereIn('id', $studentIds)->where('is_child', true)->exists();
+            }
+        } else {
+            $isKids = filter_var($isKids, FILTER_VALIDATE_BOOLEAN);
         }
 
         // Automatically determine if this is a renewal with the same trainer
@@ -399,6 +419,11 @@ class CourseController extends Controller
                         Student::where('id', $studentId)->update(['level' => $newLevel]);
                     }
                 }
+            }
+
+            // If the course is kids, update all students is_child attribute to true
+            if ($courseData['is_kids'] ?? false) {
+                Student::whereIn('id', $studentIds)->update(['is_child' => true]);
             }
 
             // Attach students to course (for dual courses)
