@@ -52,6 +52,7 @@ const Students = () => {
     { value: 'L1', label: 'المستوى 1' },
     { value: 'L2', label: 'المستوى 2' },
     { value: 'L3', label: 'المستوى 3' },
+    { value: 'L_PREP', label: 'المستوى التمهيدي' },
     { value: 'L4', label: 'المستوى 4' },
     { value: 'L5', label: 'المستوى 5' },
     { value: 'L6', label: 'المستوى 6' },
@@ -296,6 +297,7 @@ const Students = () => {
       L1: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
       L2: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
       L3: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
+      L_PREP: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
       L4: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
       L5: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
       L6: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
@@ -303,6 +305,21 @@ const Students = () => {
       L8: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
     };
     return colors[level] || colors.L1;
+  };
+
+  const getLevelLabel = (level) => {
+    const labels = {
+      L1: 'المستوى 1',
+      L2: 'المستوى 2',
+      L3: 'المستوى 3',
+      L_PREP: 'المستوى التمهيدي',
+      L4: 'المستوى 4',
+      L5: 'المستوى 5',
+      L6: 'المستوى 6',
+      L7: 'المستوى 7',
+      L8: 'المستوى 8',
+    };
+    return labels[level] || level;
   };
 
   if (loading) {
@@ -433,7 +450,7 @@ const Students = () => {
                         {student.level ? (
                           <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold ${getLevelBadgeColor(student.level)}`}>
                             <GraduationCap className="w-3 h-3" />
-                            {student.level}
+                            {getLevelLabel(student.level)}
                           </span>
                         ) : (
                           <span className="text-xs text-gray-400 dark:text-gray-500">غير مححدد</span>
@@ -612,7 +629,7 @@ const Students = () => {
                           {student.level ? (
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${getLevelBadgeColor(student.level)}`}>
                               <GraduationCap className="w-3 h-3" />
-                              {student.level}
+                              {getLevelLabel(student.level)}
                             </span>
                           ) : (
                             <span className="text-xs text-gray-400 dark:text-gray-500">غير محدد</span>

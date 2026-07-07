@@ -13,6 +13,21 @@ const CourseDetails = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const getLevelLabel = (level) => {
+    if (!level) return '';
+    const labels = {
+      L1: 'المستوى 1',
+      L2: 'المستوى 2',
+      L3: 'المستوى 3',
+      L_PREP: 'المستوى التمهيدي',
+      L4: 'المستوى 4',
+      L5: 'المستوى 5',
+      L6: 'المستوى 6',
+      L7: 'المستوى 7',
+      L8: 'المستوى 8',
+    };
+    return labels[level] || level;
+  };
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -603,7 +618,7 @@ const CourseDetails = () => {
                     className="px-0.5 py-0.5 text-center text-[5px] text-indigo-700 dark:text-indigo-300 font-medium whitespace-nowrap"
                     onClick={() => setSelectedRow(course.id)}
                   >
-                    {course.level}
+                    {getLevelLabel(course.level)}
                   </td>
                   <td 
                     className="px-0.5 py-0.5 text-center text-[5px] text-teal-700 dark:text-teal-300 font-medium whitespace-nowrap"
@@ -782,7 +797,7 @@ const CourseDetails = () => {
                     <div className="bg-teal-50 dark:bg-teal-900/20 rounded p-2 border-r-2 border-teal-300 dark:border-teal-700">
                       <span className="text-[9px] text-gray-500 dark:text-gray-400 block mb-0.5">المستوى</span>
                       <span className="text-xs font-medium text-teal-700 dark:text-teal-300">
-                        {course.level}
+                        {getLevelLabel(course.level)}
                       </span>
                     </div>
                   </div>

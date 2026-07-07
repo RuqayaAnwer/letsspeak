@@ -3183,8 +3183,18 @@ const CourseDetails = () => {
                     className="select text-xs sm:text-sm py-2 sm:py-2.5"
                     required
                   >
-                    {['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8'].map(level => (
-                      <option key={level} value={level}>{level}</option>
+                    {[
+                      { value: 'L1', label: 'المستوى 1' },
+                      { value: 'L2', label: 'المستوى 2' },
+                      { value: 'L3', label: 'المستوى 3' },
+                      { value: 'L_PREP', label: 'المستوى التمهيدي' },
+                      { value: 'L4', label: 'المستوى 4' },
+                      { value: 'L5', label: 'المستوى 5' },
+                      { value: 'L6', label: 'المستوى 6' },
+                      { value: 'L7', label: 'المستوى 7' },
+                      { value: 'L8', label: 'المستوى 8' },
+                    ].map(level => (
+                      <option key={level.value} value={level.value}>{level.label}</option>
                     ))}
                   </select>
                 </div>

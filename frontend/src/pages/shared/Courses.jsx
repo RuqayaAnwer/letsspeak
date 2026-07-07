@@ -20,6 +20,22 @@ const Courses = () => {
     if (course?.course_package_id == null && !pkg) return 'مخصص';
     return '-';
   };
+
+  const getLevelLabel = (level) => {
+    if (!level) return '';
+    const labels = {
+      L1: 'المستوى 1',
+      L2: 'المستوى 2',
+      L3: 'المستوى 3',
+      L_PREP: 'المستوى التمهيدي',
+      L4: 'المستوى 4',
+      L5: 'المستوى 5',
+      L6: 'المستوى 6',
+      L7: 'المستوى 7',
+      L8: 'المستوى 8',
+    };
+    return labels[level] || level;
+  };
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const lastFetchTimeRef = useRef(0);
@@ -580,13 +596,13 @@ const Courses = () => {
                                   <React.Fragment key={s.id}>
                                     {idx > 0 && <span className="font-normal mx-1 text-gray-400">و</span>}
                                     <button onClick={(e) => { e.stopPropagation(); navigate('/students/' + s.id); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
-                                      {s.name} {(s.pivot?.student_level || s.level) ? `(${s.pivot?.student_level || s.level})` : ''}
+                                      {s.name} {(s.pivot?.student_level || s.level) ? `(${getLevelLabel(s.pivot?.student_level || s.level)})` : ''}
                                     </button>
                                   </React.Fragment>
                                 ))
                               : (
                                 <button onClick={(e) => { e.stopPropagation(); navigate('/students/' + (course.students?.[0]?.id || course.student_id)); }} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none">
-                                  {(course.student_name || course.student?.name || course.students?.[0]?.name || '-')} {(course.student_level || course.students?.[0]?.pivot?.student_level || course.student?.level || course.students?.[0]?.level) ? `(${course.student_level || course.students?.[0]?.pivot?.student_level || course.student?.level || course.students?.[0]?.level})` : ''}
+                                  {(course.student_name || course.student?.name || course.students?.[0]?.name || '-')} {(course.student_level || course.students?.[0]?.pivot?.student_level || course.student?.level || course.students?.[0]?.level) ? `(${getLevelLabel(course.student_level || course.students?.[0]?.pivot?.student_level || course.student?.level || course.students?.[0]?.level)})` : ''}
                                 </button>
                               )}
                           </span>
@@ -767,7 +783,7 @@ const Courses = () => {
                                       title="عرض ملف الطالب"
                                     >
                                       {isKidsCourse(course) && <span className="ml-1 text-xs">👧👦</span>}
-                                      {s.name} {(s.pivot?.student_level || s.level) ? `(${s.pivot?.student_level || s.level})` : ''} <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
+                                      {s.name} {(s.pivot?.student_level || s.level) ? `(${getLevelLabel(s.pivot?.student_level || s.level)})` : ''} <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
                                     </button>
                                   </React.Fragment>
                                 ))
@@ -778,7 +794,7 @@ const Courses = () => {
                                   title="عرض ملف الطالب"
                                 >
                                   {isKidsCourse(course) && <span className="ml-1 text-xs">👧👦</span>}
-                                  {course.student_name || course.student?.name || course.students?.[0]?.name || '-'} {(course.student?.level || course.students?.[0]?.level) ? `(${course.student?.level || course.students?.[0]?.level})` : ''}
+                                  {course.student_name || course.student?.name || course.students?.[0]?.name || '-'} {(course.student?.level || course.students?.[0]?.level) ? `(${getLevelLabel(course.student?.level || course.students?.[0]?.level)})` : ''}
                                   <UserCircle className="w-3.5 h-3.5 opacity-60 flex-shrink-0" />
                                 </button>
                               )}

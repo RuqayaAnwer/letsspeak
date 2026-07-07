@@ -87,6 +87,7 @@ const CreateCourse = () => {
     { value: 'L1', label: 'المستوى 1' },
     { value: 'L2', label: 'المستوى 2' },
     { value: 'L3', label: 'المستوى 3' },
+    { value: 'L_PREP', label: 'المستوى التمهيدي' },
     { value: 'L4', label: 'المستوى 4' },
     { value: 'L5', label: 'المستوى 5' },
     { value: 'L6', label: 'المستوى 6' },

@@ -235,7 +235,19 @@ const StudentProfile = () => {
                 )}
                 {profileData?.student?.level && (
                   <span className="flex items-center gap-1.5 bg-black/10 px-2 py-1 rounded-md">
-                    <GraduationCap className="w-4 h-4" /> {profileData.student.level}
+                    <GraduationCap className="w-4 h-4" /> {
+                      {
+                        L1: 'المستوى 1',
+                        L2: 'المستوى 2',
+                        L3: 'المستوى 3',
+                        L_PREP: 'المستوى التمهيدي',
+                        L4: 'المستوى 4',
+                        L5: 'المستوى 5',
+                        L6: 'المستوى 6',
+                        L7: 'المستوى 7',
+                        L8: 'المستوى 8',
+                      }[profileData.student.level] || profileData.student.level
+                    }
                   </span>
                 )}
                 {profileData?.student?.lead?.telegram_id && (

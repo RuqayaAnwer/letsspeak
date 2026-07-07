@@ -81,7 +81,10 @@ class StaffProfileController extends Controller
             $courses = $trainer->courses->map(function ($course) {
                 return [
                     'id' => $course->id,
-                    'title' => $course->title,
+                    'title' => collect([
+                        $course->coursePackage ? $course->coursePackage->name : 'كورس مخصص',
+                        $course->is_dual ? '(ثنائي)' : '(فردي)'
+                    ])->filter()->join(' '),
                     'student' => $course->student,
                     'package' => $course->package,
                     'status' => $course->status,
@@ -137,7 +140,10 @@ class StaffProfileController extends Controller
                 $courses = $targetUser->trainer->courses->map(function ($course) {
                     return [
                         'id' => $course->id,
-                        'title' => $course->title,
+                        'title' => collect([
+                            $course->coursePackage ? $course->coursePackage->name : 'كورس مخصص',
+                            $course->is_dual ? '(ثنائي)' : '(فردي)'
+                        ])->filter()->join(' '),
                         'student' => $course->student,
                         'package' => $course->package,
                         'status' => $course->status,
