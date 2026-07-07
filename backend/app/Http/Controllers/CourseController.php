@@ -567,9 +567,13 @@ class CourseController extends Controller
             'trainer_id' => 'sometimes|required|exists:trainers,id',
             'is_kids' => 'sometimes|boolean',
             'resumption_date' => 'sometimes|nullable|date',
+            'start_date' => 'sometimes|required|date',
         ]);
 
         $oldStatus = $course->status;
+        $oldStartDate = $course->start_date ? $course->start_date->toDateString() : null;
+        $oldLectureTime = $course->lecture_time ? substr($course->lecture_time, 0, 5) : null;
+        $oldLectureDays = $course->lecture_days;
 
         if ($request->has('trainer_id')) {
             $newTrainerId = (int) $request->trainer_id;
@@ -586,13 +590,39 @@ class CourseController extends Controller
         $course->update($request->only([
             'status', 'lecture_time', 'lecture_days', 'trainer_payment_status', 'renewal_status',
             'student_max_postponements_override', 'trainer_max_postponements_override', 'notes',
-            'extra_lectures_count', 'extra_lectures_fee', 'trainer_id', 'is_kids'
+            'extra_lectures_count', 'extra_lectures_fee', 'trainer_id', 'is_kids', 'start_date'
         ]));
 
         $newStatus = $course->status;
+        
         if ($newStatus === 'active' && $oldStatus === 'paused') {
             $resumptionDate = $request->input('resumption_date', now()->toDateString());
             $this->reschedulePendingLectures($course, $resumptionDate);
+        } else {
+            // Trigger rescheduling if the start date, days, or time was manually modified
+            $startDateChanged = $request->has('start_date') && $request->start_date !== $oldStartDate;
+            $daysChanged = $request->has('lecture_days') && $request->lecture_days !== $oldLectureDays;
+            
+            $reqTime = $request->has('lecture_time') ? substr($request->lecture_time, 0, 5) : null;
+            $timeChanged = $request->has('lecture_time') && $reqTime !== $oldLectureTime;
+
+            if ($startDateChanged || $daysChanged || $timeChanged) {
+                if ($startDateChanged) {
+                    $this->reschedulePendingLectures($course, $request->start_date);
+                } else {
+                    // Reschedule remaining lectures starting from the date of the first pending lecture
+                    $firstPending = $course->lectures()
+                        ->whereNotIn('attendance', ['present', 'absent', 'partially', 'postponed_by_student', 'postponed_by_trainer', 'postponed_holiday'])
+                        ->orderBy('lecture_number')
+                        ->first();
+                        
+                    $rescheduleStartDate = $firstPending ? $firstPending->date->toDateString() : now()->toDateString();
+                    if (\Carbon\Carbon::parse($rescheduleStartDate)->isPast()) {
+                        $rescheduleStartDate = now()->toDateString();
+                    }
+                    $this->reschedulePendingLectures($course, $rescheduleStartDate);
+                }
+            }
         }
 
         $course->load(['trainer.user', 'students', 'coursePackage', 'lectures.students', 'lectures.lectureTrainer.user']);

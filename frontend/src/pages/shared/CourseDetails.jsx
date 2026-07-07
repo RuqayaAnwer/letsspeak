@@ -140,6 +140,14 @@ const CourseDetails = () => {
     resumptionDate: new Date().toISOString().split('T')[0],
     reason: '',
   });
+
+  // Edit schedule modal state (start_date, lecture_time, lecture_days)
+  const [editScheduleModal, setEditScheduleModal] = useState({
+    open: false,
+    start_date: '',
+    lecture_time: '',
+    lecture_days: [],
+  });
   
   // Evaluation modal state (for trainer)
   const [evaluationModal, setEvaluationModal] = useState({
@@ -925,6 +933,85 @@ const CourseDetails = () => {
   };
 
   /**
+   * Open edit schedule modal and populate with current course values
+   */
+  const openEditScheduleModal = () => {
+    if (!course) return;
+    
+    const dayMap = {
+      'sun': 'Sunday',
+      'mon': 'Monday',
+      'tue': 'Tuesday',
+      'wed': 'Wednesday',
+      'thu': 'Thursday',
+      'fri': 'Friday',
+      'sat': 'Saturday',
+    };
+    
+    const currentDays = (course.lecture_days || []).map(day => dayMap[day] || day);
+
+    setEditScheduleModal({
+      open: true,
+      start_date: course.start_date ? course.start_date.substring(0, 10) : '',
+      lecture_time: course.lecture_time ? course.lecture_time.substring(0, 5) : '',
+      lecture_days: currentDays,
+    });
+  };
+
+  /**
+   * Handle Edit Schedule Form Submit
+   */
+  const handleEditScheduleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!editScheduleModal.start_date || !editScheduleModal.lecture_time || editScheduleModal.lecture_days.length === 0) {
+      alert('يرجى ملء جميع الحقول المطلوبة');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      const dayMap = {
+        'Sunday': 'sun',
+        'Monday': 'mon',
+        'Tuesday': 'tue',
+        'Wednesday': 'wed',
+        'Thursday': 'thu',
+        'Friday': 'fri',
+        'Saturday': 'sat',
+      };
+      const lectureDays = editScheduleModal.lecture_days.map(day => dayMap[day] || day);
+
+      const response = await api.put(`/courses/${id}`, {
+        start_date: editScheduleModal.start_date,
+        lecture_time: editScheduleModal.lecture_time,
+        lecture_days: lectureDays,
+      });
+
+      if (response.data) {
+        alert('✅ تم تحديث مواعيد الكورس وإعادة جدولة المحاضرات المتبقية بنجاح');
+        setEditScheduleModal({ open: false, start_date: '', lecture_time: '', lecture_days: [] });
+        fetchCourse(); // Refresh the course data
+      }
+    } catch (error) {
+      console.error('Error updating course schedule:', error);
+      alert(error.response?.data?.message || 'حدث خطأ أثناء تحديث مواعيد الكورس');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /**
+   * Toggle selected day in edit schedule modal
+   */
+  const toggleEditScheduleDay = (day) => {
+    const days = editScheduleModal.lecture_days.includes(day)
+      ? editScheduleModal.lecture_days.filter((d) => d !== day)
+      : [...editScheduleModal.lecture_days, day];
+    setEditScheduleModal(prev => ({ ...prev, lecture_days: days }));
+  };
+
+  /**
    * Save non-postponement lecture changes (attendance, notes, etc.)
    */
   const saveLectures = async (showSuccessAlert = true) => {
@@ -1662,6 +1749,14 @@ const CourseDetails = () => {
               >
                 <PlusCircle className="w-5 h-5" />
                 محاضرات إضافية
+              </button>
+              <button
+                onClick={openEditScheduleModal}
+                className="btn-secondary flex items-center gap-2 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 border-orange-300 dark:border-orange-700 mt-2 sm:mt-0"
+                title="تعديل مواعيد الكورس"
+              >
+                <Calendar className="w-5 h-5" />
+                تعديل المواعيد
               </button>
               <button
                 onClick={handleDeleteCourse}
@@ -3169,6 +3264,96 @@ const CourseDetails = () => {
                 {saving ? 'جاري الحفظ...' : 'تأكيد وإعادة تفعيل'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Schedule Modal */}
+      {editScheduleModal.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Calendar className="w-6 h-6 text-orange-500" />
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white">
+                تعديل مواعيد الكورس
+              </h3>
+            </div>
+            
+            <form onSubmit={handleEditScheduleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  تاريخ البدء
+                </label>
+                <input
+                  type="date"
+                  value={editScheduleModal.start_date}
+                  onChange={(e) => setEditScheduleModal(prev => ({ ...prev, start_date: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 text-sm focus:ring-2 focus:ring-orange-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  وقت المحاضرة
+                </label>
+                <input
+                  type="time"
+                  value={editScheduleModal.lecture_time}
+                  onChange={(e) => setEditScheduleModal(prev => ({ ...prev, lecture_time: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 text-sm focus:ring-2 focus:ring-orange-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  أيام المحاضرات
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'Sunday', label: 'الأحد' },
+                    { value: 'Monday', label: 'الاثنين' },
+                    { value: 'Tuesday', label: 'الثلاثاء' },
+                    { value: 'Wednesday', label: 'الأربعاء' },
+                    { value: 'Thursday', label: 'الخميس' },
+                    { value: 'Friday', label: 'الجمعة' },
+                    { value: 'Saturday', label: 'السبت' },
+                  ].map((day) => (
+                    <button
+                      key={day.value}
+                      type="button"
+                      onClick={() => toggleEditScheduleDay(day.value)}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all ${
+                        editScheduleModal.lecture_days.includes(day.value)
+                          ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      }`}
+                    >
+                      {day.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditScheduleModal({ open: false, start_date: '', lecture_time: '', lecture_days: [] })}
+                  className="flex-1 py-2 rounded-lg border border-gray-300 dark:border-gray-600 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
+                  disabled={saving}
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving || editScheduleModal.lecture_days.length === 0}
+                  className="flex-1 py-2 rounded-lg bg-orange-600 text-white font-medium text-sm hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
