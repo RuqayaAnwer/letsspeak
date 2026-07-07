@@ -133,6 +133,13 @@ const CourseDetails = () => {
     reason: '',
   });
   const statusSelectRef = useRef(null);
+
+  // Resumption date modal state (when transitioning from paused to active)
+  const [resumptionModal, setResumptionModal] = useState({
+    open: false,
+    resumptionDate: new Date().toISOString().split('T')[0],
+    reason: '',
+  });
   
   // Evaluation modal state (for trainer)
   const [evaluationModal, setEvaluationModal] = useState({
@@ -850,6 +857,13 @@ const CourseDetails = () => {
         newStatus: value,
         reason: '',
       });
+    } else if (value === 'active' && course?.status === 'paused') {
+      // Transition from paused to active - prompt for resumption date
+      setResumptionModal({
+        open: true,
+        resumptionDate: new Date().toISOString().split('T')[0],
+        reason: '',
+      });
     } else {
       // For other statuses, change directly
       confirmStatusChange(value, '');
@@ -868,20 +882,37 @@ const CourseDetails = () => {
   };
 
   /**
+   * Cancel resumption and restore old value
+   */
+  const cancelResumption = () => {
+    setResumptionModal({ open: false, resumptionDate: '', reason: '' });
+    // Restore select to old value
+    if (statusSelectRef.current && course) {
+      statusSelectRef.current.value = course.status;
+    }
+  };
+
+  /**
    * Confirm and apply status change
    */
-  const confirmStatusChange = async (newStatus, reason) => {
+  const confirmStatusChange = async (newStatus, reason, resumptionDate = null) => {
     try {
       setSaving(true);
-      const response = await api.put(`/courses/${id}/status`, {
+      const payload = {
         status: newStatus,
         reason: reason || null,
-      });
+      };
+      if (resumptionDate) {
+        payload.resumption_date = resumptionDate;
+      }
+      const response = await api.put(`/courses/${id}/status`, payload);
       
       if (response.data.success) {
-        setCourse(prev => ({ ...prev, status: newStatus }));
+        setCourse(response.data.data);
         setStatusChangeModal({ open: false, newStatus: null, reason: '' });
+        setResumptionModal({ open: false, resumptionDate: '', reason: '' });
         console.log(`✓ تم تغيير حالة الكورس إلى: ${newStatus}`);
+        fetchCourse(); // Reload all details including payments/lectures
       } else {
         alert(response.data.message || 'حدث خطأ أثناء تحديث حالة الكورس');
       }
@@ -3075,6 +3106,67 @@ const CourseDetails = () => {
                 className="flex-1 py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resumption Date Modal */}
+      {resumptionModal.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Calendar className="w-6 h-6 text-green-500" />
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white">
+                إعادة تفعيل الكورس
+              </h3>
+            </div>
+            
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              سيتم إعادة تفعيل الكورس وجدولة جميع المحاضرات المتبقية تلقائياً بناءً على تاريخ الاستئناف المختار.
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                تاريخ استئناف الكورس الفعلي
+              </label>
+              <input
+                type="date"
+                value={resumptionModal.resumptionDate}
+                onChange={(e) => setResumptionModal(prev => ({ ...prev, resumptionDate: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 text-sm"
+                required
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                السبب / ملاحظات (اختياري)
+              </label>
+              <textarea
+                value={resumptionModal.reason}
+                onChange={(e) => setResumptionModal(prev => ({ ...prev, reason: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 text-sm"
+                rows="2"
+                placeholder="أدخل سبب إعادة التفعيل..."
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={cancelResumption}
+                className="flex-1 py-2 rounded-lg border border-gray-300 dark:border-gray-600 font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+                disabled={saving}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={() => confirmStatusChange('active', resumptionModal.reason, resumptionModal.resumptionDate)}
+                disabled={saving || !resumptionModal.resumptionDate}
+                className="flex-1 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? 'جاري الحفظ...' : 'تأكيد وإعادة تفعيل'}
               </button>
             </div>
           </div>

@@ -566,7 +566,10 @@ class CourseController extends Controller
             'extra_lectures_fee' => 'sometimes|nullable|numeric|min:0',
             'trainer_id' => 'sometimes|required|exists:trainers,id',
             'is_kids' => 'sometimes|boolean',
+            'resumption_date' => 'sometimes|nullable|date',
         ]);
+
+        $oldStatus = $course->status;
 
         if ($request->has('trainer_id')) {
             $newTrainerId = (int) $request->trainer_id;
@@ -585,6 +588,12 @@ class CourseController extends Controller
             'student_max_postponements_override', 'trainer_max_postponements_override', 'notes',
             'extra_lectures_count', 'extra_lectures_fee', 'trainer_id', 'is_kids'
         ]));
+
+        $newStatus = $course->status;
+        if ($newStatus === 'active' && $oldStatus === 'paused') {
+            $resumptionDate = $request->input('resumption_date', now()->toDateString());
+            $this->reschedulePendingLectures($course, $resumptionDate);
+        }
 
         $course->load(['trainer.user', 'students', 'coursePackage', 'lectures.students', 'lectures.lectureTrainer.user']);
         
@@ -683,6 +692,7 @@ class CourseController extends Controller
         $request->validate([
             'status' => 'required|in:active,paused,finished,paid,cancelled',
             'reason' => 'nullable|string|max:255',
+            'resumption_date' => 'nullable|date',
         ]);
 
         $oldStatus = $course->status;
@@ -690,6 +700,11 @@ class CourseController extends Controller
 
         // Update course status
         $course->update(['status' => $newStatus]);
+
+        if ($newStatus === 'active' && $oldStatus === 'paused') {
+            $resumptionDate = $request->input('resumption_date', now()->toDateString());
+            $this->reschedulePendingLectures($course, $resumptionDate);
+        }
 
         // Log status change in CourseStatusHistory
         CourseStatusHistory::create([
@@ -957,6 +972,45 @@ class CourseController extends Controller
         $course->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Reschedule pending lectures of a course starting from a specific date.
+     */
+    private function reschedulePendingLectures(Course $course, string $startDate)
+    {
+        if (is_array($course->lecture_days) && count($course->lecture_days) > 0) {
+            $dayMap = [
+                'sun' => \Carbon\Carbon::SUNDAY,
+                'mon' => \Carbon\Carbon::MONDAY,
+                'tue' => \Carbon\Carbon::TUESDAY,
+                'wed' => \Carbon\Carbon::WEDNESDAY,
+                'thu' => \Carbon\Carbon::THURSDAY,
+                'fri' => \Carbon\Carbon::FRIDAY,
+                'sat' => \Carbon\Carbon::SATURDAY,
+            ];
+            $lectureDays = array_map(fn($day) => $dayMap[$day] ?? -1, $course->lecture_days);
+            $currentDate = \Carbon\Carbon::parse($startDate);
+            
+            $pendingLectures = $course->lectures()
+                ->whereNotIn('attendance', ['present', 'absent', 'partially', 'postponed_by_student', 'postponed_by_trainer', 'postponed_holiday'])
+                ->orderBy('lecture_number')
+                ->get();
+                
+            foreach ($pendingLectures as $lecture) {
+                // Find next matching day
+                while (!in_array($currentDate->dayOfWeek, $lectureDays)) {
+                    $currentDate->addDay();
+                }
+                
+                $lecture->date = $currentDate->format('Y-m-d');
+                $lecture->time = $lecture->time ?? $course->lecture_time;
+                $lecture->save();
+                
+                // Move to next day for the next iteration
+                $currentDate->addDay();
+            }
+        }
     }
 
     /**

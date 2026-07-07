@@ -40,6 +40,13 @@ const CourseDetails = () => {
   const [notesModal, setNotesModal] = useState({ open: false, courseId: null, notes: '' });
   const [postponementModal, setPostponementModal] = useState({ open: false, courseId: null, student: '', trainer: '' });
   const [assessmentModal, setAssessmentModal] = useState({ open: false, studentId: null, studentName: '' });
+  
+  // Resumption date modal state
+  const [resumptionModal, setResumptionModal] = useState({
+    open: false,
+    courseId: null,
+    resumptionDate: new Date().toISOString().split('T')[0],
+  });
 
   const openAssessmentModal = (studentId, studentName) => {
     if (!studentId) return;
@@ -269,25 +276,49 @@ const CourseDetails = () => {
   };
 
   // تحديث حالة الكورس
-  const handleStatusChange = async (courseId, newStatus) => {
+  const handleStatusChange = async (courseId, newStatus, customResumptionDate = null) => {
+    const course = courses.find(c => c.id === courseId);
+    const oldStatus = course?.status || 'active';
+
+    if (newStatus === 'active' && oldStatus === 'paused' && !customResumptionDate) {
+      // Show resumption modal instead of doing it directly
+      setResumptionModal({
+        open: true,
+        courseId: courseId,
+        resumptionDate: new Date().toISOString().split('T')[0],
+      });
+      return;
+    }
+
     try {
       setUpdatingStatus(prev => ({ ...prev, [courseId]: true }));
       
-      await api.put(`/courses/${courseId}`, {
+      const payload = {
         status: newStatus
-      });
+      };
+      if (customResumptionDate) {
+        payload.resumption_date = customResumptionDate;
+      }
+
+      await api.put(`/courses/${courseId}`, payload);
 
       // تحديث الحالة محلياً
       setCourses(prevCourses =>
-        prevCourses.map(course =>
-          course.id === courseId ? { ...course, status: newStatus } : course
+        prevCourses.map(c =>
+          c.id === courseId ? { ...c, status: newStatus } : c
         )
       );
+
+      if (customResumptionDate) {
+        fetchCourses(); // Reload courses to get updated schedule
+        alert('✅ تم إعادة تفعيل الكورس وتعديل تواريخ المحاضرات المتبقية بنجاح');
+      }
     } catch (err) {
       console.error('Error updating course status:', err);
       alert('حدث خطأ أثناء تحديث حالة الكورس');
     } finally {
       setUpdatingStatus(prev => ({ ...prev, [courseId]: false }));
+      setResumptionModal({ open: false, courseId: null, resumptionDate: '' });
     }
   };
 
@@ -956,6 +987,52 @@ const CourseDetails = () => {
               <button
                 onClick={() => setPostponementModal({ open: false, courseId: null, student: '', trainer: '' })}
                 className="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resumption Modal */}
+      {resumptionModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setResumptionModal({ open: false, courseId: null, resumptionDate: '' })}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+              إعادة تفعيل الكورس
+            </h3>
+            
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
+              سيتم إعادة تفعيل الكورس وترتيب جدول المحاضرات المتبقية تلقائياً بناءً على تاريخ الاستئناف المختار.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  تاريخ استئناف الكورس الفعلي
+                </label>
+                <input
+                  type="date"
+                  value={resumptionModal.resumptionDate}
+                  onChange={(e) => setResumptionModal(prev => ({ ...prev, resumptionDate: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 text-xs"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => handleStatusChange(resumptionModal.courseId, 'active', resumptionModal.resumptionDate)}
+                disabled={updatingStatus[resumptionModal.courseId] || !resumptionModal.resumptionDate}
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold"
+              >
+                {updatingStatus[resumptionModal.courseId] ? 'جاري الحفظ...' : 'تأكيد وتفعيل'}
+              </button>
+              <button
+                onClick={() => setResumptionModal({ open: false, courseId: null, resumptionDate: '' })}
+                className="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors text-xs font-semibold"
               >
                 إلغاء
               </button>
