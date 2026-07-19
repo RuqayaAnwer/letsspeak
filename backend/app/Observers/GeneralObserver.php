@@ -105,7 +105,21 @@ class GeneralObserver
         // Trying to get a specific identifier for the model, like 'name' or 'id'
         $identifier = $model->name ?? $model->title ?? "#" . $model->id;
 
-        return "تم {$actionArName} {$modelArName} ({$identifier})";
+        $user = auth()->user();
+        $suffix = '';
+        if ($user) {
+            $roleAr = [
+                'admin' => 'مدير النظام',
+                'customer_service' => 'خدمة العملاء',
+                'finance' => 'المالية',
+                'accounting' => 'المحاسبة',
+                'trainer' => 'المدرب',
+            ];
+            $roleName = $roleAr[$user->role] ?? $user->role;
+            $suffix = " بواسطة {$roleName} ({$user->name})";
+        }
+
+        return "تم {$actionArName} {$modelArName} ({$identifier}){$suffix}";
     }
 
     protected function getArabicModelName(string $modelName): string

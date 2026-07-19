@@ -1740,6 +1740,16 @@ const CourseDetails = () => {
               </span>
             )}
           </div>
+          {(isCustomerService || isTrainer) && (
+            <button
+              onClick={openEditScheduleModal}
+              className="btn-secondary flex items-center gap-2 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 border-orange-300 dark:border-orange-700 mt-2 sm:mt-0"
+              title="تعديل مواعيد الكورس"
+            >
+              <Calendar className="w-5 h-5" />
+              تعديل المواعيد
+            </button>
+          )}
           {isCustomerService && (
             <>
               <button
@@ -1749,14 +1759,6 @@ const CourseDetails = () => {
               >
                 <PlusCircle className="w-5 h-5" />
                 محاضرات إضافية
-              </button>
-              <button
-                onClick={openEditScheduleModal}
-                className="btn-secondary flex items-center gap-2 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 border-orange-300 dark:border-orange-700 mt-2 sm:mt-0"
-                title="تعديل مواعيد الكورس"
-              >
-                <Calendar className="w-5 h-5" />
-                تعديل المواعيد
               </button>
               <button
                 onClick={handleDeleteCourse}

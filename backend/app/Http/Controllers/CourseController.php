@@ -552,6 +552,22 @@ class CourseController extends Controller
      */
     public function update(Request $request, Course $course)
     {
+        $user = $request->user();
+        if ($user && method_exists($user, 'isTrainer') && $user->isTrainer()) {
+            $trainerId = $user->trainer->id ?? null;
+            if (!$trainerId || $course->trainer_id !== $trainerId) {
+                return response()->json(['message' => 'غير مصرح لك بتعديل هذا الكورس'], 403);
+            }
+
+            // A trainer can only update start_date, lecture_time, and lecture_days
+            $allowedFields = ['start_date', 'lecture_time', 'lecture_days'];
+            foreach ($request->all() as $key => $val) {
+                if (!in_array($key, $allowedFields) && $request->has($key) && $key !== '_method') {
+                    return response()->json(['message' => 'غير مسموح للمدرب بتعديل حقل: ' . $key], 403);
+                }
+            }
+        }
+
         $request->validate([
             'status' => 'sometimes|required|in:active,paused,finished,paid,cancelled',
             'lecture_time' => 'sometimes|date_format:H:i',
