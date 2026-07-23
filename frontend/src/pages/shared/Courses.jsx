@@ -38,10 +38,17 @@ const Courses = () => {
   };
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const lastFetchTimeRef = useRef(0);
+  const [trainersList, setTrainersList] = useState([]);
   const [searchStudent, setSearchStudent] = useState(() => sessionStorage.getItem('coursesSearchStudent') || '');
-  const [searchTrainer, setSearchTrainer] = useState(() => sessionStorage.getItem('coursesSearchTrainer') || '');
+  const [filterTrainerId, setFilterTrainerId] = useState(() => sessionStorage.getItem('coursesFilterTrainerId') || '');
   const [filterCategory, setFilterCategory] = useState(() => sessionStorage.getItem('coursesFilterCategory') || 'all');
+  const [filterStatus, setFilterStatus] = useState(() => sessionStorage.getItem('coursesFilterStatus') || 'all');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [totalCourses, setTotalCourses] = useState(0);
+  const perPage = 25;
 
   useEffect(() => {
     sessionStorage.setItem('coursesFilterCategory', filterCategory);
@@ -52,94 +59,79 @@ const Courses = () => {
   }, [searchStudent]);
 
   useEffect(() => {
-    sessionStorage.setItem('coursesSearchTrainer', searchTrainer);
-  }, [searchTrainer]);
+    sessionStorage.setItem('coursesFilterTrainerId', filterTrainerId);
+  }, [filterTrainerId]);
+
+  useEffect(() => {
+    sessionStorage.setItem('coursesFilterStatus', filterStatus);
+  }, [filterStatus]);
 
   const [studentPaymentsModal, setStudentPaymentsModal] = useState({
     open: false,
     studentId: null,
     studentName: '',
     courseId: null,
-    course: null, // Store course object for dual courses
+    course: null,
     payments: [],
     loading: false,
   });
-  // Profile Modal State
-    // Pagination state for each course status section
-  const [coursesPages, setCoursesPages] = useState({});
 
-  useEffect(() => {
-    fetchCourses(true);
-  }, []);
-
-  // إعادة تحميل الكورسات عند العودة للصفحة
-  useEffect(() => {
-    const handleFocus = () => {
-      fetchCourses(false);
-    };
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, []);
-
-  // Reset pagination when courses change or search filters change
-  useEffect(() => {
-    setCoursesPages({});
-  }, [courses, searchStudent, searchTrainer]);
-
-  const fetchCourses = async (showLoading = true) => {
-    // If background refetch (focus event), throttle it to once every 30 seconds
-    if (!showLoading && Date.now() - lastFetchTimeRef.current < 30000) {
-      return;
+  const fetchTrainers = async () => {
+    try {
+      const response = await api.get('/trainers-list');
+      if (Array.isArray(response.data)) {
+        setTrainersList(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching trainers list:', error);
     }
-    lastFetchTimeRef.current = Date.now();
+  };
+
+  const fetchCourses = async (pageNumber = 1, showLoading = true) => {
     try {
       if (showLoading) {
         setLoading(true);
       }
-      // جلب جميع الكورسات بدون pagination
-      let allCourses = [];
-      let currentPage = 1;
-      let hasMorePages = true;
       
-      while (hasMorePages) {
-        const response = await api.get('/courses', {
-          params: { page: currentPage, per_page: 100 }
-        });
-        
-        console.log(`Fetching page ${currentPage}:`, response.data);
-        
-        if (response?.data) {
-          let coursesData = [];
-          if (response.data.data && Array.isArray(response.data.data)) {
-            // Paginated response
-            coursesData = response.data.data;
-            const totalPages = response.data.last_page || 1;
-            hasMorePages = currentPage < totalPages;
-            currentPage++;
-          } else if (Array.isArray(response.data)) {
-            // Direct array response
-            coursesData = response.data;
-            hasMorePages = false;
-          }
-          
-          allCourses = [...allCourses, ...coursesData];
-          
-          // إذا لم يكن هناك pagination، توقف
-          if (!response.data.last_page) {
-            hasMorePages = false;
-          }
-        } else {
-          hasMorePages = false;
-        }
+      const params = {
+        page: pageNumber,
+        per_page: perPage,
+      };
+
+      if (searchStudent.trim()) {
+        params.search = searchStudent.trim();
       }
       
-      console.log('All Courses Data:', allCourses);
-      console.log('Total courses:', allCourses.length);
+      if (filterTrainerId) {
+        params.trainer_id = filterTrainerId;
+      }
+
+      if (filterCategory !== 'all') {
+        params.category = filterCategory;
+      }
+
+      if (filterStatus !== 'all') {
+        params.status = filterStatus;
+      }
+
+      const response = await api.get('/courses', { params });
       
-      setCourses(allCourses);
+      if (response?.data) {
+        const responseData = response.data;
+        if (responseData.data && Array.isArray(responseData.data)) {
+          setCourses(responseData.data);
+          setCurrentPage(responseData.current_page || 1);
+          setLastPage(responseData.last_page || 1);
+          setTotalCourses(responseData.total || 0);
+        } else if (Array.isArray(responseData)) {
+          setCourses(responseData);
+          setCurrentPage(1);
+          setLastPage(1);
+          setTotalCourses(responseData.length);
+        }
+      }
     } catch (error) {
       console.error('Error fetching courses:', error);
-      console.error('Error response:', error.response?.data);
       setCourses([]);
     } finally {
       if (showLoading) {
@@ -147,6 +139,29 @@ const Courses = () => {
       }
     }
   };
+
+  useEffect(() => {
+    fetchTrainers();
+  }, []);
+
+  // Trigger fetch when filters change (with 500ms debounce for search input)
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchCourses(1, true);
+    }, searchStudent.trim() ? 500 : 0);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchStudent, filterTrainerId, filterCategory, filterStatus]);
+
+  // Handle focus event for background refetching
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchCourses(currentPage, false);
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [currentPage, searchStudent, filterTrainerId, filterCategory, filterStatus]);
+
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -447,124 +462,15 @@ const Courses = () => {
     return false;
   };
 
-  // Filter courses by search criteria
-  const filterCoursesBySearch = (coursesList) => {
-    return coursesList.filter(course => {
-      // Filter by student name
-      if (searchStudent) {
-        const studentMatch = course.students?.some(student => 
-          student.name?.toLowerCase().includes(searchStudent.toLowerCase())
-        );
-        if (!studentMatch) return false;
-      }
-      
-      // Filter by trainer name
-      if (searchTrainer) {
-        const trainerName = course.trainer?.name || course.trainer?.user?.name || course.trainer_name || course.trainer || '';
-        if (trainerName !== searchTrainer) return false;
-      }
-
-      // Filter by course category (kids vs regular)
-      if (filterCategory === 'regular') {
-        if (isKidsCourse(course)) return false;
-      } else if (filterCategory === 'kids') {
-        if (!isKidsCourse(course)) return false;
-      }
-
-      return true;
-    });
-  };
-
-  const coursesArray = Array.isArray(courses) ? courses : [];
-  
-  // Extract unique trainers for the filter dropdown
-  const uniqueTrainers = Array.from(new Set(
-    coursesArray
-      .map(c => c.trainer?.name || c.trainer?.user?.name || c.trainer_name || c.trainer)
-      .filter(Boolean)
-  )).sort((a, b) => a.localeCompare(b, 'ar'));
-  
-  // Filter courses by search criteria first
-  const filteredCourses = filterCoursesBySearch(coursesArray);
-  
-  // Group courses by trainer and sort alphabetically by trainer name
-  const coursesByTrainer = filteredCourses.reduce((acc, course) => {
-    const trainerName = course.trainer?.name || course.trainer?.user?.name || 'غير محدد';
-    const trainerId = course.trainer?.id || 'unknown';
-    const key = `${trainerId}-${trainerName}`;
-    
-    if (!acc[key]) {
-      acc[key] = {
-        trainerName,
-        trainerId,
-        courses: []
-      };
-    }
-    acc[key].courses.push(course);
-    return acc;
-  }, {});
-  
-  // Convert to array and sort by trainer name alphabetically (Arabic)
-  const trainerGroups = Object.values(coursesByTrainer).sort((a, b) => {
-    return a.trainerName.localeCompare(b.trainerName, 'ar');
-  });
-  
-  // Sort courses within each trainer group by: status priority (active > paused > finished > other), then by start date (newest first)
-  trainerGroups.forEach(group => {
-    group.courses.sort((a, b) => {
-      // Status priority
-      const statusPriority = { active: 1, paused: 2, finished: 3 };
-      const priorityA = statusPriority[a.status] || 99;
-      const priorityB = statusPriority[b.status] || 99;
-      
-      if (priorityA !== priorityB) {
-        return priorityA - priorityB;
-      }
-      
-      // If same status, sort by start date (newest first)
-      const dateA = new Date(a.start_date || 0);
-      const dateB = new Date(b.start_date || 0);
-      return dateB - dateA;
-    });
-  });
-
-  const renderCourseTable = (coursesList, title, titleColor, sectionKey) => {
-    if (coursesList.length === 0) return null;
-
-    // Get pagination state for this section
-    const currentPage = coursesPages[sectionKey] || 1;
-    const itemsPerPage = 5;
-    const totalPages = Math.ceil(coursesList.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const currentCourses = coursesList.slice(startIndex, endIndex);
-
-    const setPage = (page) => {
-      setCoursesPages(prev => ({ ...prev, [sectionKey]: page }));
-    };
-
-    const trainerIdFromKey = sectionKey.startsWith('trainer-') 
-      ? sectionKey.split('-')[1] 
-      : null;
-    const isValidTrainerId = trainerIdFromKey && trainerIdFromKey !== 'unknown';
+  const renderUnifiedCourseList = () => {
+    if (courses.length === 0) return null;
 
     return (
-      <div className="mb-4 sm:mb-5">
-        <h2 className={`text-xs sm:text-base font-bold mb-1.5 sm:mb-2 pr-1 sm:pr-16 ${titleColor}`}>
-          {isValidTrainerId ? (
-            <Link to={`/staff-profile/trainer/${trainerIdFromKey}`} className="hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors">
-              {title}
-            </Link>
-          ) : (
-            title
-          )}
-        </h2>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-          {/* Mobile Cards View */}
-          <div className="md:hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden mb-5">
+        {/* Mobile Cards View */}
+        <div className="md:hidden">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
-              {currentCourses.map((course) => {
+            {courses.map((course) => {
               const completionPercentage = calculateCompletionPercentage(course);
               const is75Percent = isAt75Percent(course);
               
@@ -585,9 +491,13 @@ const Courses = () => {
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الكورس #</span>
+                      <span className="text-xs font-bold text-gray-800 dark:text-white">{course.id}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الطالب</span>
                       <div className="text-right flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">{course.id}</span>
                         <div className="flex items-center gap-1 flex-wrap justify-end">
                           <span className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-1">
                             {isKidsCourse(course) && <span className="ml-1 text-[13px]" title="كورس أطفال">👧👦</span>}
@@ -666,6 +576,13 @@ const Courses = () => {
                         )}
                       </span>
                     </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">نسبة التقدم</span>
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        {completionPercentage}%
+                      </span>
+                    </div>
                     
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الحالة</span>
@@ -683,11 +600,6 @@ const Courses = () => {
                         >
                           التفاصيل
                         </Link>
-                        {is75Percent && (
-                          <span className="text-[10px] text-orange-600 dark:text-orange-400 font-semibold">
-                            {completionPercentage}% مكتمل
-                          </span>
-                        )}
                         {(course.status === 'finished' || completionPercentage >= 100) && (
                           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded mt-0.5">
                             ✅ كورس مكتمل
@@ -698,59 +610,25 @@ const Courses = () => {
                   </div>
                 </div>
               );
-              })}
-            </div>
-            
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between p-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                <button
-                  onClick={() => setPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
-                    currentPage === 1
-                      ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-500 text-white hover:bg-blue-600'
-                  }`}
-                >
-                  <ChevronRight className="w-3 h-3" />
-                  السابق
-                </button>
-
-                <span className="text-[9px] text-gray-600 dark:text-gray-400">
-                  صفحة {currentPage} من {totalPages}
-                </span>
-
-                <button
-                  onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-lg font-medium transition-colors text-[9px] ${
-                    currentPage === totalPages
-                      ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-500 text-white hover:bg-blue-600'
-                  }`}
-                >
-                  التالي
-                  <ChevronLeft className="w-3 h-3" />
-                </button>
-              </div>
-            )}
+            })}
           </div>
+        </div>
 
-          {/* Desktop Table View */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-xs">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-xs">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>الطالب</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>الباقة</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>المدرب</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>الحالة</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300" style={{ textAlign: 'center' }}>الإجراءات</th>
+                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الكورس #</th>
+                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الطالب</th>
+                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">المدرب</th>
+                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الباقة والتقدم</th>
+                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
+                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الإجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {coursesList.map((course) => {
+              {courses.map((course) => {
                 const completionPercentage = calculateCompletionPercentage(course);
                 const is75Percent = isAt75Percent(course);
                 
@@ -769,6 +647,9 @@ const Courses = () => {
                               : ''
                     }`}
                   >
+                    <td className="px-2 py-2 text-center font-bold text-gray-600 dark:text-gray-400">
+                      {course.id}
+                    </td>
                     <td className="px-2 py-2 text-center text-gray-800 dark:text-white font-bold">
                       <div className="flex flex-col items-center gap-0.5">
                         <div className="flex items-center gap-1">
@@ -800,7 +681,7 @@ const Courses = () => {
                               )}
                           </span>
                           {isDualCourse(course) && (
-                            <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold font-normal">
+                            <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold">
                               ثنائي
                             </span>
                           )}
@@ -813,22 +694,41 @@ const Courses = () => {
                       </div>
                     </td>
                     <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
-                      <div className="flex items-center justify-center gap-1 flex-wrap">
-                        <PackageBadge course={course} className="text-[10px] font-normal" />
-                        <span className="text-[9px] text-gray-500 dark:text-gray-400 ml-1">
-                          ({course.lectures_count ?? (course.course_package || course.coursePackage)?.lectures_count ?? 0} محاضرة)
-                        </span>
-                        {getStudentId(course) && !isTrainer && (
-                          <button
-                            onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id, course)}
-                            className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer mr-1"
-                            title="عرض تفاصيل الدفعات والاشتراك"
-                          >
-                            <HelpCircle className="w-4 h-4" />
-                          </button>
-                        )}
+                      {course.trainer_id ? (
+                        <Link to={`/staff-profile/trainer/${course.trainer_id}`} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors font-semibold text-[11px]">
+                          {course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'}
+                        </Link>
+                      ) : (
+                        course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'
+                      )}
+                    </td>
+                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <PackageBadge course={course} className="text-[10px] font-normal" />
+                          <span className="text-[9px] text-gray-500 dark:text-gray-400 ml-1">
+                            ({course.lectures_count ?? (course.course_package || course.coursePackage)?.lectures_count ?? 0} محاضرة)
+                          </span>
+                          {getStudentId(course) && !isTrainer && (
+                            <button
+                              onClick={() => fetchStudentPayments(getStudentId(course), getStudentName(course), course.id, course)}
+                              className="text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors cursor-pointer mr-1"
+                              title="عرض تفاصيل الدفعات والاشتراك"
+                            >
+                              <HelpCircle className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                        {/* Progress Bar */}
+                        <div className="w-24 bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden mt-1">
+                          <div 
+                            className={`h-full ${is75Percent ? 'bg-orange-500' : 'bg-blue-500'}`} 
+                            style={{ width: `${completionPercentage}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-[9px] font-semibold mt-0.5">{completionPercentage}% مكتمل</span>
                         {course.extra_lectures_count > 0 && (
-                          <div className="w-full flex justify-center mt-1">
+                          <div className="mt-1">
                             <span className="flex items-center gap-1 bg-amber-100 dark:bg-amber-900/40 text-[9px] text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded">
                               <span className="font-bold">+{course.extra_lectures_count}</span> إضافية
                               {!isTrainer && (
@@ -839,15 +739,6 @@ const Courses = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
-                      {course.trainer_id ? (
-                        <Link to={`/staff-profile/trainer/${course.trainer_id}`} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors font-semibold text-[11px]">
-                          {course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'}
-                        </Link>
-                      ) : (
-                        course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'
-                      )}
-                    </td>
                     <td className="px-2 py-2 text-center">
                       <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${getStatusBadge(course.status)}`}>
                         {getStatusLabel(course.status)}
@@ -856,20 +747,13 @@ const Courses = () => {
                     <td className="px-2 py-2 text-center">
                       <Link
                         to={`/courses/${course.id}`}
-                        className="text-blue-600 dark:text-blue-400 hover:underline text-[10px]"
+                        className="text-blue-600 dark:text-blue-400 hover:underline text-[10px] font-semibold"
                       >
                         التفاصيل
                       </Link>
-                      {is75Percent && (
-                        <div className="mt-1">
-                          <span className="text-[9px] text-orange-600 dark:text-orange-400 font-semibold">
-                            {completionPercentage}% مكتمل
-                          </span>
-                        </div>
-                      )}
                       {(course.status === 'finished' || completionPercentage >= 100) && (
                         <div className="mt-1">
-                          <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5">
+                          <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-955/30 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5">
                             ✅ مكتمل
                           </span>
                         </div>
@@ -880,7 +764,6 @@ const Courses = () => {
               })}
             </tbody>
           </table>
-          </div>
         </div>
       </div>
     );
@@ -908,7 +791,7 @@ const Courses = () => {
 
       {/* Search Filters */}
       <div className="card p-3 sm:p-4 mb-3 sm:mb-4">
-        <div className={`grid grid-cols-1 ${!isTrainer ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-2 sm:gap-4`}>
+        <div className={`grid grid-cols-1 ${!isTrainer ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 sm:gap-4`}>
           <div>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
               البحث باسم الطالب
@@ -927,17 +810,34 @@ const Courses = () => {
                 ابحث عن مدرب
               </label>
               <select
-                value={searchTrainer}
-                onChange={(e) => setSearchTrainer(e.target.value)}
+                value={filterTrainerId}
+                onChange={(e) => setFilterTrainerId(e.target.value)}
                 className="input text-xs sm:text-sm appearance-none cursor-pointer"
               >
                 <option value="">جميع المدربين</option>
-                {uniqueTrainers.map((trainer, idx) => (
-                  <option key={idx} value={trainer}>{trainer}</option>
+                {trainersList.map((trainer) => (
+                  <option key={trainer.id} value={trainer.id}>{trainer.name}</option>
                 ))}
               </select>
             </div>
           )}
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+              حالة الكورس
+            </label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="input text-xs sm:text-sm appearance-none cursor-pointer text-right"
+            >
+              <option value="all">جميع الحالات</option>
+              <option value="active">نشط</option>
+              <option value="paused">متوقف</option>
+              <option value="finished">منتهي</option>
+              <option value="paid">مدفوع</option>
+              <option value="cancelled">ملغي</option>
+            </select>
+          </div>
           <div>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
               تصنيف الكورس
@@ -954,7 +854,7 @@ const Courses = () => {
           </div>
         </div>
         
-        {(searchStudent || searchTrainer || filterCategory !== 'all') && (
+        {(searchStudent || filterTrainerId || filterStatus !== 'all' || filterCategory !== 'all') && (
           <div className="mt-2 sm:mt-3 flex items-center gap-2 text-xs sm:text-sm flex-wrap">
             <span className="text-gray-600 dark:text-gray-400">عوامل التصفية النشطة:</span>
             {searchStudent && (
@@ -966,12 +866,21 @@ const Courses = () => {
                 <X className="w-3 h-3" />
               </button>
             )}
-            {searchTrainer && (
+            {filterTrainerId && (
               <button
-                onClick={() => setSearchTrainer('')}
+                onClick={() => setFilterTrainerId('')}
                 className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded text-xs"
               >
-                المدرب: {searchTrainer}
+                المدرب: {trainersList.find(t => String(t.id) === String(filterTrainerId))?.name || 'محدد'}
+                <X className="w-3 h-3" />
+              </button>
+            )}
+            {filterStatus !== 'all' && (
+              <button
+                onClick={() => setFilterStatus('all')}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 rounded text-xs"
+              >
+                الحالة: {getStatusLabel(filterStatus)}
                 <X className="w-3 h-3" />
               </button>
             )}
@@ -987,8 +896,9 @@ const Courses = () => {
             <button
               onClick={() => {
                 setSearchStudent('');
-                setSearchTrainer('');
+                setFilterTrainerId('');
                 setFilterCategory('all');
+                setFilterStatus('all');
               }}
               className="text-red-600 dark:text-red-400 hover:underline text-xs"
             >
@@ -998,35 +908,51 @@ const Courses = () => {
         )}
       </div>
 
-      {trainerGroups.length === 0 && !loading && (
+      {courses.length === 0 && !loading && (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-xs sm:text-sm bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-          {searchStudent ? (
-            <div>
-              <p className="text-base sm:text-lg mb-2">لا توجد نتائج مطابقة لبحثك</p>
-              <p className="text-xs sm:text-sm">جرب تغيير معايير البحث</p>
-            </div>
-          ) : (
-            'لا توجد كورسات'
-          )}
+          <div>
+            <p className="text-base sm:text-lg mb-2">لا توجد نتائج مطابقة لبحثك</p>
+            <p className="text-xs sm:text-sm">جرب تغيير معايير البحث</p>
+          </div>
         </div>
       )}
 
-      {/* Render courses grouped by trainer */}
-      {trainerGroups.map((trainerGroup, index) => {
-        const sectionKey = `trainer-${trainerGroup.trainerId}-${index}`;
-        const totalCount = trainerGroup.courses.length;
-        
-        return (
-          <div key={sectionKey}>
-            {renderCourseTable(
-              trainerGroup.courses, 
-              `${trainerGroup.trainerName} (${totalCount})`, 
-              'text-blue-600 dark:text-blue-400', 
-              sectionKey
-            )}
-          </div>
-        );
-      })}
+      {renderUnifiedCourseList()}
+
+      {/* Pagination Controls */}
+      {lastPage > 1 && (
+        <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl shadow-lg mb-6">
+          <button
+            onClick={() => currentPage > 1 && fetchCourses(currentPage - 1, true)}
+            disabled={currentPage === 1}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors text-xs ${
+              currentPage === 1
+                ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                : 'bg-blue-500 text-white hover:bg-blue-600'
+            }`}
+          >
+            <ChevronRight className="w-4 h-4" />
+            السابق
+          </button>
+
+          <span className="text-xs text-gray-600 dark:text-gray-400 font-semibold">
+            صفحة {currentPage} من {lastPage} | إجمالي الكورسات: {totalCourses}
+          </span>
+
+          <button
+            onClick={() => currentPage < lastPage && fetchCourses(currentPage + 1, true)}
+            disabled={currentPage === lastPage}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors text-xs ${
+              currentPage === lastPage
+                ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                : 'bg-blue-500 text-white hover:bg-blue-600'
+            }`}
+          >
+            التالي
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Student Payments Modal */}
       {studentPaymentsModal.open && (

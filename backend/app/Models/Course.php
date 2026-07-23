@@ -96,8 +96,12 @@ class Course extends Model
                 return $lecture->trainer_id !== null && $lecture->trainer_id != $this->trainer_id;
             });
         }
+        if (array_key_exists('has_trainer_changed', $this->attributes)) {
+            return (bool) $this->attributes['has_trainer_changed'];
+        }
         return $this->lectures()->whereNotNull('trainer_id')->where('trainer_id', '!=', $this->trainer_id)->exists();
     }
+
 
     /**
      * Get the trainer for this course.
@@ -179,6 +183,9 @@ class Course extends Model
         if ($this->relationLoaded('lectures')) {
             return $this->lectures->where('attendance', Lecture::ATTENDANCE_POSTPONED_BY_STUDENT)->count();
         }
+        if (array_key_exists('student_postponement_count', $this->attributes)) {
+            return (int) $this->attributes['student_postponement_count'];
+        }
         return $this->lectures()->where('attendance', Lecture::ATTENDANCE_POSTPONED_BY_STUDENT)->count();
     }
 
@@ -190,8 +197,12 @@ class Course extends Model
         if ($this->relationLoaded('lectures')) {
             return $this->lectures->where('attendance', Lecture::ATTENDANCE_POSTPONED_BY_TRAINER)->count();
         }
+        if (array_key_exists('trainer_postponement_count', $this->attributes)) {
+            return (int) $this->attributes['trainer_postponement_count'];
+        }
         return $this->lectures()->where('attendance', Lecture::ATTENDANCE_POSTPONED_BY_TRAINER)->count();
     }
+
 
     /**
      * Get all payments for this course.
@@ -240,6 +251,9 @@ class Course extends Model
     {
         if ($this->relationLoaded('lectures')) {
             return $this->lectures->where('attendance', 'present')->count();
+        }
+        if (array_key_exists('completed_lectures_count', $this->attributes)) {
+            return (int) $this->attributes['completed_lectures_count'];
         }
         return $this->lectures()->where('attendance', 'present')->count();
     }

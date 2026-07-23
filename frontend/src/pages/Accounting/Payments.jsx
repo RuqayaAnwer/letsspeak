@@ -235,7 +235,7 @@ const Payments = () => {
         let hasMore = true;
         
         while (hasMore) {
-          const response = await api.get(endpoint, { params: { page: currentPage } });
+          const response = await api.get(endpoint, { params: { page: currentPage, per_page: 1000 } });
           const responseData = response.data;
           const data = responseData?.data || responseData || [];
           
@@ -288,7 +288,7 @@ const Payments = () => {
       let hasMorePages = true;
 
       while (hasMorePages) {
-        const response = await api.get('/courses', { params: { page: currentPage } });
+        const response = await api.get('/courses', { params: { page: currentPage, per_page: 1000 } });
         const responseData = response.data;
         const coursesData = responseData?.data || responseData || [];
 

@@ -21,25 +21,37 @@ class CourseController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Course::with(['trainer.user', 'students', 'coursePackage'])->whereHas('trainer.user');
+        $query = Course::select([
+                'courses.*',
+                DB::raw("SUM(CASE WHEN lectures.id IS NOT NULL AND (lectures.attendance IS NULL OR lectures.attendance NOT LIKE 'postponed_%') THEN 1 ELSE 0 END) as total_lectures_count"),
+                DB::raw("SUM(CASE WHEN lectures.attendance IN ('present', 'partially', 'absent') THEN 1 ELSE 0 END) as completed_lectures_count"),
+                DB::raw("SUM(CASE WHEN lectures.attendance = 'postponed_by_student' THEN 1 ELSE 0 END) as student_postponement_count"),
+                DB::raw("SUM(CASE WHEN lectures.attendance = 'postponed_by_trainer' THEN 1 ELSE 0 END) as trainer_postponement_count"),
+                DB::raw("MAX(CASE WHEN lectures.trainer_id IS NOT NULL AND lectures.trainer_id != courses.trainer_id THEN 1 ELSE 0 END) as has_trainer_changed")
+            ])
+            ->leftJoin('lectures', 'courses.id', '=', 'lectures.course_id')
+            ->groupBy('courses.id')
+            ->with(['trainer.user', 'students', 'coursePackage'])
+            ->whereHas('trainer.user');
+
 
         // Filter by trainer for trainer role (if user is authenticated)
         $user = $request->user();
         if ($user && method_exists($user, 'isTrainer') && $user->isTrainer()) {
             $trainerId = $user->trainer->id ?? null;
             if ($trainerId) {
-                $query->where('trainer_id', $trainerId);
+                $query->where('courses.trainer_id', $trainerId);
             }
         }
 
         // Filter by status
         if ($request->has('status')) {
-            $query->where('status', $request->status);
+            $query->where('courses.status', $request->status);
         }
 
         // Filter by trainer
         if ($request->has('trainer_id')) {
-            $query->where('trainer_id', $request->trainer_id);
+            $query->where('courses.trainer_id', $request->trainer_id);
         }
 
         // Filter by student (using pivot table)
@@ -49,14 +61,23 @@ class CourseController extends Controller
             });
         }
 
+        // Filter by category (kids vs regular)
+        if ($request->has('category') && $request->category !== 'all') {
+            if ($request->category === 'kids') {
+                $query->where('courses.is_kids', true);
+            } elseif ($request->category === 'regular') {
+                $query->where('courses.is_kids', false);
+            }
+        }
+
         // Search
-        if ($request->has('search')) {
+        if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->whereHas('coursePackage', function ($pq) use ($search) {
                       $pq->where('name', 'like', "%{$search}%");
                   })
-                  ->orWhereHas('student', function ($sq) use ($search) {
+                  ->orWhereHas('students', function ($sq) use ($search) {
                       $sq->where('name', 'like', "%{$search}%");
                   })
                   ->orWhereHas('trainer.user', function ($tq) use ($search) {
@@ -65,12 +86,13 @@ class CourseController extends Controller
             });
         }
 
+
         // For trainers, get all courses (no pagination limit)
         // For other roles, use pagination
         if ($user && method_exists($user, 'isTrainer') && $user->isTrainer()) {
-            $courses = $query->with(['lectures.students', 'lectures.lectureTrainer.user', 'coursePackage'])
+            $courses = $query->with(['lectures', 'coursePackage'])
                             ->withCount('lectures')
-                            ->orderBy('id', 'asc')
+                            ->orderBy('courses.id', 'asc')
                             ->get()
                             ->map(function ($course) {
                                 // Ensure coursePackage is loaded
@@ -115,9 +137,8 @@ class CourseController extends Controller
         }
 
         $perPage = (int) $request->input('per_page', 15);
-        $courses = $query->with(['lectures.students', 'lectures.lectureTrainer.user', 'coursePackage', 'students'])
-                        ->withCount('lectures')
-                        ->orderBy('id', 'asc')
+        $courses = $query->with(['coursePackage', 'students'])
+                        ->orderBy('courses.id', 'asc')
                         ->paginate($perPage);
 
         // Pre-fetch all previous trainers in bulk to avoid N+1 query issue
@@ -155,21 +176,8 @@ class CourseController extends Controller
                 $course->load('coursePackage');
             }
             
-            // Manually associate parent course instance to avoid N+1 query loops during serialization
-            foreach ($course->lectures as $lecture) {
-                $lecture->setRelation('course', $course);
-            }
-            
-            // Count completed lectures: either is_completed=true OR attendance is present/absent
-            // Exclude postponed lectures
-            $validLectures = $course->lectures->filter(function ($lecture) {
-                return !str_starts_with($lecture->attendance ?? '', 'postponed_');
-            });
-            $completedCount = $validLectures->filter(function ($lecture) {
-                return $lecture->is_completed || in_array($lecture->attendance, ['present', 'absent']);
-            })->count();
-            $totalCount = $validLectures->count();
-            $totalRequired = $course->lectures_count ?: $totalCount;
+            $completedCount = (int) $course->completed_lectures_count;
+            $totalRequired = $course->lectures_count ?: (int) $course->total_lectures_count;
             $completionPercentage = $totalRequired > 0 ? round(($completedCount / $totalRequired) * 100) : 0;
             
             // Add attributes to the course model
@@ -186,7 +194,6 @@ class CourseController extends Controller
                 $pStudentId = $firstStudent ? $firstStudent->id : null;
                 
                 if ($pStudentId && isset($studentCoursesMap[$pStudentId])) {
-                    // Find the first course in the array (sorted desc by ID) that has course_id < $course->id
                     foreach ($studentCoursesMap[$pStudentId] as $prev) {
                         if ($prev['course_id'] < $course->id) {
                             $previousTrainerName = $prev['trainer_name'];
@@ -1127,7 +1134,8 @@ class CourseController extends Controller
     public function nearingCompletion(Request $request)
     {
         // 1. Get courses with lecture counts through SQL, much faster and zero Memory leakage
-        $coursesData = Course::with(['trainer.user', 'student', 'coursePackage'])
+        $coursesData = Course::with(['trainer.user', 'student', 'students', 'coursePackage'])
+
             ->where('status', 'active')
             ->withCount(['lectures as total_lectures' => function ($query) {
                 $query->where(function($q) {
