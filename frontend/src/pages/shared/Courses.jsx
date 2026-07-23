@@ -36,6 +36,20 @@ const Courses = () => {
     };
     return labels[level] || level;
   };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString;
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}/${month}/${day}`;
+    } catch (e) {
+      return dateString;
+    }
+  };
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [trainersList, setTrainersList] = useState([]);
@@ -585,6 +599,13 @@ const Courses = () => {
                     </div>
                     
                     <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">تاريخ البدء</span>
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        {formatDate(course.start_date)}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الحالة</span>
                       <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(course.status)}`}>
                         {getStatusLabel(course.status)}
@@ -622,6 +643,7 @@ const Courses = () => {
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الكورس #</th>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الطالب</th>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">المدرب</th>
+                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ البدء</th>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الباقة والتقدم</th>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
                 <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الإجراءات</th>
@@ -701,6 +723,9 @@ const Courses = () => {
                       ) : (
                         course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'
                       )}
+                    </td>
+                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px] font-semibold">
+                      {formatDate(course.start_date)}
                     </td>
                     <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
                       <div className="flex flex-col items-center justify-center gap-1">

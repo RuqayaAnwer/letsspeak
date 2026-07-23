@@ -1,19 +1,16 @@
 <?php
-\ = file_get_contents('http://localhost:8000/api/auth/dev-login', false, stream_context_create([
-    'http' => [
-        'method' => 'POST',
-        'header' => 'Content-Type: application/json',
-        'content' => json_encode(['email' => 'admin@example.com', 'password' => 'password'])
-    ]
-]));
-\ = json_decode(\)->token;
-\ = stream_context_create([
-    'http' => [
-        'method' => 'POST',
-        'header' => "Authorization: Bearer \\r\nContent-Type: application/json\r\nAccept: application/json\r\n",
-        'content' => json_encode(['note' => 'test', 'type' => 'general']),
-        'ignore_errors' => true
-    ]
-]);
-\ = file_get_contents('http://localhost:8000/api/students/1/notes', false, \);
-echo \;
+require 'vendor/autoload.php';
+$app = require_once 'bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
+
+$request = Illuminate\Http\Request::create('/api/courses', 'GET', ['per_page' => 15]);
+// Bind request to app instance to simulate auth user check
+$user = App\Models\User::first(); // get a mock user
+$request->setUserResolver(fn() => $user);
+
+$response = Route::dispatch($request);
+echo "Status: " . $response->getStatusCode() . "\n";
+echo "Content length: " . strlen($response->getContent()) . "\n";
+echo "Content: " . substr($response->getContent(), 0, 1000) . "\n";
+?>
