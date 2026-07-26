@@ -5,23 +5,27 @@ $app = require_once 'bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
-use Illuminate\Support\Facades\DB;
+use App\Models\Course;
+use Carbon\Carbon;
 
-$uniqueYears = DB::table('courses')
-    ->select(DB::raw('DISTINCT strftime("%Y", start_date) as year'))
-    ->get();
+$courses = Course::select('id', 'title', 'start_date')->get();
 
-echo "Unique start_date years in courses table:\n";
-foreach ($uniqueYears as $y) {
-    echo "- Year: '" . ($y->year ?? 'NULL') . "'\n";
+$years = [];
+foreach ($courses as $c) {
+    if ($c->start_date) {
+        $year = Carbon::parse($c->start_date)->year;
+        $years[$year] = ($years[$year] ?? 0) + 1;
+    } else {
+        $years['NULL'] = ($years['NULL'] ?? 0) + 1;
+    }
 }
 
-$sampleCourses = DB::table('courses')
-    ->select('id', 'title', 'start_date')
-    ->take(10)
-    ->get();
+echo "Unique start_date years in courses table:\n";
+foreach ($years as $yr => $count) {
+    echo "- Year: '$yr' | Count: $count\n";
+}
 
 echo "\nSample courses:\n";
-foreach ($sampleCourses as $c) {
-    echo "- ID: {$c->id} | Title: '{$c->title}' | Raw start_date: '{$c->start_date}'\n";
+foreach ($courses->take(15) as $c) {
+    echo "- ID: {$c->id} | Title: '{$c->title}' | Raw start_date: '{$c->getRawOriginal('start_date')}'\n";
 }
