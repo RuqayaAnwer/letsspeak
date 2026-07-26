@@ -400,6 +400,17 @@ try {
         ];
 
         if (!$dryRun) {
+            // Check if course already exists to prevent duplication
+            $existingCourse = Course::where('title', $courseTitle)
+                ->where('start_date', 'like', $startDate . '%')
+                ->where('trainer_id', $trainerId)
+                ->first();
+
+            if ($existingCourse) {
+                $skippedCount++;
+                continue;
+            }
+
             $course = Course::create($courseData);
             
             foreach ($studentIds as $index => $sId) {
