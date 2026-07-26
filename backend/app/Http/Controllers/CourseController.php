@@ -331,9 +331,19 @@ class CourseController extends Controller
             }
         }
 
+        $studentNames = [];
+        foreach ($studentIds as $studentId) {
+            $studentObj = Student::find($studentId);
+            if ($studentObj) {
+                $studentNames[] = $studentObj->name;
+            }
+        }
+        $courseTitle = "كورس " . implode(' & ', $studentNames);
+
         $courseData = [
             'trainer_id' => $request->trainer_id,
             'course_package_id' => $isCustom ? null : $request->course_package_id,
+            'title' => $courseTitle,
             'lectures_count' => $lecturesCount,
             'start_date' => $request->start_date,
             'lecture_time' => $request->lecture_time,

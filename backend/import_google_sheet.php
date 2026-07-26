@@ -406,13 +406,32 @@ try {
         ];
 
         if (!$dryRun) {
-            // Check if course already exists to prevent duplication
-            $existingCourse = Course::where('title', $courseTitle)
-                ->where('start_date', 'like', $startDate . '%')
+            // Check if there is an existing course with the same trainer and start date
+            $existingCourses = Course::where('start_date', 'like', $startDate . '%')
                 ->where('trainer_id', $trainerId)
-                ->first();
+                ->get();
+            
+            $alreadyExists = false;
+            foreach ($existingCourses as $ec) {
+                if ($ec->title === $courseTitle) {
+                    $alreadyExists = true;
+                    break;
+                }
+                
+                $ecStudentIds = $ec->students->pluck('id')->toArray();
+                sort($ecStudentIds);
+                sort($studentIds);
+                if (!empty($ecStudentIds) && $ecStudentIds === $studentIds) {
+                    $alreadyExists = true;
+                    if ($ec->title !== $courseTitle) {
+                        $ec->title = $courseTitle;
+                        $ec->save();
+                    }
+                    break;
+                }
+            }
 
-            if ($existingCourse) {
+            if ($alreadyExists) {
                 $skippedCount++;
                 continue;
             }
