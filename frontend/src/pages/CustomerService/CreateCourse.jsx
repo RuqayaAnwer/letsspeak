@@ -1284,7 +1284,7 @@ const CreateCourse = () => {
                   <option value="custom">مخصص</option>
                   {filteredPackages.map((pkg) => (
                     <option key={pkg.id} value={pkg.id}>
-                      {pkg.name} {pkg.lectures_count > 0 ? `- ${pkg.lectures_count} محاضرة` : '- (عدد مفتوح)'} {pkg.price > 0 ? `(${pkg.price} د.ع)` : ''}
+                      {pkg.name} {pkg.lectures_count > 0 ? `- ${pkg.lectures_count} محاضرة` : '- (عدد مفتوح)'} {pkg.price > 0 ? `(${formatAmountForInput(getPackagePrice(pkg.price))} د.ع)` : ''}
                     </option>
                   ))}
                 </select>
