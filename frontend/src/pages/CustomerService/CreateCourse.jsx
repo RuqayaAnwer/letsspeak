@@ -43,6 +43,8 @@ const CreateCourse = () => {
   const [addStudentTarget, setAddStudentTarget] = useState(0); // 0 for Student 1, 1 for Student 2
   const [selectedLeadOption, setSelectedLeadOption] = useState(null);
   const [directAdd, setDirectAdd] = useState(false);
+  const [showSingleDiscount, setShowSingleDiscount] = useState(false);
+  const [showDualDiscount, setShowDualDiscount] = useState([false, false]);
   const [newStudentData, setNewStudentData] = useState({
     name: '',
     phone: '',
@@ -1343,22 +1345,44 @@ const CreateCourse = () => {
             <CreditCard className="w-5 h-5 text-primary-500" />
             معلومات الدفع
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-6">
             {isDual ? (
               // Dual course: Show payment info for each student
               <div className="space-y-6">
                 {formData.student_ids.map((studentId, index) => {
                   const student = students.find(s => s.id.toString() === studentId);
-                  const studentPayment = formData.student_payments[index] || { paid_amount: '', remaining_amount: '' };
+                  const studentPayment = formData.student_payments[index] || { paid_amount: '', discount: '', remaining_amount: '' };
                   
+                  // Calculate student price/packagePrice
+                  const selectedPackage = packages.find((p) => p.id.toString() === formData.course_package_id);
+                  let packagePrice = 0;
+                  if (formData.is_custom) {
+                    packagePrice = parseFloat(parseAmountInput(formData.custom_total_amount)) || 0;
+                  } else if (selectedPackage) {
+                    packagePrice = getStudentPrice(selectedPackage.name, true);
+                  }
+
                   return (
-                    <div key={index} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                      <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3">
-                        {student ? `${student.name} - ${student.phone}` : `الطالب ${index + 1}`}
+                    <div key={index} className="bg-blue-50/50 dark:bg-blue-900/10 rounded-xl p-4 border border-blue-200/60 dark:border-blue-900/30">
+                      <h3 className="text-xs font-bold text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-1.5">
+                        <span>👤</span> {student ? `${student.name} - ${student.phone}` : `الطالب ${index + 1}`}
                       </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {/* 1. المبلغ المدفوع */}
                         <div>
-                          <label className="label" htmlFor={`student-${index}-paid-amount`}>المبلغ المدفوع (د.ع)</label>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className="label mb-0 text-green-700 dark:text-green-400 font-bold" htmlFor={`student-${index}-paid-amount`}>المبلغ المدفوع (د.ع) *</label>
+                            {packagePrice > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleStudentPaidAmountChange(index, packagePrice.toString())}
+                                className="text-[10px] text-teal-600 hover:text-teal-800 dark:text-teal-400 font-bold underline focus:outline-none"
+                              >
+                                دفع كامل ({formatAmountForInput(packagePrice)})
+                              </button>
+                            )}
+                          </div>
                           <input
                             type="text"
                             value={formatAmountForInput(studentPayment.paid_amount)}
@@ -1368,137 +1392,216 @@ const CreateCourse = () => {
                                 handleStudentPaidAmountChange(index, value);
                               }
                             }}
-                            className="input"
-                            placeholder="0"
+                            className="input bg-green-50/50 dark:bg-green-950/10 border-green-300 dark:border-green-800/80 text-green-700 dark:text-green-400 font-bold placeholder-green-400 focus:ring-green-500 focus:bg-white"
+                            placeholder={packagePrice > 0 ? formatAmountForInput(packagePrice) : "0"}
                             id={`student-${index}-paid-amount`}
                             name={`student-${index}-paid-amount`}
+                            required
                           />
                         </div>
 
+                        {/* 2. المبلغ المتبقي */}
                         <div>
-                          <label className="label" htmlFor={`student-${index}-discount`}>الخصم (د.ع)</label>
-                          <input
-                            type="text"
-                            value={formatAmountForInput(studentPayment.discount)}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === '' || /^[\d.]+$/.test(value)) {
-                                handleStudentDiscountChange(index, value);
-                              }
-                            }}
-                            className="input text-red-500 border-red-200 focus:border-red-500 focus:ring-red-500/20"
-                            placeholder="0"
-                            id={`student-${index}-discount`}
-                            name={`student-${index}-discount`}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="label" htmlFor={`student-${index}-remaining-amount`}>المبلغ المتبقي (د.ع)</label>
+                          <label className="label text-gray-700 dark:text-slate-300 font-bold" htmlFor={`student-${index}-remaining-amount`}>المبلغ المتبقي (د.ع)</label>
                           <input
                             type="text"
                             value={formatAmountForInput(studentPayment.remaining_amount)}
-                            className="input bg-[var(--color-bg-secondary)] cursor-not-allowed"
+                            className="input bg-[var(--color-bg-secondary)] border-gray-300 dark:border-gray-700/80 text-gray-700 dark:text-slate-300 cursor-not-allowed font-semibold"
                             placeholder="0"
                             readOnly
                             disabled
                             id={`student-${index}-remaining-amount`}
                             name={`student-${index}-remaining-amount`}
                           />
-                          {formData.course_package_id && (
-                            <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                              يتم حساب المتبقي تلقائياً حسب الباقة
-                            </p>
+                        </div>
+
+                        {/* 3. زر الخصم */}
+                        <div className="flex items-end">
+                          {!showDualDiscount[index] && (parseFloat(parseAmountInput(studentPayment.discount)) || 0) <= 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newShow = [...showDualDiscount];
+                                newShow[index] = true;
+                                setShowDualDiscount(newShow);
+                              }}
+                              className="w-full py-2.5 px-4 rounded-lg border border-dashed border-red-300 hover:border-red-500 text-red-600 hover:text-red-700 bg-red-50/30 hover:bg-red-50/50 dark:bg-red-950/5 dark:hover:bg-red-950/10 font-bold text-xs flex items-center justify-center gap-1.5 transition-all duration-250 cursor-pointer"
+                            >
+                              <span>🏷️</span> إضافة خصم مالي
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newShow = [...showDualDiscount];
+                                newShow[index] = false;
+                                setShowDualDiscount(newShow);
+                                handleStudentDiscountChange(index, ''); // reset discount if closed
+                              }}
+                              className="w-full py-2.5 px-4 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 font-bold text-xs flex items-center justify-center gap-1.5 transition-all duration-250 cursor-pointer"
+                            >
+                              <span>❌</span> إلغاء الخصم
+                            </button>
                           )}
                         </div>
                       </div>
+
+                      {/* حقول الخصم الإضافية للطالب */}
+                      {(showDualDiscount[index] || (parseFloat(parseAmountInput(studentPayment.discount)) || 0) > 0) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50/20 dark:bg-red-950/5 animate-fade-in mt-3">
+                          <div>
+                            <label className="label text-xs text-red-700 dark:text-red-400 font-bold" htmlFor={`student-${index}-discount`}>قيمة الخصم (د.ع) *</label>
+                            <input
+                              type="text"
+                              value={formatAmountForInput(studentPayment.discount)}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || /^[\d.]+$/.test(value)) {
+                                  handleStudentDiscountChange(index, value);
+                                }
+                              }}
+                              className="input text-red-600 border-red-200 focus:border-red-500 focus:ring-red-500/20 text-xs py-2"
+                              placeholder="0"
+                              id={`student-${index}-discount`}
+                              name={`student-${index}-discount`}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="label text-xs text-gray-500">سعر الباقة المخصص للطالب (د.ع)</label>
+                            <input type="text" value={formatAmountForInput(packagePrice)} className="input bg-[var(--color-bg-secondary)] cursor-not-allowed text-gray-400 text-xs py-2" readOnly disabled />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             ) : (
               // Single course: Show single payment info
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+              <div className="space-y-4">
                 {(() => {
-                   const pkg = packages.find(p => p.id.toString() === formData.course_package_id);
-                   const basePrice = formData.is_custom 
-                     ? (parseFloat(parseAmountInput(formData.custom_total_amount)) || 0)
-                     : (pkg ? getPackagePrice(pkg.price) : 0);
-                   const discount = parseFloat(parseAmountInput(formData.discount)) || 0;
-                   const netPrice = Math.max(0, basePrice - discount);
-                   
-                   return (
-                     <>
+                  const pkg = packages.find(p => p.id.toString() === formData.course_package_id);
+                  const basePrice = formData.is_custom 
+                    ? (parseFloat(parseAmountInput(formData.custom_total_amount)) || 0)
+                    : (pkg ? getPackagePrice(pkg.price) : 0);
+                  const discount = parseFloat(parseAmountInput(formData.discount)) || 0;
+                  const netPrice = Math.max(0, basePrice - discount);
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {/* 1. المبلغ المدفوع */}
                         <div>
-                          <label className="label">المبلغ الأصلي (د.ع)</label>
-                          <input type="text" value={formatAmountForInput(basePrice)} className="input bg-[var(--color-bg-secondary)] cursor-not-allowed font-semibold text-gray-500 line-through" readOnly disabled />
-                        </div>
-                        <div>
-                          <label className="label" htmlFor="discount-amount">الخصم (د.ع)</label>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className="label mb-0 text-green-700 dark:text-green-400 font-bold" htmlFor="paid-amount">المبلغ المدفوع (د.ع) *</label>
+                            {basePrice > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handlePaidAmountChange(basePrice.toString())}
+                                className="text-[10px] text-teal-600 hover:text-teal-800 dark:text-teal-400 font-bold underline focus:outline-none"
+                              >
+                                دفع كامل ({formatAmountForInput(basePrice)})
+                              </button>
+                            )}
+                          </div>
                           <input
                             type="text"
-                            value={formatAmountForInput(formData.discount)}
+                            value={formatAmountForInput(formData.paid_amount)}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (value === '' || /^[\d.]+$/.test(value)) {
-                                handleDiscountChange(value);
+                                handlePaidAmountChange(value);
                               }
                             }}
-                            className="input text-red-500 border-red-200 focus:border-red-500 focus:ring-red-500/20"
-                            placeholder="0"
-                            id="discount-amount"
-                            name="discount-amount"
+                            className="input bg-green-50/50 dark:bg-green-950/10 border-green-300 dark:border-green-800/80 text-green-700 dark:text-green-400 font-bold placeholder-green-400 focus:ring-green-500 focus:bg-white"
+                            placeholder={basePrice > 0 ? formatAmountForInput(basePrice) : "0"}
+                            id="paid-amount"
+                            name="paid-amount"
+                            required
                           />
                         </div>
+
+                        {/* 2. المبلغ المتبقي */}
                         <div>
-                          <label className="label text-green-700 dark:text-green-400">الإجمالي بعد الخصم</label>
-                          <input type="text" value={formatAmountForInput(netPrice)} className="input bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 cursor-not-allowed font-bold" readOnly disabled />
+                          <label className="label text-gray-700 dark:text-slate-300 font-bold" htmlFor="remaining-amount">المبلغ المتبقي (د.ع)</label>
+                          <input
+                            type="text"
+                            value={formatAmountForInput(formData.remaining_amount)}
+                            className="input bg-[var(--color-bg-secondary)] border-gray-300 dark:border-gray-700/80 text-gray-700 dark:text-slate-300 cursor-not-allowed font-semibold"
+                            placeholder="0"
+                            readOnly
+                            disabled
+                            id="remaining-amount"
+                            name="remaining-amount"
+                          />
                         </div>
-                     </>
-                   );
+
+                        {/* 3. زر الخصم */}
+                        <div className="flex items-end">
+                          {!showSingleDiscount && discount <= 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => setShowSingleDiscount(true)}
+                              className="w-full py-2.5 px-4 rounded-lg border border-dashed border-red-300 hover:border-red-500 text-red-600 hover:text-red-700 bg-red-50/30 hover:bg-red-50/50 dark:bg-red-950/5 dark:hover:bg-red-950/10 font-bold text-xs flex items-center justify-center gap-1.5 transition-all duration-250 cursor-pointer"
+                            >
+                              <span>🏷️</span> إضافة خصم مالي
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowSingleDiscount(false);
+                                handleDiscountChange(''); // clear discount if closed
+                              }}
+                              className="w-full py-2.5 px-4 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 font-bold text-xs flex items-center justify-center gap-1.5 transition-all duration-250 cursor-pointer"
+                            >
+                              <span>❌</span> إلغاء الخصم
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* حقول الخصم الإضافية - تظهر عند التفعيل */}
+                      {(showSingleDiscount || discount > 0) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50/20 dark:bg-red-950/5 animate-fade-in mt-3">
+                          <div>
+                            <label className="label text-xs text-gray-500">المبلغ الأصلي قبل الخصم (د.ع)</label>
+                            <input type="text" value={formatAmountForInput(basePrice)} className="input bg-[var(--color-bg-secondary)] cursor-not-allowed text-gray-400 line-through text-xs py-2" readOnly disabled />
+                          </div>
+                          
+                          <div>
+                            <label className="label text-xs text-red-700 dark:text-red-400 font-bold" htmlFor="discount-amount">قيمة الخصم (د.ع) *</label>
+                            <input
+                              type="text"
+                              value={formatAmountForInput(formData.discount)}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || /^[\d.]+$/.test(value)) {
+                                  handleDiscountChange(value);
+                                }
+                              }}
+                              className="input text-red-600 border-red-200 focus:border-red-500 focus:ring-red-500/20 text-xs py-2"
+                              placeholder="0"
+                              id="discount-amount"
+                              name="discount-amount"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="label text-xs text-green-700 dark:text-green-400 font-bold">الإجمالي بعد الخصم (د.ع)</label>
+                            <input type="text" value={formatAmountForInput(netPrice)} className="input bg-green-50 dark:bg-green-900/10 border-green-200 text-green-700 dark:text-green-400 cursor-not-allowed font-bold text-xs py-2" readOnly disabled />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
                 })()}
-
-                <div>
-                  <label className="label" htmlFor="paid-amount">المبلغ المدفوع (د.ع)</label>
-                  <input
-                    type="text"
-                    value={formatAmountForInput(formData.paid_amount)}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '' || /^[\d.]+$/.test(value)) {
-                        handlePaidAmountChange(value);
-                      }
-                    }}
-                    className="input"
-                    placeholder="0"
-                    id="paid-amount"
-                    name="paid-amount"
-                  />
-                </div>
-
-                <div>
-                  <label className="label" htmlFor="remaining-amount">المبلغ المتبقي (د.ع)</label>
-                  <input
-                    type="text"
-                    value={formatAmountForInput(formData.remaining_amount)}
-                    className="input bg-[var(--color-bg-secondary)] cursor-not-allowed"
-                    placeholder="0"
-                    readOnly
-                    disabled
-                    id="remaining-amount"
-                    name="remaining-amount"
-                  />
-                  {formData.course_package_id && (
-                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                      يتم حساب المتبقي تلقائياً من سعر الباقة
-                    </p>
-                  )}
-                </div>
               </div>
             )}
 
             {/* Payment Method */}
-            <div>
+            <div className="pt-2">
               <label className="label">طريقة الدفع</label>
               <select
                 value={formData.payment_method}
