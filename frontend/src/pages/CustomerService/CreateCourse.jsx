@@ -844,32 +844,32 @@ const CreateCourse = () => {
   const selectStyles = {
     control: (base, state) => ({
       ...base,
-      borderColor: state.isFocused ? '#14b8a6' : '#1e293b',
+      borderColor: state.isFocused ? '#14b8a6' : 'var(--color-border)',
       boxShadow: state.isFocused ? '0 0 0 1px #14b8a6' : 'none',
       '&:hover': {
         borderColor: '#0d9488'
       },
       padding: '0.125rem',
       borderRadius: '0.5rem',
-      backgroundColor: '#0f172a',
-      color: '#f1f5f9'
+      backgroundColor: 'var(--color-bg-secondary)',
+      color: 'var(--color-text-primary)'
     }),
     singleValue: (base) => ({
       ...base,
-      color: '#f1f5f9'
+      color: 'var(--color-text-primary)'
     }),
     input: (base) => ({
       ...base,
-      color: '#f1f5f9'
+      color: 'var(--color-text-primary)'
     }),
     option: (base, state) => ({
       ...base,
       backgroundColor: state.isSelected 
         ? '#0d9488' 
         : state.isFocused 
-          ? '#1e293b' 
-          : '#0f172a',
-      color: '#f1f5f9',
+          ? 'var(--color-bg-tertiary)' 
+          : 'var(--color-bg-secondary)',
+      color: 'var(--color-text-primary)',
       cursor: 'pointer',
       '&:active': {
         backgroundColor: '#0f766e'
@@ -878,9 +878,9 @@ const CreateCourse = () => {
     menu: (base) => ({
       ...base,
       zIndex: 50,
-      backgroundColor: '#0f172a',
-      border: '1px solid #1e293b',
-      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+      backgroundColor: 'var(--color-bg-primary)',
+      border: '1px solid var(--color-border)',
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
     }),
     menuList: (base) => ({
       ...base,
@@ -888,11 +888,11 @@ const CreateCourse = () => {
     }),
     noOptionsMessage: (base) => ({
       ...base,
-      color: '#94a3b8'
+      color: 'var(--color-text-muted)'
     }),
     loadingMessage: (base) => ({
       ...base,
-      color: '#94a3b8'
+      color: 'var(--color-text-muted)'
     })
   };
 
@@ -1726,8 +1726,8 @@ const CreateCourse = () => {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => !addingStudent && setIsAddStudentModalOpen(false)}
           />
-          <div className="bg-[#0f172a] rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden relative z-[101] animate-scale-up border border-[var(--color-border)]">
-            <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-[#1e293b]">
+          <div className="bg-[var(--color-bg-primary)] rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden relative z-[101] animate-scale-up border border-[var(--color-border)]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
               <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
                 إضافة طالب جديد
               </h3>
@@ -1750,7 +1750,7 @@ const CreateCourse = () => {
                   onChange={(e) => setDirectAdd(e.target.checked)}
                   className="checkbox w-4 h-4 text-teal-600 focus:ring-teal-500 rounded cursor-pointer"
                 />
-                <label htmlFor="directAdd" className="text-xs font-bold text-gray-300 cursor-pointer select-none">
+                <label htmlFor="directAdd" className="text-xs font-bold text-[var(--color-text-secondary)] cursor-pointer select-none">
                   إضافة طالب مباشرة (دون اختيار عميل من مسار العملاء)
                 </label>
               </div>
@@ -1765,7 +1765,7 @@ const CreateCourse = () => {
                     onChange={(e) => setNewStudentData({ ...newStudentData, is_child: e.target.checked })}
                     className="checkbox w-4 h-4 text-pink-600 focus:ring-pink-500 rounded cursor-pointer"
                   />
-                  <label htmlFor="isChild" className="text-xs font-bold text-gray-300 cursor-pointer select-none">
+                  <label htmlFor="isChild" className="text-xs font-bold text-[var(--color-text-secondary)] cursor-pointer select-none">
                     تسجيل كطالب طفل 👶
                   </label>
                 </div>
