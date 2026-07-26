@@ -63,30 +63,36 @@ function parseArabicDays($str) {
 function parseDate($str) {
     if (empty($str)) return null;
     $str = trim($str);
-    
-    $cleaned = preg_replace('/\s+/', ' ', $str);
-    $parts = explode(' ', $cleaned);
-    $datePart = $parts[0];
-    
-    $delimiters = ['/', '-', '.'];
-    $dateElements = [];
-    foreach ($delimiters as $delim) {
-        if (strpos($datePart, $delim) !== false) {
-            $dateElements = explode($delim, $datePart);
-            break;
-        }
-    }
-    
-    if (count($dateElements) === 3) {
-        $day = intval($dateElements[0]);
-        $month = intval($dateElements[1]);
-        $year = intval($dateElements[2]);
-        if ($year < 100) $year += 2000;
+    try {
+        // Strip time if present
+        $parts = explode(' ', $str);
+        $datePart = $parts[0];
         
-        $dayStr = str_pad($day, 2, '0', STR_PAD_LEFT);
-        $monthStr = str_pad($month, 2, '0', STR_PAD_LEFT);
-        return "$year-$monthStr-$dayStr";
-    }
+        $d = null;
+        // Try common formats (both 4-digit and 2-digit years)
+        $formats = ['d/m/Y', 'Y-m-d', 'd-m-Y', 'Y/m/d', 'm/d/Y', 'd/m/y', 'y/m/d', 'm/d/y'];
+        foreach ($formats as $f) {
+            try {
+                $parsed = Carbon::createFromFormat($f, $datePart);
+                if ($parsed) {
+                    $d = $parsed;
+                    break;
+                }
+            } catch (\Exception $e) {}
+        }
+        
+        if (!$d) {
+            $d = Carbon::parse($datePart);
+        }
+        
+        if ($d) {
+            $year = $d->year;
+            if ($year < 100) {
+                $d->year = $year + 2000;
+            }
+            return $d->format('Y-m-d');
+        }
+    } catch (\Exception $e) {}
     return null;
 }
 
