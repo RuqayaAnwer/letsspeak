@@ -255,16 +255,26 @@ const Pipeline = () => {
                     </td>
 
                     <td className="px-4 py-4 text-center border-l border-gray-200 dark:border-[#1e293b]">
-                      {lead.package_selected ? (
-                        <span className={`inline-block border text-[11px] px-3 py-1 rounded-full ${
-                          isKidsLead(lead) 
-                            ? 'border-pink-300 bg-pink-50 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 dark:border-pink-800/50 shadow-sm' 
-                            : 'border-[#334155] bg-white dark:bg-[#1e293b]/50 text-gray-700 dark:text-slate-300'
-                        }`}>
-                          {isKidsLead(lead) && <span className="ml-1 text-[12px]">👧👦</span>}
-                          {lead.package_selected}
-                        </span>
-                      ) : <span className="text-slate-600">-</span>}
+                      <div className="flex flex-col gap-1.5 items-center justify-center">
+                        {lead.package_selected ? (
+                          <span className={`inline-block border text-[11px] px-3 py-1 rounded-full ${
+                            isKidsLead(lead) 
+                              ? 'border-pink-300 bg-pink-50 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 dark:border-pink-800/50 shadow-sm' 
+                              : 'border-[#334155] bg-white dark:bg-[#1e293b]/50 text-gray-700 dark:text-slate-300'
+                          }`}>
+                            {isKidsLead(lead) && <span className="ml-1 text-[12px]">👧👦</span>}
+                            {lead.package_selected}
+                          </span>
+                        ) : <span className="text-gray-400 text-[10px]">- الباقة غير محددة -</span>}
+                        
+                        {lead.current_level ? (
+                          <span className="inline-block text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800/30 px-2 py-0.5 rounded">
+                            {lead.current_level === 'L_PREP' ? 'التمهيدي' : lead.current_level}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-[10px]">- بدون تحديد مستوى -</span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="px-4 py-4 text-center border-l border-gray-200 dark:border-[#1e293b]">
@@ -431,7 +441,22 @@ const Pipeline = () => {
             </div>
             <div>
               <label className="label">المستوى الحالي</label>
-              <input type="text" value={formData.current_level} onChange={e => setFormData({...formData, current_level: e.target.value})} className="input" placeholder="مستوى الطالب الحالي..." />
+              <select 
+                value={formData.current_level} 
+                onChange={e => setFormData({...formData, current_level: e.target.value})} 
+                className="select w-full"
+              >
+                <option value="">اختر المستوى...</option>
+                <option value="L_PREP">المستوى التمهيدي</option>
+                <option value="L1">المستوى 1</option>
+                <option value="L2">المستوى 2</option>
+                <option value="L3">المستوى 3</option>
+                <option value="L4">المستوى 4</option>
+                <option value="L5">المستوى 5</option>
+                <option value="L6">المستوى 6</option>
+                <option value="L7">المستوى 7</option>
+                <option value="L8">المستوى 8</option>
+              </select>
             </div>
            </div>
 

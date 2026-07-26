@@ -114,7 +114,11 @@ class LeadController extends Controller
 
         foreach ($fieldsToCheck as $field) {
             if ($field) {
-                if (preg_match('/(L[1-8])/i', $field, $matches)) {
+                $fieldLower = strtolower($field);
+                if (strpos($fieldLower, 'l_prep') !== false || strpos($fieldLower, 'prep') !== false || strpos($fieldLower, 'تمهيدي') !== false) {
+                    $level = 'L_PREP';
+                    break;
+                } elseif (preg_match('/(L[1-8])/i', $field, $matches)) {
                     $level = strtoupper($matches[1]);
                     break;
                 } elseif (preg_match('/مستوى\s*([1-8])/u', $field, $matches) || preg_match('/المستوى\s*([1-8])/u', $field, $matches)) {
