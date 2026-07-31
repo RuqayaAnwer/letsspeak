@@ -12,39 +12,53 @@ $kernel->bootstrap();
 
 echo "Starting rollback script for Google Sheet import on 2026-07-23...\n";
 
-// Find all courses imported at 2026-07-23 13:42 and 13:43
-$courses = Course::where(function($q) {
-    $q->where('created_at', 'like', '2026-07-23 13:42%')
-      ->orWhere('created_at', 'like', '2026-07-23 13:43%');
-})->get();
+echo "Auto-detecting Google Sheet import minutes (database-agnostic)...\n";
 
-$totalCourses = $courses->count();
-echo "Found $totalCourses courses to delete.\n";
-
-if ($totalCourses === 0) {
-    echo "No courses found to delete.\n";
-    exit;
+// Load all courses with only id and created_at to group in PHP memory
+$allCourses = Course::select('id', 'created_at')->get();
+$grouped = [];
+foreach ($allCourses as $c) {
+    if ($c->created_at) {
+        $minute = $c->created_at->format('Y-m-d H:i');
+        $grouped[$minute][] = $c->id;
+    }
 }
 
-$courseIds = $courses->pluck('id')->toArray();
+$courseIdsToDelete = [];
+echo "Detected bulk creation minutes (>100 courses/min):\n";
+foreach ($grouped as $minute => $ids) {
+    $count = count($ids);
+    if ($count > 100) {
+        echo "- Minute: $minute | Courses Count: $count\n";
+        $courseIdsToDelete = array_merge($courseIdsToDelete, $ids);
+    }
+}
+
+$totalCourses = count($courseIdsToDelete);
+echo "Total courses to delete: $totalCourses\n";
+
+if ($totalCourses === 0) {
+    echo "No bulk imported courses detected to delete.\n";
+    exit;
+}
 
 DB::beginTransaction();
 
 try {
     // Delete payments
-    $paymentsDeleted = Payment::whereIn('course_id', $courseIds)->delete();
+    $paymentsDeleted = Payment::whereIn('course_id', $courseIdsToDelete)->delete();
     echo "Deleted $paymentsDeleted payments.\n";
 
     // Delete lectures
-    $lecturesDeleted = Lecture::whereIn('course_id', $courseIds)->delete();
+    $lecturesDeleted = Lecture::whereIn('course_id', $courseIdsToDelete)->delete();
     echo "Deleted $lecturesDeleted lectures.\n";
 
     // Delete student pivot entries
-    $pivotDeleted = DB::table('course_students')->whereIn('course_id', $courseIds)->delete();
+    $pivotDeleted = DB::table('course_students')->whereIn('course_id', $courseIdsToDelete)->delete();
     echo "Deleted $pivotDeleted student course assignments.\n";
 
     // Delete courses
-    $coursesDeleted = Course::whereIn('id', $courseIds)->delete();
+    $coursesDeleted = Course::whereIn('id', $courseIdsToDelete)->delete();
     echo "Deleted $coursesDeleted courses.\n";
 
     DB::commit();
