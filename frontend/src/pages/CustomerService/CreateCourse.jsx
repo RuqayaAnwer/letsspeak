@@ -184,6 +184,29 @@ const CreateCourse = () => {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
+  useEffect(() => {
+    if (selectedLeadOption && selectedLeadOption.lead) {
+      const lead = selectedLeadOption.lead;
+      const isLeadKids = (lead.source || '').toLowerCase().includes('kids') || 
+                         (lead.package_selected || '').toLowerCase().includes('kids') ||
+                         (lead.notes || '').toLowerCase().includes('kids') ||
+                         (lead.current_level || '').toLowerCase().includes('kids') ||
+                         (lead.source || '').toLowerCase().includes('اطفال') || 
+                         (lead.package_selected || '').toLowerCase().includes('اطفال') ||
+                         (lead.notes || '').toLowerCase().includes('اطفال') ||
+                         (lead.current_level || '').toLowerCase().includes('اطفال');
+
+      setNewStudentData({
+        name: lead.name || '',
+        phone: lead.phone_whatsapp || '',
+        level: lead.current_level || '',
+        notes: lead.notes || '',
+        is_child: isLeadKids,
+        age: lead.age || '',
+      });
+    }
+  }, [selectedLeadOption]);
+
   const fetchData = async (skipLoading = false) => {
     // If background refetch (focus event), throttle it to once every 30 seconds
     if (skipLoading && Date.now() - lastFetchTimeRef.current < 30000) {
@@ -1792,8 +1815,8 @@ const CreateCourse = () => {
                 )}
               </div>
 
-              {!directAdd ? (
-                <div>
+              {!directAdd && (
+                <div className="mb-4">
                   <label className="label text-sm mb-1">ابحث عن العميل في مسار العملاء *</label>
                   <AsyncSelect
                     cacheOptions
@@ -1811,8 +1834,10 @@ const CreateCourse = () => {
                     يجب أن يكون الطالب مسجلاً مسبقاً في مسار العملاء (Leads) قبل إضافته للكورس.
                   </p>
                 </div>
-              ) : (
-                <div className="space-y-3">
+              )}
+
+              {(directAdd || selectedLeadOption) && (
+                <div className="space-y-3 mt-4 pt-4 border-t border-[var(--color-border)]">
                   <div>
                     <label className="label text-xs">اسم الطالب *</label>
                     <input

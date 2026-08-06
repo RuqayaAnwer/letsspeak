@@ -137,13 +137,18 @@ class LeadController extends Controller
             : ($lead->age !== null && $lead->age < 16);
         $age = $request->has('age') ? $request->age : $lead->age;
 
+        // Allow explicit level override from the request
+        if ($request->has('level') && $request->level) {
+            $level = $request->level;
+        }
+
         $student = \App\Models\Student::create([
-            'name' => $lead->name,
-            'phone' => $lead->phone_whatsapp,
+            'name' => $request->input('name', $lead->name),
+            'phone' => $request->input('phone', $lead->phone_whatsapp),
             'level' => $isChild ? 'أطفال' : $level,
-            'notes' => "المستوى التقييمي: " . ($lead->current_level ?? 'غير محدد') . "\n" .
+            'notes' => $request->has('notes') ? $request->notes : ("المستوى التقييمي: " . ($lead->current_level ?? 'غير محدد') . "\n" .
                        "الباقة المطلوبة: " . ($lead->package_selected ?? 'غير محدد') . "\n" . 
-                       $lead->notes . "\n(تم التحويل من مسار العملاء)",
+                       $lead->notes . "\n(تم التحويل من مسار العملاء)"),
             'lead_id' => $lead->id,
             'is_child' => $isChild,
             'age' => $age,

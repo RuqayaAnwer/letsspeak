@@ -30,7 +30,31 @@ const Students = () => {
     is_child: false,
     age: '',
   });
-  const [selectedLeadId, setSelectedLeadId] = useState(null);
+  const [selectedLeadOption, setSelectedLeadOption] = useState(null);
+
+  useEffect(() => {
+    if (selectedLeadOption && selectedLeadOption.lead) {
+      const lead = selectedLeadOption.lead;
+      const isLeadKids = (lead.source || '').toLowerCase().includes('kids') || 
+                         (lead.package_selected || '').toLowerCase().includes('kids') ||
+                         (lead.notes || '').toLowerCase().includes('kids') ||
+                         (lead.current_level || '').toLowerCase().includes('kids') ||
+                         (lead.source || '').toLowerCase().includes('اطفال') || 
+                         (lead.package_selected || '').toLowerCase().includes('اطفال') ||
+                         (lead.notes || '').toLowerCase().includes('اطفال') ||
+                         (lead.current_level || '').toLowerCase().includes('اطفال');
+
+      setFormData(prev => ({
+        ...prev,
+        name: lead.name || '',
+        phone: lead.phone_whatsapp || '',
+        level: lead.current_level || '',
+        notes: lead.notes || '',
+        is_child: isLeadKids,
+        age: lead.age || '',
+      }));
+    }
+  }, [selectedLeadOption]);
 
   const loadLeads = async (inputValue) => {
     if (!inputValue || inputValue.length < 2) return [];
@@ -187,12 +211,16 @@ const Students = () => {
       } else if (directAdd) {
         await api.post('/students', formData);
       } else {
-        if (!selectedLeadId) {
+        if (!selectedLeadOption) {
           alert('يرجى اختيار عميل أولاً');
           setSubmitting(false);
           return;
         }
-        await api.post(`/leads/${selectedLeadId}/convert`, {
+        await api.post(`/leads/${selectedLeadOption.value}/convert`, {
+          name: formData.name,
+          phone: formData.phone,
+          level: formData.is_child ? 'أطفال' : (formData.level || undefined),
+          notes: formData.notes || undefined,
           is_child: formData.is_child,
           age: formData.is_child && formData.age ? parseInt(formData.age) : null,
         });
@@ -241,6 +269,7 @@ const Students = () => {
   };
 
   const openModal = (student = null) => {
+    setSelectedLeadOption(null);
     if (student) {
       setEditingStudent(student);
       setFormData({
@@ -276,7 +305,7 @@ const Students = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingStudent(null);
-    setSelectedLeadId(null);
+    setSelectedLeadOption(null);
     setDirectAdd(false);
     setFormData({ 
       name: '', 
@@ -768,14 +797,14 @@ const Students = () => {
             </div>
           )}
 
-          {!editingStudent && !directAdd ? (
-            <div>
+          {!editingStudent && !directAdd && (
+            <div className="mb-4">
               <label className="label text-sm mb-1">ابحث عن العميل في مسار العملاء *</label>
               <AsyncSelect
                 cacheOptions
                 defaultOptions
                 loadOptions={loadLeads}
-                onChange={(selected) => setSelectedLeadId(selected ? selected.value : null)}
+                onChange={(selected) => setSelectedLeadOption(selected)}
                 placeholder="اكتب اسم العميل أو رقمه للبحث..."
                 noOptionsMessage={({ inputValue }) => !inputValue ? "اكتب للبحث..." : "لا يوجد عملاء مطابقين للبحث"}
                 loadingMessage={() => "جاري البحث..."}
@@ -786,7 +815,9 @@ const Students = () => {
                 يجب أن يكون الطالب مسجلاً مسبقاً في مسار العملاء (Leads).
               </p>
             </div>
-          ) : (
+          )}
+
+          {(editingStudent || directAdd || selectedLeadOption) && (
             <>
               <div>
                 <label className="label">اسم الطالب *</label>
