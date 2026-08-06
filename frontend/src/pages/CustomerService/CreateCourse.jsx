@@ -827,7 +827,12 @@ const CreateCourse = () => {
     return name.includes('kids') || name.includes('أطفال') || name.includes('اطفال') || name.includes('طفل');
   };
 
+  const hasKidsPackages = packages.some(isKidsPackage);
+
   const filteredPackages = packages.filter(pkg => {
+    if (!hasKidsPackages) {
+      return true;
+    }
     if (isKids) {
       return isKidsPackage(pkg);
     } else {

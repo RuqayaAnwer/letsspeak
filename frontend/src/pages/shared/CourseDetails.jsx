@@ -3555,12 +3555,21 @@ const CourseDetails = () => {
                 >
                   <option value="">اختر الباقة</option>
                   <option value="custom">مخصص (سعر وتفاصيل مخصصة)</option>
-                  {packages
-                    .filter(pkg => {
+                  {(() => {
+                    const hasKidsPkgs = packages.some(pkg => {
                       const name = (pkg.name || '').toLowerCase();
-                      const isKidsPkg = name.includes('kids') || name.includes('أطفال') || name.includes('اطفال') || name.includes('طفل');
-                      return renewalResetModal.is_kids ? isKidsPkg : !isKidsPkg;
-                    })
+                      return name.includes('kids') || name.includes('أطفال') || name.includes('اطفال') || name.includes('طفل');
+                    });
+                    return packages
+                      .filter(pkg => {
+                        if (!hasKidsPkgs) {
+                          return true;
+                        }
+                        const name = (pkg.name || '').toLowerCase();
+                        const isKidsPkg = name.includes('kids') || name.includes('أطفال') || name.includes('اطفال') || name.includes('طفل');
+                        return renewalResetModal.is_kids ? isKidsPkg : !isKidsPkg;
+                      });
+                  })()
                     .map((pkg) => (
                       <option key={pkg.id} value={pkg.id}>
                         {pkg.name} ({pkg.price} د.ع - {pkg.lectures_count} محاضرة)
