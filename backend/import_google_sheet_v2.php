@@ -314,6 +314,9 @@ try {
         $partnerName = trim($row[2]);
         $timeStr = trim($row[3]);
         $trainerName = trim($row[4]);
+        if (strtolower($trainerName) === 'amaam') {
+            $trainerName = 'Anaam';
+        }
         $level = trim($row[5]);
         $paymentMethod = trim($row[6]);
         $notes = trim($row[7]);
