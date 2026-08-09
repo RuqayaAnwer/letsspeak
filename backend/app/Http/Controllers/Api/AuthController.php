@@ -63,8 +63,52 @@ class AuthController extends Controller
     public function devLogin(Request $request): JsonResponse
     {
         $request->validate([
-            'role' => 'required|in:trainer,customer_service,finance',
+            'role' => 'required|in:admin,customer_service,trainer,accounting,finance',
+            'email' => 'nullable|email',
         ]);
+
+        $role = $request->role;
+        $email = $request->email;
+
+        if ($role === 'admin' || $role === 'finance' || $role === 'accounting') {
+            if (empty($email)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'البريد الإلكتروني مطلوب للدخول السريع لهذا القسم'
+                ], 400);
+            }
+
+            $allowedEmails = ['admin@letspeak.online', 'eng.ruqayaanwar@gmail.com'];
+            if (!in_array(strtolower(trim($email)), $allowedEmails)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'غير مصرح لك بالدخول السريع لهذه الصلاحية'
+                ], 403);
+            }
+
+            $user = \App\Models\User::where('email', trim($email))->first();
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لم يتم العثور على مستخدم لهذا البريد الإلكتروني'
+                ], 404);
+            }
+
+            $tokenResult = $user->createToken('dev-token');
+            $type = $user->role;
+            if ($user->role === 'trainer') {
+                $user->load('trainer');
+                $type = 'trainer';
+            }
+
+            return response()->json([
+                'success' => true,
+                'user' => $user,
+                'role' => $user->role,
+                'type' => $type,
+                'token' => $tokenResult->plainTextToken,
+            ]);
+        }
 
         $result = $this->authService->devLogin($request->input('role'));
 

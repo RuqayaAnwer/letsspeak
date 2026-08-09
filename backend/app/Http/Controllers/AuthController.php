@@ -10,19 +10,33 @@ use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
-    /**
-     * Dev login - دخول مباشر بدون كلمة مرور للتطوير
-     */
     public function devLogin(Request $request)
     {
         $request->validate([
             'role' => 'required|in:admin,customer_service,trainer,accounting,finance',
+            'email' => 'nullable|email',
         ]);
 
-        $user = User::where('role', $request->role)->first();
+        $role = $request->role;
+        $email = $request->email;
+
+        if ($role === 'admin' || $role === 'finance' || $role === 'accounting') {
+            if (empty($email)) {
+                return response()->json(['message' => 'البريد الإلكتروني مطلوب للدخول السريع لهذا القسم'], 400);
+            }
+
+            $allowedEmails = ['admin@letspeak.online', 'eng.ruqayaanwar@gmail.com'];
+            if (!in_array(strtolower(trim($email)), $allowedEmails)) {
+                return response()->json(['message' => 'غير مصرح لك بالدخول السريع لهذه الصلاحية'], 403);
+            }
+
+            $user = User::where('email', trim($email))->first();
+        } else {
+            $user = User::where('role', $role)->first();
+        }
 
         if (!$user) {
-            return response()->json(['message' => 'لم يتم العثور على مستخدم لهذا القسم'], 404);
+            return response()->json(['message' => 'لم يتم العثور على مستخدم لهذا القسم أو البريد الإلكتروني غير مسجل'], 404);
         }
 
         // Load trainer relation if user is a trainer

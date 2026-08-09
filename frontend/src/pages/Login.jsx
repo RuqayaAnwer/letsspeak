@@ -30,10 +30,19 @@ const Login = () => {
     };
 
     const handleDevLogin = async (role) => {
+        let emailInput = null;
+        if (role === 'admin' || role === 'finance') {
+            emailInput = prompt('يرجى إدخال البريد الإلكتروني للمصادقة السريعة:');
+            if (emailInput === null) return; // User cancelled prompt
+            if (!emailInput.trim()) {
+                setError('البريد الإلكتروني مطلوب للدخول السريع لهذا القسم.');
+                return;
+            }
+        }
         setLoading(true);
         setError('');
         try {
-            const result = await devLogin(role);
+            const result = await devLogin(role, emailInput ? emailInput.trim() : null);
             navigateByRole(result.role);
         } catch (err) {
             setError(err.message || 'فشل تسجيل الدخول.');

@@ -58,9 +58,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const devLogin = async (role) => {
+  const devLogin = async (role, email = null) => {
     try {
-      const response = await api.post('/auth/dev-login', { role });
+      const response = await api.post('/auth/dev-login', { role, email });
       const { token, user: userData } = response.data;
       
       // Ensure role is included
