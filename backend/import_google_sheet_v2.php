@@ -326,11 +326,14 @@ try {
         $courseType = trim($row[14]);
         $subSource = trim($row[15] ?? '');
 
-        // Skip rows with no student name, or marked deleted/duplicate in the sheet
+        // Skip rows with no student name, or marked deleted/duplicate in the sheet, OR if trainer is waiting/empty
         if (empty($studentName) 
             || mb_strpos($studentName, 'حذف') !== false 
             || mb_strpos($studentName, 'مكرر') !== false
             || mb_strpos($studentName, 'مكتمل و منتهي') !== false
+            || empty($trainerName)
+            || mb_strpos($trainerName, 'بانتظار') !== false
+            || mb_strpos($trainerName, 'waiting') !== false
         ) {
             $skippedCount++;
             continue;
