@@ -146,9 +146,18 @@ function determineLecturesAndSplits($pkg, $amountPaid, $isDual, $isKids) {
         $singlePrice = 120000;
         $packageId = 1;
     } elseif (mb_strpos($pkg, 'kids') !== false || mb_strpos($pkg, 'أطفال') !== false || $isKids) {
-        $baseLectures = 12;
-        $singlePrice = 120000;
-        $packageId = 1;
+        // Kids Packages:
+        // 1. Speed (السرعة): 20 lectures / 300,000 IQD
+        // 2. Balance (التوازن): 12 lectures / 180,000 IQD
+        if (mb_strpos($pkg, 'سرعة') !== false || mb_strpos($pkg, 'السرعة') !== false || mb_strpos($pkg, 'speed') !== false || (abs($amountPaid - 300000) < 20000)) {
+            $baseLectures = 20;
+            $singlePrice = 300000;
+            $packageId = null; // Custom 20 lectures course
+        } else {
+            $baseLectures = 12;
+            $singlePrice = 180000;
+            $packageId = 1; // Speed Package (12 lectures in database)
+        }
     } elseif (mb_strpos($pkg, 'group') !== false) {
         $baseLectures = 12;
         $singlePrice = 75000;
