@@ -7,6 +7,7 @@ $kernel->bootstrap();
 use App\Models\User;
 use App\Models\Trainer;
 use App\Models\Student;
+use App\Models\Lead;
 use App\Models\Course;
 use App\Models\CoursePackage;
 use App\Models\Lecture;
@@ -426,6 +427,15 @@ try {
                 }
                 $studentIds[] = $student->id;
                 $dryRunStudents[$sName] = $student->id;
+
+                // Find and update lead status to confirmed
+                if ($isLive) {
+                    $lead = Lead::where('name', 'like', $sName)->first();
+                    if ($lead && $lead->status !== 'confirmed') {
+                        $lead->status = 'confirmed';
+                        $lead->save();
+                    }
+                }
             }
         }
 
