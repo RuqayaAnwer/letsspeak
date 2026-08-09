@@ -59,16 +59,62 @@ const CustomSlidersIcon = ({ className }) => (
   </svg>
 );
 
+export const deducePackageName = (course) => {
+  if (!course) return '-';
+  
+  const lectures = course.lectures_count ?? 0;
+  const isKids = course.is_kids ?? false;
+  const isDual = course.is_dual ?? false;
+  const totalAmount = parseFloat(course.total_amount ?? 0);
+  
+  // 1. Kids Packages
+  if (isKids) {
+    if (lectures === 20) return 'أطفال (سرعة)';
+    if (lectures === 12) return 'أطفال (توازن)';
+    return `أطفال مخصص (${lectures} محاضرة)`;
+  }
+  
+  // 2. Bmazaji (8 lectures)
+  if (lectures === 8) {
+    return 'بمزاجي';
+  }
+  
+  // 3. 12 Lectures Packages (Tawazon, Speed, Group, Dual)
+  if (lectures === 12) {
+    if (isDual) {
+      if (totalAmount === 135000 || totalAmount === 270000) return 'توازن (ثنائي)';
+      if (totalAmount === 225000 || totalAmount === 450000) return 'سرعة (ثنائي)';
+      return 'ثنائي';
+    }
+    
+    if (totalAmount === 75000) return 'جروب (مجموعة)';
+    if (totalAmount === 120000) return 'السرعة';
+    if (totalAmount === 150000) return 'التوازن';
+    
+    // Check original database name
+    const origName = course.course_package?.name || course.coursePackage?.name;
+    if (origName === 'Speed Package') {
+      return 'التوازن';
+    }
+  }
+  
+  const origName = course.course_package?.name || course.coursePackage?.name;
+  if (origName && origName !== 'Speed Package' && !origName.includes('محاضرة')) {
+    return origName;
+  }
+  
+  if (lectures === 24) return 'باقة 24 محاضرة';
+  if (lectures === 36) return 'باقة 36 محاضرة';
+  
+  return origName || 'مخصص';
+};
+
 const PackageBadge = ({ course, packageName, className = '' }) => {
   let name = packageName;
 
   // If packageName is not explicitly provided, try to extract it from the course object
   if (!name && course) {
-    if (course.is_custom) {
-      name = 'مخصص';
-    } else {
-      name = course.course_package?.name || course.coursePackage?.name || 'كورس بدون باقة';
-    }
+    name = deducePackageName(course);
   }
 
   // Fallback for nulls or empties

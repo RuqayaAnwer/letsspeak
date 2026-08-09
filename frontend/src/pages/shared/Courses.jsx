@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Plus, PlusCircle, AlertTriangle, Info, X, HelpCircle, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
 import api from '../../api/axios';
 import { formatCurrency } from '../../utils/currencyFormat';
-import PackageBadge from '../../components/PackageBadge';
+import PackageBadge, { deducePackageName } from '../../components/PackageBadge';
 
 // Updated: 2025-12-21 - Courses separated by status with smaller fonts
 const Courses = () => {
@@ -13,12 +13,7 @@ const Courses = () => {
   
   // Helper function to get package name (handles custom packages)
   const getPackageName = (course) => {
-    if (course?.is_custom) return 'مخصص';
-    const pkg = course?.course_package || course?.coursePackage;
-    if (pkg?.name) return pkg.name;
-    // كورس بدون باقة = مخصص (احتياط إذا لم يُرسل is_custom)
-    if (course?.course_package_id == null && !pkg) return 'مخصص';
-    return '-';
+    return deducePackageName(course);
   };
 
   const getLevelLabel = (level) => {
