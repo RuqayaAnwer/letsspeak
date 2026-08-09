@@ -26,6 +26,7 @@ const AdminUsers = () => {
   const [totalTrainersCount, setTotalTrainersCount] = useState(0);
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -54,6 +55,13 @@ const AdminUsers = () => {
     base_salary: '',
     submitting: false,
   });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchQuery);
+    }, searchQuery.trim() ? 500 : 0);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchUsers();
@@ -255,6 +263,7 @@ const AdminUsers = () => {
           <h1 className="page-title flex items-center gap-2">
             <Users className="w-5 h-5 text-purple-500" />
             إدارة المستخدمين
+            {loading && <span className="animate-spin inline-block w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full"></span>}
           </h1>
           <p className="page-subtitle">إضافة وتعديل موظفي النظام</p>
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
@@ -280,8 +289,8 @@ const AdminUsers = () => {
           <input
             type="text"
             placeholder="بحث بالاسم أو الإيميل..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="input pr-9 text-sm w-full"
           />
         </div>
@@ -340,7 +349,7 @@ const AdminUsers = () => {
       </div>
 
       {/* Content */}
-      {loading ? <LoadingSpinner /> : (
+      {loading && users.length === 0 ? <LoadingSpinner /> : (
         <>
           {/* Mobile Cards */}
           <div className="md:hidden space-y-2">

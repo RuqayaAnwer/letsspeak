@@ -428,7 +428,7 @@ const Courses = () => {
              : (typeof course.student === 'object' ? course.student?.name : course.student)) || '-';
   };
 
-  if (loading) {
+  if (loading && courses.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -799,8 +799,9 @@ const Courses = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
         <div>
-          <h1 className="text-base sm:text-xl font-bold text-gray-800 dark:text-white pr-2 sm:pr-20">
+          <h1 className="text-base sm:text-xl font-bold text-gray-800 dark:text-white pr-2 sm:pr-20 flex items-center gap-2">
             الكورسات
+            {loading && <span className="animate-spin inline-block w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></span>}
           </h1>
         </div>
         {isCustomerService && (
