@@ -29,6 +29,77 @@ echo "==================================================\n\n";
 $googleSheetUrl = 'https://docs.google.com/spreadsheets/d/1db0NYPAOunswRyxOMfprGcU-zCfUfMBsxZfKbMcpLAY/export?format=csv&gid=556864345';
 
 // Helper parsers
+function normalizeTrainerName($name) {
+    $name = trim($name);
+    
+    $map = [
+        // English -> Arabic (DB is Arabic)
+        'mohammed' => 'محمد أحمد',
+        'mohamed' => 'محمد أحمد',
+        'mohammad' => 'محمد أحمد',
+        'fatima' => 'فاطمة علي',
+        'fatimah' => 'فاطمة علي',
+        'ali' => 'علي حسن',
+        'ahmed' => 'أحمد محمد',
+        'ahmad' => 'أحمد محمد',
+        'sara' => 'سارة علي',
+        'sarah' => 'سارة علي',
+        
+        // Arabic -> English (DB is English)
+        'فرح' => 'Farah',
+        'بتول' => 'Batool',
+        'وسام' => 'Wisam',
+        'رغد' => 'Raghad',
+        'اسراء' => 'Israa',
+        'إسراء' => 'Israa',
+        'زهور' => 'Zhoor',
+        'مصطفى' => 'Mustafa',
+        'حسن' => 'Hasan',
+        'براء' => 'Baraa',
+        'ابتسام' => 'Ibtisam',
+        'نوران' => 'Noran',
+        'ميس' => 'Mais',
+        'عائشة' => 'Aisha',
+        'بنين' => 'Baneen H',
+        'منار' => 'Manar Drgham',
+        'حسين' => 'Hussein',
+        'حيدر' => 'Haider',
+        'أريج' => 'Areej',
+        'طه' => 'Taha',
+        'داليا' => 'Dalia',
+        'تبارك' => 'Tabark',
+        'نور' => 'Noor',
+        'رند' => 'Rand',
+        'انعام' => 'Anaam',
+        'أنعام' => 'Anaam',
+        'amaam' => 'Anaam',
+        'إنعام' => 'Anaam',
+        'ابتهال' => 'Ibtihal',
+        'غدير' => 'Ghadeer',
+        'يسر' => 'Yusur Ahmed',
+        'آية' => 'Aya Yasir',
+        'اية' => 'Aya Yasir',
+        'أمينة' => 'Amina Rabah',
+        'امينة' => 'Amina Rabah',
+    ];
+    
+    $clean = mb_strtolower($name);
+    $clean = str_replace(['أ', 'إ', 'آ'], 'ا', $clean);
+    $clean = str_replace('ة', 'ه', $clean);
+    
+    foreach ($map as $key => $target) {
+        $cleanKey = mb_strtolower($key);
+        $cleanKey = str_replace(['أ', 'إ', 'آ'], 'ا', $cleanKey);
+        $cleanKey = str_replace('ة', 'ه', $cleanKey);
+        
+        if ($clean === $cleanKey) {
+            return $target;
+        }
+    }
+    
+    return $name;
+}
+
 function parseArabicDays($str) {
     if (empty($str)) {
         return [];
@@ -313,10 +384,7 @@ try {
         $studentName = trim($row[1]);
         $partnerName = trim($row[2]);
         $timeStr = trim($row[3]);
-        $trainerName = trim($row[4]);
-        if (strtolower($trainerName) === 'amaam') {
-            $trainerName = 'Anaam';
-        }
+        $trainerName = normalizeTrainerName($row[4]);
         $level = trim($row[5]);
         $paymentMethod = trim($row[6]);
         $notes = trim($row[7]);
