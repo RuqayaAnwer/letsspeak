@@ -50,6 +50,7 @@ const Courses = () => {
   const [trainersList, setTrainersList] = useState([]);
   const [searchStudent, setSearchStudent] = useState(() => sessionStorage.getItem('coursesSearchStudent') || '');
   const [filterTrainerId, setFilterTrainerId] = useState(() => sessionStorage.getItem('coursesFilterTrainerId') || '');
+  const [trainerSearchText, setTrainerSearchText] = useState('');
   const [filterCategory, setFilterCategory] = useState(() => sessionStorage.getItem('coursesFilterCategory') || 'all');
   const [filterStatus, setFilterStatus] = useState(() => sessionStorage.getItem('coursesFilterStatus') || 'all');
 
@@ -74,6 +75,31 @@ const Courses = () => {
   useEffect(() => {
     sessionStorage.setItem('coursesFilterStatus', filterStatus);
   }, [filterStatus]);
+
+  // Synchronize trainerSearchText with filterTrainerId
+  useEffect(() => {
+    if (filterTrainerId && trainersList.length > 0) {
+      const selected = trainersList.find(t => String(t.id) === String(filterTrainerId));
+      if (selected) {
+        setTrainerSearchText(selected.name);
+      }
+    } else if (!filterTrainerId) {
+      setTrainerSearchText('');
+    }
+  }, [filterTrainerId, trainersList]);
+
+  const handleTrainerSearchChange = (e) => {
+    const value = e.target.value;
+    setTrainerSearchText(value);
+    
+    // Find if the typed value matches any trainer name exactly (case insensitive)
+    const matched = trainersList.find(t => t.name.trim().toLowerCase() === value.trim().toLowerCase());
+    if (matched) {
+      setFilterTrainerId(String(matched.id));
+    } else if (value === '') {
+      setFilterTrainerId('');
+    }
+  };
 
   const [studentPaymentsModal, setStudentPaymentsModal] = useState({
     open: false,
@@ -830,16 +856,19 @@ const Courses = () => {
               <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                 ابحث عن مدرب
               </label>
-              <select
-                value={filterTrainerId}
-                onChange={(e) => setFilterTrainerId(e.target.value)}
-                className="input text-xs sm:text-sm appearance-none cursor-pointer"
-              >
-                <option value="">جميع المدربين</option>
+              <input
+                list="trainers-datalist"
+                value={trainerSearchText}
+                onChange={handleTrainerSearchChange}
+                placeholder="ابحث عن مدرب بالكتابة أو الاختيار..."
+                className="input text-xs sm:text-sm text-right"
+                style={{ direction: 'rtl' }}
+              />
+              <datalist id="trainers-datalist">
                 {trainersList.map((trainer) => (
-                  <option key={trainer.id} value={trainer.id}>{trainer.name}</option>
+                  <option key={trainer.id} value={trainer.name} />
                 ))}
-              </select>
+              </datalist>
             </div>
           )}
           <div>

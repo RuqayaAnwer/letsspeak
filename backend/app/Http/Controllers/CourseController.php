@@ -44,9 +44,27 @@ class CourseController extends Controller
             }
         }
 
-        // Filter by status
+        // Filter by status (including completed active courses in finished list, and excluding them from active list)
         if ($request->filled('status') && $request->status !== 'all' && $request->status !== 'null' && $request->status !== 'undefined') {
-            $query->where('courses.status', $request->status);
+            if ($request->status === 'active') {
+                $query->where('courses.status', 'active');
+                $query->havingRaw("
+                    SUM(CASE WHEN lectures.attendance IN ('present', 'partially', 'absent') THEN 1 ELSE 0 END) < 
+                    COALESCE(courses.lectures_count, SUM(CASE WHEN lectures.id IS NOT NULL AND (lectures.attendance IS NULL OR lectures.attendance NOT LIKE 'postponed_%') THEN 1 ELSE 0 END))
+                ");
+            } elseif ($request->status === 'finished') {
+                $query->where(function ($q) {
+                    $q->where('courses.status', 'finished')
+                      ->orWhere('courses.status', 'active');
+                });
+                $query->havingRaw("
+                    (courses.status = 'finished') OR 
+                    (courses.status = 'active' AND SUM(CASE WHEN lectures.attendance IN ('present', 'partially', 'absent') THEN 1 ELSE 0 END) >= 
+                    COALESCE(courses.lectures_count, SUM(CASE WHEN lectures.id IS NOT NULL AND (lectures.attendance IS NULL OR lectures.attendance NOT LIKE 'postponed_%') THEN 1 ELSE 0 END)))
+                ");
+            } else {
+                $query->where('courses.status', $request->status);
+            }
         }
 
         // Filter by trainer

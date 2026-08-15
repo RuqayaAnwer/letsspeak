@@ -83,6 +83,8 @@ function normalizeTrainerName($name) {
         'امينة' => 'Amina Rabah',
         'ضي ميثم' => 'Dhay',
         'ضي' => 'Dhay',
+        'ايات فلاح' => 'Ayat Falah',
+        'ايات' => 'Ayat Falah',
     ];
     
     $clean = mb_strtolower($name);

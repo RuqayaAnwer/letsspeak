@@ -60,7 +60,9 @@ class AutoMergeTrainers extends Command
         'aya' => 'آيه',
         'amina' => 'امينه',
         'dhay' => 'ضي ميثم',
-        'dhay_short' => 'ضي'
+        'dhay_short' => 'ضي',
+        'ayat falah' => 'ايات فلاح',
+        'ayat' => 'ايات فلاح'
     ];
 
     public function handle()
