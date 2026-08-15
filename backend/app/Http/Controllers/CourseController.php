@@ -45,24 +45,24 @@ class CourseController extends Controller
         }
 
         // Filter by status
-        if ($request->has('status')) {
+        if ($request->filled('status') && $request->status !== 'all' && $request->status !== 'null' && $request->status !== 'undefined') {
             $query->where('courses.status', $request->status);
         }
 
         // Filter by trainer
-        if ($request->has('trainer_id')) {
+        if ($request->filled('trainer_id') && $request->trainer_id !== 'null' && $request->trainer_id !== 'undefined') {
             $query->where('courses.trainer_id', $request->trainer_id);
         }
 
         // Filter by student (using pivot table)
-        if ($request->has('student_id')) {
+        if ($request->filled('student_id') && $request->student_id !== 'null' && $request->student_id !== 'undefined') {
             $query->whereHas('students', function ($q) use ($request) {
                 $q->where('students.id', $request->student_id);
             });
         }
 
         // Filter by category (kids vs regular)
-        if ($request->has('category') && $request->category !== 'all') {
+        if ($request->filled('category') && $request->category !== 'all' && $request->category !== 'null' && $request->category !== 'undefined') {
             if ($request->category === 'kids') {
                 $query->where('courses.is_kids', true);
             } elseif ($request->category === 'regular') {

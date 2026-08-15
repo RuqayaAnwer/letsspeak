@@ -81,6 +81,8 @@ function normalizeTrainerName($name) {
         'اية' => 'Aya Yasir',
         'أمينة' => 'Amina Rabah',
         'امينة' => 'Amina Rabah',
+        'ضي ميثم' => 'Dhay',
+        'ضي' => 'Dhay',
     ];
     
     $clean = mb_strtolower($name);
@@ -430,9 +432,22 @@ try {
             if (array_key_exists($trainerName, $dryRunTrainers)) {
                 $trainerId = $dryRunTrainers[$trainerName];
             } else {
-                $trainerUser = User::where('role', 'trainer')
-                    ->where('name', 'like', $trainerName)
-                    ->first();
+                // Find trainer user by comparing normalized names to avoid duplicates (e.g., سارة vs ساره, spaces, casing)
+                $trainerUser = User::where('role', 'trainer')->get()->first(function ($u) use ($trainerName) {
+                    $n1 = mb_strtolower(trim($u->name));
+                    $n1 = str_replace(['أ', 'إ', 'آ'], 'ا', $n1);
+                    $n1 = str_replace('ة', 'ه', $n1);
+                    $n1 = str_replace('ى', 'ي', $n1);
+                    $n1 = str_replace([' ', '-', '_'], '', $n1);
+
+                    $n2 = mb_strtolower(trim($trainerName));
+                    $n2 = str_replace(['أ', 'إ', 'آ'], 'ا', $n2);
+                    $n2 = str_replace('ة', 'ه', $n2);
+                    $n2 = str_replace('ى', 'ي', $n2);
+                    $n2 = str_replace([' ', '-', '_'], '', $n2);
+
+                    return $n1 === $n2;
+                });
                 
                 if (!$trainerUser) {
                     $email = strtolower(str_replace(' ', '', $trainerName)) . '@letspeak.com';
