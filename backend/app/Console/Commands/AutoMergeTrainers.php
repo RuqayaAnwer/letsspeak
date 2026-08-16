@@ -237,6 +237,19 @@ class AutoMergeTrainers extends Command
             }
         }
 
+        // 4. English Levenshtein distance match (detect spelling typos/variations like Hussein vs Huseein)
+        if (preg_match('/^[a-z]+$/', $n1) && preg_match('/^[a-z]+$/', $n2)) {
+            $distance = levenshtein($n1, $n2);
+            if ($distance <= 1) {
+                // Verify email similarity to avoid false positives (first 4 characters of email prefix must match)
+                $emailPrefix1 = substr($cleanEmail1, 0, 4);
+                $emailPrefix2 = substr($cleanEmail2, 0, 4);
+                if ($emailPrefix1 === $emailPrefix2 && !empty($emailPrefix1)) {
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 
