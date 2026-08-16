@@ -22,6 +22,7 @@ const Trainers = () => {
     max_level: '',
     notes: '',
     password: '',
+    status: 'active',
   });
   const [newTrainerCredentials, setNewTrainerCredentials] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -96,6 +97,7 @@ const Trainers = () => {
           min_level: formData.min_level,
           max_level: formData.max_level,
           notes: formData.notes,
+          status: formData.status,
         };
         if (formData.password) payload.password = formData.password;
         await api.put(`/trainers/${editingTrainer.id}`, payload);
@@ -142,10 +144,11 @@ const Trainers = () => {
         min_level: trainer.min_level || '',
         max_level: trainer.max_level || '',
         notes: trainer.notes || '',
+        status: trainer.status || 'active',
       });
     } else {
       setEditingTrainer(null);
-      setFormData({ name: '', email: '', phone: '', min_level: '', max_level: '', notes: '', password: '' });
+      setFormData({ name: '', email: '', phone: '', min_level: '', max_level: '', notes: '', password: '', status: 'active' });
     }
     setIsModalOpen(true);
   };
@@ -279,6 +282,17 @@ const Trainers = () => {
                         </span>
                       </div>
 
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الحالة</span>
+                        <span className={`badge text-xs px-1.5 py-0.5 ${
+                          trainer.status === 'active'
+                            ? 'badge-success'
+                            : 'badge-gray'
+                        }`}>
+                          {trainer.status === 'active' ? 'نشط' : 'غير نشط'}
+                        </span>
+                      </div>
+
                       {trainer.notes && (
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">ملاحظات</span>
@@ -317,6 +331,7 @@ const Trainers = () => {
                   <th className="py-2 px-2 text-center">المستوى</th>
                   <th className="py-2 px-2 text-center">الكورسات</th>
                   <th className="py-2 px-2 text-center">محاضرات الأسبوع</th>
+                  <th className="py-2 px-2 text-center">الحالة</th>
                   <th className="py-2 px-2 text-center">ملاحظات</th>
                   <th className="py-2 px-2 text-center">الإجراءات</th>
                 </tr>
@@ -367,6 +382,15 @@ const Trainers = () => {
                             : 'badge-gray'
                       }`}>
                         {trainer.weekly_lectures_count || 0}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <span className={`badge text-[10px] px-1.5 py-0.5 ${
+                        trainer.status === 'active' 
+                          ? 'badge-success' 
+                          : 'badge-gray'
+                      }`}>
+                        {trainer.status === 'active' ? 'نشط' : 'غير نشط'}
                       </span>
                     </td>
                     <td className="py-2 px-2 text-center">
@@ -543,6 +567,19 @@ const Trainers = () => {
               required={!editingTrainer}
               minLength={6}
             />
+          </div>
+
+          <div>
+            <label className="label">حالة المدرب *</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              className="select w-full"
+              required
+            >
+              <option value="active">نشط (حالي)</option>
+              <option value="inactive">غير نشط (سابق)</option>
+            </select>
           </div>
 
           <div>
