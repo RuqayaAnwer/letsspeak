@@ -10,7 +10,7 @@ use Carbon\Carbon;
 
 class TrainerActivityReport extends Command
 {
-    protected $signature = 'trainers:activity-report';
+    protected $signature = 'trainers:activity-report {--status= : Filter trainers by status (active, recent, long, never)}';
 
     protected $description = 'Generate an activity report for trainers (Active, recently inactive, and inactive for more than a month)';
 
@@ -87,6 +87,27 @@ class TrainerActivityReport extends Command
                 $lastActiveDate ?: 'بدون نشاط سابق',
                 $status
             ];
+        }
+
+        // Filter rows by status if --status option is passed
+        $statusFilter = $this->option('status');
+        if ($statusFilter) {
+            $statusMap = [
+                'active' => 'نشط مستمر',
+                'recent' => 'متوقف حديثاً (< 30 يوم)',
+                'long' => 'غير نشط منذ شهر فأكثر',
+                'never' => 'لم يبدأ أي كورس',
+            ];
+            
+            $targetStatus = $statusMap[strtolower($statusFilter)] ?? null;
+            if ($targetStatus) {
+                $rows = array_filter($rows, function ($row) use ($targetStatus) {
+                    return $row[5] === $targetStatus;
+                });
+            } else {
+                $this->error("Invalid status filter. Choose from: active, recent, long, never");
+                return Command::FAILURE;
+            }
         }
 
         // Sort rows: Active first, then recently inactive, then long inactive, then never active
