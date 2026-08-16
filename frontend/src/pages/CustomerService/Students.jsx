@@ -613,11 +613,6 @@ const Students = () => {
                       <td className="font-semibold">{(page - 1) * 15 + index + 1}</td>
                         <td>
                           <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center ${student.is_child ? 'from-pink-400 to-orange-400' : 'from-primary-400 to-accent-400'}`}>
-                              <span className="text-white font-bold">
-                                {student.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <button 
                                 onClick={(e) => { e.stopPropagation(); navigate('/students/' + student.id); }}

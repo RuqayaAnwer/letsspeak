@@ -342,11 +342,6 @@ const Trainers = () => {
                     <td className="py-2 px-2 text-center font-semibold">{(page - 1) * 15 + index + 1}</td>
                     <td className="py-2 px-2 text-center">
                       <div className="flex items-center justify-center gap-1.5">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
-                          <span className="text-white font-bold text-[9px]">
-                            {(trainer.user?.name || trainer.name)?.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
                         <Link to={`/staff-profile/trainer/${trainer.id}`} className="font-medium text-[11px] text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
                           {trainer.user?.name || trainer.name}
                         </Link>
