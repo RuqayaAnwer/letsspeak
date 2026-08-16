@@ -23,6 +23,9 @@ const StaffProfile = () => {
   // Tabs: 'info', 'courses', 'payroll'
   const [activeTab, setActiveTab] = useState('info');
   const [expandedCourse, setExpandedCourse] = useState(null);
+  const [courseStatusFilter, setCourseStatusFilter] = useState('active');
+
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || 'https://api.letspeak.online').replace('/api', '');
 
   // Edit form state
   const [editMode, setEditMode] = useState(false);
@@ -127,10 +130,22 @@ const StaffProfile = () => {
             </button>
         </div>
         <div className="px-6 pb-6 sm:flex sm:items-end sm:space-x-5 rtl:space-x-reverse relative -mt-12">
-            <div className="h-24 w-24 rounded-2xl bg-white dark:bg-gray-800 p-1 flex items-center justify-center shadow-md border-4 border-white dark:border-gray-800 shrink-0">
-                <div className="w-full h-full bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
-                    <User className="w-10 h-10" />
-                </div>
+            <div className="h-24 w-24 rounded-2xl bg-white dark:bg-gray-800 p-1 flex items-center justify-center shadow-md border-4 border-white dark:border-gray-800 shrink-0 overflow-hidden">
+                {profile.avatar ? (
+                    <img 
+                        src={`${apiBase}/storage/${profile.avatar}`} 
+                        alt={profile.name} 
+                        className="w-full h-full object-cover rounded-xl"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '';
+                        }}
+                    />
+                ) : (
+                    <div className="w-full h-full bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
+                        <User className="w-10 h-10" />
+                    </div>
+                )}
             </div>
             <div className="mt-4 sm:flex-1 sm:min-w-0 sm:flex sm:items-center sm:justify-end sm:space-x-6 sm:pb-1 rtl:space-x-reverse">
                 <div className="mt-2 min-w-0 flex-1">
@@ -179,7 +194,11 @@ const StaffProfile = () => {
                     <div className="p-2 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-lg"><Star className="w-5 h-5"/></div>
                     <div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">مستويات التدريب</p>
-                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{profile.min_level} → {profile.max_level}</p>
+                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                            {profile.min_level && profile.max_level 
+                                ? `${profile.min_level} ← ${profile.max_level}` 
+                                : profile.min_level || profile.max_level || 'غير محدد'}
+                        </p>
                     </div>
                 </div>
             )}
@@ -289,29 +308,29 @@ const StaffProfile = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
                                     <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">الاسم الكامل</label>
-                                    <input type="text" className="input-field" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required/>
+                                    <input type="text" className="input" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required/>
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">البريد الإلكتروني</label>
-                                    <input type="email" className="input-field" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required/>
+                                    <input type="email" className="input" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required/>
                                 </div>
                                 {isTrainer && (
                                     <div>
                                         <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف</label>
-                                        <input type="text" className="input-field" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                                        <input type="text" className="input" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                                     </div>
                                 )}
                                 <div>
                                     <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">المسمى الوظيفي</label>
-                                    <input type="text" className="input-field" value={formData.job_title} onChange={e => setFormData({...formData, job_title: e.target.value})} />
+                                    <input type="text" className="input" value={formData.job_title} onChange={e => setFormData({...formData, job_title: e.target.value})} />
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">الراتب الثابت (د.ع)</label>
-                                    <input type="number" className="input-field" value={formData.base_salary} onChange={e => setFormData({...formData, base_salary: e.target.value})} />
+                                    <input type="number" className="input" value={formData.base_salary} onChange={e => setFormData({...formData, base_salary: e.target.value})} />
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">حالة الحساب</label>
-                                    <select className="input-field" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
+                                    <select className="select w-full" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
                                         <option value="active">نشط</option>
                                         <option value="inactive">غير نشط / موقوف</option>
                                     </select>
@@ -324,7 +343,7 @@ const StaffProfile = () => {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-xs text-amber-700 dark:text-amber-400 mb-1">من مستوى</label>
-                                            <select className="input-field" value={formData.min_level} onChange={e => setFormData({...formData, min_level: e.target.value})}>
+                                            <select className="select w-full" value={formData.min_level} onChange={e => setFormData({...formData, min_level: e.target.value})}>
                                                 <option value="">اختر المستوى</option>
                                                 <option value="L1">L1</option>
                                                 <option value="L2">L2</option>
@@ -338,7 +357,7 @@ const StaffProfile = () => {
                                         </div>
                                         <div>
                                             <label className="block text-xs text-amber-700 dark:text-amber-400 mb-1">إلى مستوى</label>
-                                            <select className="input-field" value={formData.max_level} onChange={e => setFormData({...formData, max_level: e.target.value})}>
+                                            <select className="select w-full" value={formData.max_level} onChange={e => setFormData({...formData, max_level: e.target.value})}>
                                                 <option value="">اختر المستوى</option>
                                                 <option value="L1">L1</option>
                                                 <option value="L2">L2</option>
@@ -415,63 +434,87 @@ const StaffProfile = () => {
             {/* COURSES TAB */}
             {activeTab === 'courses' && isTrainer && (
                 <div className="animate-fade-in space-y-4">
-                     {courses.length === 0 ? (
-                         <div className="text-center py-10 bg-gray-50 dark:bg-gray-800/30 rounded-xl">
-                            <BookOpen className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                            <p className="text-gray-500 font-medium">هذا المدرب لم يقم بتدريب أي كورس حتى الآن.</p>
-                         </div>
-                     ) : (
-                        courses.map(course => (
-                            <div key={course.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800">
-                                <div 
-                                    className="p-4 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                                    onClick={() => setExpandedCourse(expandedCourse === course.id ? null : course.id)}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-1.5 h-10 rounded-full ${course.status === 'active' ? 'bg-green-500' : course.status === 'finished' ? 'bg-blue-500' : 'bg-gray-400'}`}></div>
-                                        <div>
-                                            <h4 className="font-bold text-gray-800 dark:text-gray-100 text-sm sm:text-base flex items-center gap-1.5 flex-wrap">
-                                                {course.title || 'كورس مخصص'}
-                                                {course.is_kids && <span className="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 text-xs px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1">كورس أطفال 👶</span>}
-                                            </h4>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                <span className="flex items-center gap-1"><User className="w-3 h-3"/> الطالب: {course.student?.name}</span>
-                                                <span>•</span>
-                                                <span className="flex items-center gap-1"><CheckCircle className="w-3 h-3"/> بدء الكورس: {course.actual_start_date || course.start_date}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between w-full sm:w-auto mt-3 sm:mt-0 gap-4">
-                                        <span className={`text-xs px-2.5 py-1 rounded-md font-bold ${course.status === 'active' ? 'bg-green-100 text-green-700' : course.status === 'finished' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
-                                            {course.status === 'active' ? 'نشط' : course.status === 'finished' ? 'منتهي' : course.status}
-                                        </span>
-                                        <div className="p-1 bg-gray-100 dark:bg-gray-700 rounded-full">
-                                            {expandedCourse === course.id ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-                                        </div>
-                                    </div>
-                                </div>
-                                {expandedCourse === course.id && (
-                                    <div className="px-4 pb-4 bg-gray-50/50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700">
-                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-                                            <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-                                                <p className="text-xs text-gray-500 mb-1">التقدم المنجز</p>
-                                                <p className="font-bold text-lg text-gray-800 dark:text-gray-200">{course.completed_lectures} <span className="text-sm font-normal">من</span> {course.total_lectures}</p>
-                                            </div>
-                                            <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-                                                <p className="text-xs text-gray-500 mb-1">نسبة الإنجاز</p>
-                                                <p className="font-bold text-lg text-primary-600">{course.progress}%</p>
-                                            </div>
-                                            <div className="col-span-2 lg:col-span-2 bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-end">
-                                                <button onClick={() => navigate(`/shared/course/${course.id}`)} className="text-primary-600 hover:text-primary-800 text-sm font-bold flex items-center gap-1 group">
-                                                    الدخول لصفحة الكورس <BookOpen className="w-4 h-4 group-hover:translate-x-1 transition-transform rtl:rotate-180" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ))
-                     )}
+                     {/* Filter dropdown */}
+                     <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100 dark:border-gray-700">
+                         <h3 className="font-bold text-gray-800 dark:text-gray-200 text-sm">حالة الكورسات المعروضة</h3>
+                         <select 
+                             value={courseStatusFilter} 
+                             onChange={(e) => setCourseStatusFilter(e.target.value)} 
+                             className="select py-1 px-3 text-xs w-44"
+                         >
+                             <option value="active">الكورسات النشطة هذا الشهر</option>
+                             <option value="finished">الكورسات المنتهية</option>
+                             <option value="all">جميع الكورسات</option>
+                         </select>
+                     </div>
+
+                     {(() => {
+                         const filteredCourses = courses.filter(course => {
+                             if (courseStatusFilter === 'active') return course.status === 'active';
+                             if (courseStatusFilter === 'finished') return course.status === 'finished';
+                             return true;
+                         });
+
+                         if (filteredCourses.length === 0) {
+                             return (
+                                 <div className="text-center py-10 bg-gray-50 dark:bg-gray-800/30 rounded-xl">
+                                    <BookOpen className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                                    <p className="text-gray-500 font-medium">لا توجد كورسات مطابقة للفحص.</p>
+                                 </div>
+                             );
+                         }
+
+                         return filteredCourses.map(course => (
+                             <div key={course.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800">
+                                 <div 
+                                     className="p-4 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                                     onClick={() => setExpandedCourse(expandedCourse === course.id ? null : course.id)}
+                                 >
+                                     <div className="flex items-center gap-3">
+                                         <div className={`w-1.5 h-10 rounded-full ${course.status === 'active' ? 'bg-green-500' : course.status === 'finished' ? 'bg-blue-500' : 'bg-gray-400'}`}></div>
+                                         <div>
+                                             <h4 className="font-bold text-gray-800 dark:text-gray-100 text-sm sm:text-base flex items-center gap-1.5 flex-wrap">
+                                                 {course.title || 'كورس مخصص'}
+                                                 {course.is_kids && <span className="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 text-xs px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1">كورس أطفال 👶</span>}
+                                             </h4>
+                                             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                 <span className="flex items-center gap-1"><User className="w-3 h-3"/> الطالب: {course.student?.name}</span>
+                                                 <span>•</span>
+                                                 <span className="flex items-center gap-1"><CheckCircle className="w-3 h-3"/> بدء الكورس: {course.actual_start_date || course.start_date}</span>
+                                             </div>
+                                         </div>
+                                     </div>
+                                     <div className="flex items-center justify-between w-full sm:w-auto mt-3 sm:mt-0 gap-4">
+                                         <span className={`text-xs px-2.5 py-1 rounded-md font-bold ${course.status === 'active' ? 'bg-green-100 text-green-700' : course.status === 'finished' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                                             {course.status === 'active' ? 'نشط' : course.status === 'finished' ? 'منتهي' : course.status}
+                                         </span>
+                                         <div className="p-1 bg-gray-100 dark:bg-gray-700 rounded-full">
+                                             {expandedCourse === course.id ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                                         </div>
+                                     </div>
+                                 </div>
+                                 {expandedCourse === course.id && (
+                                     <div className="px-4 pb-4 bg-gray-50/50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700">
+                                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                                             <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                                                 <p className="text-xs text-gray-500 mb-1">التقدم المنجز</p>
+                                                 <p className="font-bold text-lg text-gray-800 dark:text-gray-200">{course.completed_lectures} <span className="text-sm font-normal">من</span> {course.total_lectures}</p>
+                                             </div>
+                                             <div className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                                                 <p className="text-xs text-gray-500 mb-1">نسبة الإنجاز</p>
+                                                 <p className="font-bold text-lg text-primary-600">{course.progress}%</p>
+                                             </div>
+                                             <div className="col-span-2 lg:col-span-2 bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-end">
+                                                 <button onClick={() => navigate(`/shared/course/${course.id}`)} className="text-primary-600 hover:text-primary-800 text-sm font-bold flex items-center gap-1 group">
+                                                     الدخول لصفحة الكورس <BookOpen className="w-4 h-4 group-hover:translate-x-1 transition-transform rtl:rotate-180" />
+                                                 </button>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 )}
+                             </div>
+                         ));
+                     })()}
                 </div>
             )}
 

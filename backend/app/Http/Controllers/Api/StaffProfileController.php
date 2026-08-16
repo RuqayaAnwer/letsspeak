@@ -50,7 +50,7 @@ class StaffProfileController extends Controller
         $trainerId = null;
 
         if ($type === 'trainer') {
-            $trainer = Trainer::with(['user:id,name,email,job_title,role,created_at,base_salary', 'courses.student', 'courses.package'])->find($id);
+            $trainer = Trainer::with(['user:id,name,email,job_title,role,created_at,base_salary,avatar', 'courses.student', 'courses.package'])->find($id);
 
             if (!$trainer) {
                 return response()->json(['success' => false, 'message' => 'Trainer not found'], 404);
@@ -72,6 +72,7 @@ class StaffProfileController extends Controller
                 'min_level' => $trainer->min_level,
                 'max_level' => $trainer->max_level,
                 'notes' => $trainer->notes,
+                'avatar' => $trainer->user ? $trainer->user->avatar : null,
                 'base_salary' => $trainer->user ? $trainer->user->base_salary : 0,
                 'created_at' => $trainer->created_at,
                 'type' => 'trainer'
@@ -126,6 +127,7 @@ class StaffProfileController extends Controller
                 'role' => $targetUser->role,
                 'job_title' => $targetUser->job_title,
                 'status' => $targetUser->status,
+                'avatar' => $targetUser->avatar,
                 'base_salary' => $targetUser->base_salary,
                 'created_at' => $targetUser->created_at,
                 'type' => 'user'
