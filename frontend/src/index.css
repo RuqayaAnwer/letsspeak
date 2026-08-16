@@ -25,6 +25,12 @@
     --color-border-hover: #475569;
   }
 
+  /* Make native date and time picker icons white in dark mode */
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+
   * {
     font-family: 'Cairo', sans-serif;
   }
