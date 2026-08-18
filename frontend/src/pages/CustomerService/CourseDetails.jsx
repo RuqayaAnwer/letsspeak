@@ -506,43 +506,43 @@ const CourseDetails = () => {
       ) : (
         <div className="w-full">
           {/* Desktop Table */}
-          <table className="hidden lg:table w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm text-[5px] table-fixed">
+          <table className="hidden lg:table w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm text-[11px] table-fixed">
             <thead className="bg-gradient-to-r from-orange-100 to-orange-50 dark:from-orange-900/40 dark:to-orange-900/20">
               <tr>
-                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[7%]">
+                <th className="px-0.5 py-0.5 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[7%]">
                   تاريخ البدء
                 </th>
-                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[10%]">
+                <th className="px-0.5 py-0.5 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[10%]">
                   اسم المتدرب
                 </th>
-                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[9%]">
+                <th className="px-0.5 py-0.5 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[9%]">
                   المتدرب الثاني
                 </th>
-                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[5%]">
+                <th className="px-0.5 py-0.5 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[5%]">
                   الوقت
                 </th>
-                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[9%]">
+                <th className="px-0.5 py-0.5 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[9%]">
                   اسم المدرب
                 </th>
-                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[5%]">
+                <th className="px-0.5 py-0.5 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[5%]">
                   المستوى
                 </th>
-                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[7%]">
+                <th className="px-0.5 py-0.5 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[7%]">
                   طريقة الدفع
                 </th>
-                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[8%]">
+                <th className="px-0.5 py-0.5 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[8%]">
                   التأجيلات
                 </th>
-                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[12%]">
+                <th className="px-0.5 py-0.5 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[12%]">
                   ملاحظات
                 </th>
-                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[10%]">
+                <th className="px-0.5 py-0.5 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[10%]">
                   الأيام
                 </th>
-                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[8%]">
+                <th className="px-0.5 py-0.5 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[8%]">
                   الحالة
                 </th>
-                <th className="px-0.5 py-0.5 text-center text-[5px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[9%]">
+                <th className="px-0.5 py-0.5 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-orange-300 dark:border-orange-700 w-[9%]">
                   كان مع المدرب
                 </th>
               </tr>
@@ -565,13 +565,13 @@ const CourseDetails = () => {
                   }`}
                 >
                   <td 
-                    className="px-0.5 py-0.5 text-center text-[5px] text-gray-700 dark:text-gray-300 whitespace-nowrap"
+                    className="px-0.5 py-0.5 text-center text-[11px] text-gray-700 dark:text-gray-300 whitespace-nowrap"
                     onClick={() => setSelectedRow(course.id)}
                   >
                     {course.start_date ? formatDateSimple(course.start_date) : '-'}
                   </td>
                   <td 
-                    className="px-0.5 py-0.5 text-center text-[5px] text-gray-900 dark:text-white font-medium truncate" 
+                    className="px-0.5 py-0.5 text-center text-[11px] text-gray-900 dark:text-white font-medium truncate" 
                     title={course.student_name}
                     onClick={() => setSelectedRow(course.id)}
                   >
@@ -597,20 +597,20 @@ const CourseDetails = () => {
                     )}
                   </td>
                   <td 
-                    className="px-0.5 py-0.5 text-center text-[5px] text-gray-600 dark:text-gray-400 truncate" 
+                    className="px-0.5 py-0.5 text-center text-[11px] text-gray-600 dark:text-gray-400 truncate" 
                     title={course.second_student_name !== '-' ? course.second_student_name : ''}
                     onClick={() => setSelectedRow(course.id)}
                   >
                     {course.second_student_name !== '-' ? course.second_student_name : '-'}
                   </td>
                   <td 
-                    className="px-0.5 py-0.5 text-center text-[5px] text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap"
+                    className="px-0.5 py-0.5 text-center text-[11px] text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap"
                     onClick={() => setSelectedRow(course.id)}
                   >
                     {course.lecture_time ? (typeof course.lecture_time === 'string' ? course.lecture_time : course.lecture_time) : '-'}
                   </td>
                   <td 
-                    className="px-0.5 py-0.5 text-center text-[5px] text-purple-700 dark:text-purple-300 font-medium truncate" 
+                    className="px-0.5 py-0.5 text-center text-[11px] text-purple-700 dark:text-purple-300 font-medium truncate" 
                     title={course.trainer_name}
                     onClick={(e) => {
                       if (course.trainer_id) {
@@ -622,7 +622,7 @@ const CourseDetails = () => {
                     }}
                   >
                     {course.trainer_id ? (
-                      <Link to={`/staff-profile/trainer/${course.trainer_id}`} className="hover:underline text-blue-600 dark:text-blue-400 font-semibold" onClick={(e) => e.stopPropagation()}>
+                      <Link to={`/staff-profile/trainer/${course.trainer_id}`} className="hover:underline text-blue-600 dark:text-blue-400 font-semibold text-[11px]" onClick={(e) => e.stopPropagation()}>
                         {course.trainer_name}
                       </Link>
                     ) : (
@@ -630,13 +630,13 @@ const CourseDetails = () => {
                     )}
                   </td>
                   <td 
-                    className="px-0.5 py-0.5 text-center text-[5px] text-indigo-700 dark:text-indigo-300 font-medium whitespace-nowrap"
+                    className="px-0.5 py-0.5 text-center text-[11px] text-indigo-700 dark:text-indigo-300 font-medium whitespace-nowrap"
                     onClick={() => setSelectedRow(course.id)}
                   >
                     {getLevelLabel(course.level)}
                   </td>
                   <td 
-                    className="px-0.5 py-0.5 text-center text-[5px] text-teal-700 dark:text-teal-300 font-medium whitespace-nowrap"
+                    className="px-0.5 py-0.5 text-center text-[11px] text-teal-700 dark:text-teal-300 font-medium whitespace-nowrap"
                     onClick={() => setSelectedRow(course.id)}
                   >
                     {course.payment_method && course.payment_method !== '-' ? (
@@ -647,7 +647,7 @@ const CourseDetails = () => {
                     ) : '-'}
                   </td>
                   <td 
-                    className={`px-0.5 py-0.5 text-center text-[5px] whitespace-nowrap ${isAdmin ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''}`}
+                    className={`px-0.5 py-0.5 text-center text-[11px] whitespace-nowrap ${isAdmin ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''}`}
                     title={isAdmin ? "انقر لتعديل حدود التأجيل لهذا الكورس" : ""}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -665,7 +665,7 @@ const CourseDetails = () => {
                     </div>
                   </td>
                   <td 
-                    className="px-0.5 py-0.5 text-center text-[5px] text-gray-600 dark:text-gray-400 truncate cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" 
+                    className="px-0.5 py-0.5 text-center text-[11px] text-gray-600 dark:text-gray-400 truncate cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" 
                     title={course.notes || 'انقر نقراً مزدوجاً لإضافة/تعديل الملاحظات'}
                     onClick={() => setSelectedRow(course.id)}
                     onDoubleClick={(e) => {
@@ -674,13 +674,13 @@ const CourseDetails = () => {
                     }}
                   >
                     {course.notes ? (
-                      <span className="text-orange-600 dark:text-orange-400 text-[6px] font-medium">📝 {course.notes.substring(0, 20)}{course.notes.length > 20 ? '...' : ''}</span>
+                      <span className="text-orange-600 dark:text-orange-400 text-[11px] font-medium">📝 {course.notes.substring(0, 20)}{course.notes.length > 20 ? '...' : ''}</span>
                     ) : (
-                      <span className="text-gray-500 dark:text-gray-400 text-[6px] font-medium">أضف ملاحظة</span>
+                      <span className="text-gray-500 dark:text-gray-400 text-[11px] font-medium">أضف ملاحظة</span>
                     )}
                   </td>
                   <td 
-                    className="px-0.5 py-0.5 text-center text-[3px] text-gray-700 dark:text-gray-300 leading-tight"
+                    className="px-0.5 py-0.5 text-center text-[11px] text-gray-700 dark:text-gray-300 leading-tight"
                     onClick={() => setSelectedRow(course.id)}
                     style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', maxWidth: '100%' }}
                   >
@@ -689,7 +689,7 @@ const CourseDetails = () => {
                     </div>
                   </td>
                   <td 
-                    className="px-1 py-1 text-center" 
+                    className="px-0.5 py-0.5 text-center" 
                     onClick={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
                   >
@@ -702,22 +702,22 @@ const CourseDetails = () => {
                       disabled={updatingStatus[course.id]}
                       onClick={(e) => e.stopPropagation()}
                       onMouseDown={(e) => e.stopPropagation()}
-                      className={`text-[6px] px-1.5 py-1 rounded border-0 font-semibold cursor-pointer focus:ring-1 focus:ring-orange-500 w-full ${
+                      className={`text-[11px] px-1.5 py-1 rounded border-0 font-semibold cursor-pointer focus:ring-1 focus:ring-orange-500 w-full ${
                         course.status === 'active' ? 'bg-green-200 text-green-900 dark:bg-green-800 dark:text-green-100' :
                         course.status === 'finished' || course.status === 'completed' ? 'bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100' :
                         course.status === 'paused' ? 'bg-orange-200 text-orange-900 dark:bg-orange-800 dark:text-orange-100' :
                         'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
                       } ${updatingStatus[course.id] ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      style={{ fontSize: '6px', minHeight: '18px' }}
+                      style={{ fontSize: '11px', minHeight: '26px' }}
                     >
-                      <option value="active" style={{ fontSize: '6px' }}>نشط</option>
-                      <option value="paused" style={{ fontSize: '6px' }}>متوقف</option>
-                      <option value="finished" style={{ fontSize: '6px' }}>مكتمل</option>
-                      <option value="cancelled" style={{ fontSize: '6px' }}>ملغي</option>
+                      <option value="active" style={{ fontSize: '11px' }}>نشط</option>
+                      <option value="paused" style={{ fontSize: '11px' }}>متوقف</option>
+                      <option value="finished" style={{ fontSize: '11px' }}>مكتمل</option>
+                      <option value="cancelled" style={{ fontSize: '11px' }}>ملغي</option>
                     </select>
                   </td>
                   <td 
-                    className="px-0.5 py-0.5 text-center text-[5px] text-gray-600 dark:text-gray-400 truncate" 
+                    className="px-0.5 py-0.5 text-center text-[11px] text-gray-600 dark:text-gray-400 truncate" 
                     title={course.trainer_name || ''}
                     onClick={() => setSelectedRow(course.id)}
                   >

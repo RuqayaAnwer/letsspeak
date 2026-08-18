@@ -691,13 +691,13 @@ const Courses = () => {
           <table className="w-full text-xs">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الكورس #</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الطالب</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">المدرب</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">تاريخ البدء</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الباقة والتقدم</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
-                <th className="px-2 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-gray-300">الإجراءات</th>
+                <th className="px-1 py-1.5 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">الكورس #</th>
+                <th className="px-1 py-1.5 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">الطالب</th>
+                <th className="px-1 py-1.5 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">المدرب</th>
+                <th className="px-1 py-1.5 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">تاريخ البدء</th>
+                <th className="px-1 py-1.5 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">الباقة والتقدم</th>
+                <th className="px-1 py-1.5 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">الحالة</th>
+                <th className="px-1 py-1.5 text-center text-xs font-semibold text-gray-700 dark:text-gray-300">الإجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -720,20 +720,20 @@ const Courses = () => {
                               : ''
                     }`}
                   >
-                    <td className="px-2 py-2 text-center font-bold text-gray-600 dark:text-gray-400">
+                    <td className="px-1 py-1.5 text-center font-bold text-gray-600 dark:text-gray-400 text-xs">
                       {course.id}
                     </td>
-                    <td className="px-2 py-2 text-center text-gray-800 dark:text-white font-bold">
+                    <td className="px-1 py-1.5 text-center text-gray-800 dark:text-white font-bold text-xs">
                       <div className="flex flex-col items-center gap-0.5">
                         <div className="flex items-center gap-1">
-                          <span className="flex items-center flex-wrap justify-center gap-1">
+                          <span className="flex items-center flex-wrap justify-center gap-1 text-xs">
                             {course.is_dual && course.students?.length > 0
                               ? course.students.map((s, idx) => (
                                   <React.Fragment key={s.id}>
-                                    {idx > 0 && <span className="font-normal text-gray-400 dark:text-gray-500 mx-0.5">و</span>}
+                                    {idx > 0 && <span className="font-normal text-gray-400 dark:text-gray-500 mx-0.5 text-xs">و</span>}
                                     <button 
                                       onClick={(e) => { e.stopPropagation(); navigate('/students/' + s.id); }} 
-                                      className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5"
+                                      className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5 text-xs"
                                       title="عرض ملف الطالب"
                                     >
                                       {isKidsCourse(course) && <span className="ml-1 text-xs">👧👦</span>}
@@ -744,7 +744,7 @@ const Courses = () => {
                               : (
                                 <button 
                                   onClick={(e) => { e.stopPropagation(); navigate('/students/' + (course.students?.[0]?.id || course.student_id)); }} 
-                                  className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5"
+                                  className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors focus:outline-none flex items-center gap-0.5 text-xs"
                                   title="عرض ملف الطالب"
                                 >
                                   {isKidsCourse(course) && <span className="ml-1 text-xs">👧👦</span>}
@@ -754,35 +754,35 @@ const Courses = () => {
                               )}
                           </span>
                           {isDualCourse(course) && (
-                            <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold">
+                            <span className="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px] font-semibold">
                               ثنائي
                             </span>
                           )}
                           {course.renewal_iteration > 1 && (
-                            <span className="px-1 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-[9px] font-semibold">
+                            <span className="px-1 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-[10px] font-semibold">
                               تجديد {course.renewal_iteration}
                             </span>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
+                    <td className="px-1 py-1.5 text-center text-gray-600 dark:text-gray-400 text-xs">
                       {course.trainer_id ? (
-                        <Link to={`/staff-profile/trainer/${course.trainer_id}`} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors font-semibold text-[11px]">
+                        <Link to={`/staff-profile/trainer/${course.trainer_id}`} className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors font-semibold text-xs">
                           {course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'}
                         </Link>
                       ) : (
                         course.trainer_name || (typeof course.trainer === 'object' ? (course.trainer?.user?.name || course.trainer?.name) : course.trainer) || '-'
                       )}
                     </td>
-                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px] font-semibold">
+                    <td className="px-1 py-1.5 text-center text-gray-600 dark:text-gray-400 text-xs font-semibold">
                       {formatDate(course.start_date)}
                     </td>
-                    <td className="px-2 py-2 text-center text-gray-600 dark:text-gray-400 text-[10px]">
+                    <td className="px-1 py-1.5 text-center text-gray-600 dark:text-gray-400 text-xs">
                       <div className="flex flex-col items-center justify-center gap-1">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <PackageBadge course={course} className="text-[10px] font-normal" />
-                          <span className="text-[9px] text-gray-500 dark:text-gray-400 ml-1">
+                          <PackageBadge course={course} className="text-xs font-normal" />
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 ml-1">
                             ({course.lectures_count ?? (course.course_package || course.coursePackage)?.lectures_count ?? 0} محاضرة)
                           </span>
                           {getStudentId(course) && !isTrainer && (
@@ -802,10 +802,10 @@ const Courses = () => {
                             style={{ width: `${completionPercentage}%` }}
                           ></div>
                         </div>
-                        <span className="text-[9px] font-semibold mt-0.5">{completionPercentage}% مكتمل</span>
+                        <span className="text-[10px] font-semibold mt-0.5">{completionPercentage}% مكتمل</span>
                         {course.extra_lectures_count > 0 && (
                           <div className="mt-1">
-                            <span className="flex items-center gap-1 bg-amber-100 dark:bg-amber-900/40 text-[9px] text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded">
+                            <span className="flex items-center gap-1 bg-amber-100 dark:bg-amber-900/40 text-[10px] text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded">
                               <span className="font-bold">+{course.extra_lectures_count}</span> إضافية
                               {!isTrainer && (
                                 <span className="mx-0.5 font-bold">({formatCurrency(course.extra_lectures_fee)})</span>
@@ -815,21 +815,21 @@ const Courses = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-2 py-2 text-center">
-                      <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${getStatusBadge(course.status)}`}>
+                    <td className="px-1 py-1.5 text-center text-xs">
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getStatusBadge(course.status)}`}>
                         {getStatusLabel(course.status)}
                       </span>
                     </td>
-                    <td className="px-2 py-2 text-center">
+                    <td className="px-1 py-1.5 text-center text-xs">
                       <Link
                         to={`/courses/${course.id}`}
-                        className="text-blue-600 dark:text-blue-400 hover:underline text-[10px] font-semibold"
+                        className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-semibold"
                       >
                         التفاصيل
                       </Link>
                       {(course.status === 'finished' || completionPercentage >= 100) && (
                         <div className="mt-1">
-                          <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-955/30 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5">
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-955/30 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5">
                             ✅ مكتمل
                           </span>
                         </div>
