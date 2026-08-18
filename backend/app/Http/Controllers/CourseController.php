@@ -100,7 +100,9 @@ class CourseController extends Controller
                   })
                   ->orWhereHas('trainer.user', function ($tq) use ($search) {
                       $tq->where('name', 'like', "%{$search}%");
-                  });
+                  })
+                  ->orWhere('courses.payment_method', 'like', "%{$search}%")
+                  ->orWhere('courses.student_level', 'like', "%{$search}%");
             });
         }
 

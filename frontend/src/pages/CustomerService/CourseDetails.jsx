@@ -6,7 +6,7 @@ import EmptyState from '../../components/EmptyState';
 import { formatDateSimple } from '../../utils/dateFormat';
 import { formatCurrency } from '../../utils/currencyFormat';
 import { useAuth } from '../../context/AuthContext';
-import { Brain } from 'lucide-react';
+import { Brain, ChevronLeft, ChevronRight } from 'lucide-react';
 import StudentAssessmentModal from '../../components/StudentAssessmentModal';
 
 const CourseDetails = () => {
@@ -41,6 +41,11 @@ const CourseDetails = () => {
   const [postponementModal, setPostponementModal] = useState({ open: false, courseId: null, student: '', trainer: '' });
   const [assessmentModal, setAssessmentModal] = useState({ open: false, studentId: null, studentName: '' });
   
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCourses, setTotalCourses] = useState(0);
+
   // Resumption date modal state
   const [resumptionModal, setResumptionModal] = useState({
     open: false,
@@ -93,39 +98,42 @@ const CourseDetails = () => {
   };
  // Notes modal state
 
+  // Reset page to 1 whenever filters change
   useEffect(() => {
-    fetchCourses();
-  }, []);
+    setPage(1);
+  }, [searchTerm, filterStatus]);
 
-  const fetchCourses = async () => {
+  // Fetch courses with debounce on search
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchCourses(page);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, filterStatus, page]);
+
+  const fetchCourses = async (targetPage = 1) => {
     try {
       setLoading(true);
       setError(null);
       
-      // جلب جميع الكورسات بدون pagination
-      let allCourses = [];
-      let currentPage = 1;
-      let hasMorePages = true;
-
-      while (hasMorePages) {
-        const response = await api.get(`/courses?page=${currentPage}&per_page=100`);
-        const data = response.data;
-        
-        if (data.data && Array.isArray(data.data)) {
-          allCourses = [...allCourses, ...data.data];
-          hasMorePages = data.current_page < data.last_page;
-          currentPage++;
-        } else if (Array.isArray(data)) {
-          allCourses = [...allCourses, ...data];
-          hasMorePages = false;
-        } else {
-          hasMorePages = false;
+      const response = await api.get('/courses', {
+        params: {
+          page: targetPage,
+          per_page: 20,
+          status: filterStatus,
+          search: searchTerm,
         }
-      }
+      });
+      
+      const data = response.data;
+      const coursesList = data.data || [];
+      setTotalPages(data.last_page || 1);
+      setTotalCourses(data.total || 0);
 
-      // جلب تفاصيل إضافية لكل كورس
-      const coursesWithDetails = allCourses.map((course) => {
-        // استخراج معلومات الطالب
+      // Map additional details for each course
+      const coursesWithDetails = coursesList.map((course) => {
+        // Extract student name
         let studentName = '-';
         if (course.student_name) {
           studentName = course.student_name;
@@ -135,13 +143,13 @@ const CourseDetails = () => {
           studentName = typeof course.student === 'object' ? course.student?.name : course.student;
         }
         
-        // استخراج معلومات الطالب الثاني (للثنائي)
+        // Extract second student name (if dual)
         let secondStudentName = '-';
         if (course.students && Array.isArray(course.students) && course.students.length > 1) {
           secondStudentName = course.students.slice(1).map(s => (typeof s === 'object' ? s.name : s)).filter(Boolean).join(' / ');
         }
         
-        // استخراج معلومات المدرب
+        // Extract trainer name
         let trainerName = '-';
         if (course.trainer_name) {
           trainerName = course.trainer_name;
@@ -153,11 +161,9 @@ const CourseDetails = () => {
           }
         }
         
-        // استخراج المستوى (من بيانات الطالب)
+        // Extract level
         let level = '-';
-        // محاولة الحصول على المستوى من بيانات الطالب
         if (course.students && Array.isArray(course.students) && course.students.length > 0) {
-          // أخذ المستوى من الطالب الأول
           const firstStudent = course.students[0];
           if (typeof firstStudent === 'object' && firstStudent.level) {
             level = firstStudent.level;
@@ -168,7 +174,7 @@ const CourseDetails = () => {
           level = course.student_level;
         }
         
-        // تنسيق الوقت בצيغة 12 ساعة
+        // Format lecture time to 12 hour format
         let lectureTime = '-';
         if (course.lecture_time) {
           if (typeof course.lecture_time === 'string') {
@@ -213,30 +219,8 @@ const CourseDetails = () => {
     }
   };
 
-  // تصفية الكورسات
-  const filteredCourses = courses.filter(course => {
-    // تصفية حسب الحالة
-    if (filterStatus !== 'all' && course.status !== filterStatus) {
-      return false;
-    }
-    
-    // تصفية حسب البحث
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        course.student_name?.toLowerCase().includes(searchLower) ||
-        course.second_student_name?.toLowerCase().includes(searchLower) ||
-        course.trainer_name?.toLowerCase().includes(searchLower) ||
-        course.level?.toLowerCase().includes(searchLower) ||
-        course.payment_method?.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    return true;
-  });
-
   // ترتيب الكورسات حسب التاريخ (الأحدث أولاً)
-  const sortedCourses = [...filteredCourses].sort((a, b) => {
+  const sortedCourses = [...courses].sort((a, b) => {
     const dateA = a.start_date ? new Date(a.start_date) : new Date(0);
     const dateB = b.start_date ? new Date(b.start_date) : new Date(0);
     return dateB - dateA;
@@ -894,10 +878,45 @@ const CourseDetails = () => {
         </div>
       )}
 
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-xl mt-4">
+          <button
+            onClick={() => setPage(prev => Math.max(1, prev - 1))}
+            disabled={page === 1}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors text-xs ${
+              page === 1
+                ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                : 'bg-orange-600 text-white hover:bg-orange-700'
+            }`}
+          >
+            <ChevronRight className="w-4 h-4" />
+            السابق
+          </button>
+
+          <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+            صفحة {page} من {totalPages}
+          </span>
+
+          <button
+            onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={page === totalPages}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors text-xs ${
+              page === totalPages
+                ? 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                : 'bg-orange-600 text-white hover:bg-orange-700'
+            }`}
+          >
+            التالي
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Summary */}
       <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
         <p className="text-sm text-gray-700 dark:text-gray-300">
-          إجمالي الكورسات: <span className="font-semibold">{sortedCourses.length}</span>
+          إجمالي الكورسات المطابقة: <span className="font-semibold text-orange-600 dark:text-orange-400">{totalCourses}</span>
         </p>
         <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
           💡 انقر على الصف لتحديده | انقر نقراً مزدوجاً على الملاحظات لإضافتها/تعديلها
