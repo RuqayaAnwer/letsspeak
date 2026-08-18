@@ -30,6 +30,88 @@ const Trainers = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalTrainers, setTotalTrainers] = useState(0);
 
+  const formatDays = (days) => {
+    if (!days || (Array.isArray(days) && days.length === 0)) return '-';
+    
+    let daysArray = days;
+    if (typeof days === 'string') {
+      try {
+        daysArray = JSON.parse(days);
+      } catch (e) {
+        daysArray = days.split(',').map(d => d.trim());
+      }
+    }
+    
+    if (!Array.isArray(daysArray)) return String(days);
+
+    const daysMap = {
+      'sun': 'أحد',
+      'mon': 'اثنين',
+      'tue': 'ثلاثاء',
+      'wed': 'أربعاء',
+      'thu': 'خميس',
+      'fri': 'جمعة',
+      'sat': 'سبت',
+      'sunday': 'أحد',
+      'monday': 'اثنين',
+      'tuesday': 'ثلاثاء',
+      'wednesday': 'أربعاء',
+      'thursday': 'خميس',
+      'friday': 'جمعة',
+      'saturday': 'سبت',
+      'الأحد': 'أحد',
+      'الاثنين': 'اثنين',
+      'الثلاثاء': 'ثلاثاء',
+      'الأربعاء': 'أربعاء',
+      'الخميس': 'خميس',
+      'الجمعة': 'جمعة',
+      'السبت': 'سبت'
+    };
+    
+    const dayOrder = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    
+    const mappedDays = daysArray
+      .map(d => {
+        const key = String(d).trim().toLowerCase();
+        return daysMap[key] || d;
+      })
+      .filter(Boolean);
+      
+    return mappedDays.join('، ');
+  };
+
+  const formatTime = (timeString) => {
+    if (!timeString) return '-';
+    try {
+      const parts = timeString.split(':');
+      if (parts.length >= 2) {
+        let hours = parseInt(parts[0], 10);
+        const minutes = parts[1];
+        const ampm = hours >= 12 ? 'م' : 'ص';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // 0 becomes 12
+        return `${hours}:${minutes} ${ampm}`;
+      }
+      return timeString;
+    } catch (e) {
+      return timeString;
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString;
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${day}/${month}/${year}`;
+    } catch (e) {
+      return dateString;
+    }
+  };
+
   // Fetch trainers function passing the page parameter to the API
   const fetchTrainers = async (showLoading = true, pageToFetch = page) => {
     if (showLoading) setLoading(true);
@@ -162,6 +244,9 @@ const Trainers = () => {
     return <LoadingSpinner size="lg" />;
   }
 
+  const maxActiveCourses = trainers.length > 0 ? Math.max(...trainers.map(t => (t.courses || []).length), 5) : 5;
+  const courseColumns = Array.from({ length: maxActiveCourses }, (_, i) => i + 1);
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -223,6 +308,7 @@ const Trainers = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2">
               {trainers.map((trainer, index) => {
                 const displayIndex = (page - 1) * 15 + index + 1;
+                const trainerCourses = trainer.courses || [];
                 return (
                   <div
                     key={trainer.id}
@@ -263,9 +349,9 @@ const Trainers = () => {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الكورسات</span>
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">الكورسات النشطة</span>
                         <span className="badge badge-info text-xs px-1.5 py-0.5">
-                          {trainer.courses_count || 0}
+                          {trainer.active_courses_count ?? trainerCourses.length}
                         </span>
                       </div>
 
@@ -312,6 +398,36 @@ const Trainers = () => {
                           </button>
                         </div>
                       )}
+
+                      {/* Active Courses List on Mobile */}
+                      {trainerCourses.length > 0 && (
+                        <div className="mt-2.5 pt-2.5 border-t border-gray-200 dark:border-gray-700">
+                          <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 block mb-1.5">الكورسات النشطة ({trainerCourses.length}):</span>
+                          <div className="space-y-1.5">
+                            {trainerCourses.map((course) => (
+                              <div key={course.id} className="p-1.5 bg-blue-50/40 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/40 rounded text-[11px] flex justify-between items-center">
+                                <div className="font-semibold text-blue-600 dark:text-blue-400">
+                                  {course.is_dual && course.students && course.students.length > 0 ? (
+                                    course.students.map((s, idx) => (
+                                      <span key={s.id}>
+                                        {idx > 0 && ' و '}
+                                        <Link to={`/students/${s.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{s.name}</Link>
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <Link to={`/students/${course.students?.[0]?.id || course.student_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+                                      {course.students?.[0]?.name || course.student_name || '-'}
+                                    </Link>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-gray-500 dark:text-gray-400">
+                                  {formatDays(course.lecture_days)} | {formatTime(course.lecture_time)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -321,110 +437,116 @@ const Trainers = () => {
 
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="table text-xs">
+            <table className="table text-xs w-full border-collapse">
               <thead>
-                <tr>
-                  <th className="py-2 px-2 text-center">#</th>
-                  <th className="py-2 px-2 text-center">اسم المدرب</th>
-                  <th className="py-2 px-2 text-center">رقم الهاتف</th>
-                  <th className="py-2 px-2 text-center">البريد الإلكتروني</th>
-                  <th className="py-2 px-2 text-center">المستوى</th>
-                  <th className="py-2 px-2 text-center">الكورسات</th>
-                  <th className="py-2 px-2 text-center">محاضرات الأسبوع</th>
-                  <th className="py-2 px-2 text-center">الحالة</th>
-                  <th className="py-2 px-2 text-center">ملاحظات</th>
-                  <th className="py-2 px-2 text-center">الإجراءات</th>
+                <tr className="bg-gray-100 dark:bg-gray-700/50">
+                  <th className="py-2 px-2 text-center text-xs font-bold w-12 border border-gray-200 dark:border-gray-700">#</th>
+                  <th className="py-2 px-2 text-center text-xs font-bold border border-gray-200 dark:border-gray-700 min-w-[120px]">اسم المدرب</th>
+                  <th className="py-2 px-2 text-center text-xs font-bold border border-gray-200 dark:border-gray-700 w-24">المستويات</th>
+                  <th className="py-2 px-2 text-center text-xs font-bold border border-gray-200 dark:border-gray-700 w-16">المجموع</th>
+                  {courseColumns.map((colNum) => (
+                    <th key={colNum} className="py-2 px-2 text-center text-xs font-bold border border-gray-200 dark:border-gray-700 min-w-[150px]">
+                      {colNum}
+                    </th>
+                  ))}
+                  <th className="py-2 px-2 text-center text-xs font-bold border border-gray-200 dark:border-gray-700 w-24">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
-                {trainers.map((trainer, index) => (
-                  <tr key={trainer.id}>
-                    <td className="py-2 px-2 text-center font-semibold">{(page - 1) * 15 + index + 1}</td>
-                    <td className="py-2 px-2 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Link to={`/staff-profile/trainer/${trainer.id}`} className="font-medium text-[11px] text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
+                {trainers.map((trainer, index) => {
+                  const trainerCourses = trainer.courses || [];
+                  return (
+                    <tr key={trainer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                      {/* Serial Number */}
+                      <td className="py-3 px-2 text-center font-bold border border-gray-200 dark:border-gray-700">
+                        {(page - 1) * 15 + index + 1}
+                      </td>
+                      
+                      {/* Trainer's Name */}
+                      <td className="py-3 px-2 text-center border border-gray-200 dark:border-gray-700 font-semibold text-gray-800 dark:text-white">
+                        <Link to={`/staff-profile/trainer/${trainer.id}`} className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
                           {trainer.user?.name || trainer.name}
                         </Link>
-                      </div>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Phone className="w-3 h-3 text-[var(--color-text-muted)]" />
-                        <span dir="ltr" className="text-[11px]">{trainer.phone || '-'}</span>
-                      </div>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <span dir="ltr" className="text-[11px]">{trainer.user?.email || trainer.email || '-'}</span>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <span className="text-[10px] text-[var(--color-text-secondary)] whitespace-nowrap font-medium">
-                        {trainer.min_level && trainer.max_level 
-                          ? `${trainer.min_level} - ${trainer.max_level}` 
+                      </td>
+                      
+                      {/* Levels */}
+                      <td className="py-3 px-2 text-center border border-gray-200 dark:border-gray-700 font-medium text-gray-600 dark:text-gray-400">
+                        {trainer.min_level && trainer.max_level
+                          ? `${trainer.min_level} - ${trainer.max_level}`
                           : trainer.min_level || trainer.max_level || '-'}
-                      </span>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <span className="badge badge-info text-[10px] px-1.5 py-0.5">
-                        {trainer.courses_count || 0}
-                      </span>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <span className={`badge text-[10px] px-1.5 py-0.5 ${
-                        trainer.weekly_lectures_count >= 3 
-                          ? 'badge-success' 
-                          : trainer.weekly_lectures_count > 0 
-                            ? 'badge-warning' 
-                            : 'badge-gray'
-                      }`}>
-                        {trainer.weekly_lectures_count || 0}
-                      </span>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <span className={`badge text-[10px] px-1.5 py-0.5 ${
-                        trainer.status === 'active' 
-                          ? 'badge-success' 
-                          : 'badge-gray'
-                      }`}>
-                        {trainer.status === 'active' ? 'نشط' : 'غير نشط'}
-                      </span>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      {trainer.notes ? (
-                        <button
-                          onClick={() => setNotesPopup({
-                            open: true,
-                            notes: trainer.notes,
-                            trainerName: trainer.user?.name || trainer.name || 'المدرب'
-                          })}
-                          className="p-1 rounded-lg text-blue-600 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 transition-colors"
-                          title={trainer.notes}
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                        </button>
-                      ) : (
-                        <span className="text-gray-300 dark:text-gray-600">-</span>
-                      )}
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <div className="flex items-center justify-center gap-0.5">
-                        <button
-                          onClick={() => openModal(trainer)}
-                          className="p-1.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-primary-600"
-                          title="تعديل"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(trainer.id)}
-                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-[var(--color-text-muted)] hover:text-red-600"
-                          title="حذف"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      
+                      {/* Total Active Courses */}
+                      <td className="py-3 px-2 text-center font-bold border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
+                        {trainer.active_courses_count ?? trainerCourses.length}
+                      </td>
+                      
+                      {/* Course Slots */}
+                      {courseColumns.map((_, colIndex) => {
+                        const course = trainerCourses[colIndex];
+                        return (
+                          <td key={colIndex} className="p-2 border border-gray-200 dark:border-gray-700 align-middle text-center">
+                            {course ? (
+                              <div className="flex flex-col gap-1 text-[10px] text-right p-1.5 rounded bg-blue-50/40 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/40 min-w-[120px] max-w-[160px] mx-auto shadow-sm">
+                                {/* Student Name */}
+                                <div className="font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                                  {course.is_dual && course.students && course.students.length > 0 ? (
+                                    course.students.map((s, idx) => (
+                                      <span key={s.id}>
+                                        {idx > 0 && ' و '}
+                                        <Link to={`/students/${s.id}`} className="hover:underline">{s.name}</Link>
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <Link to={`/students/${course.students?.[0]?.id || course.student_id}`} className="hover:underline">
+                                      {course.students?.[0]?.name || course.student_name || '-'}
+                                    </Link>
+                                  )}
+                                </div>
+                                {/* Days */}
+                                <div className="text-gray-500 dark:text-gray-400 text-[9px] truncate" title={formatDays(course.lecture_days)}>
+                                  {formatDays(course.lecture_days)}
+                                </div>
+                                {/* Level */}
+                                <div className="text-gray-700 dark:text-gray-300 font-semibold text-[9px]">
+                                  {course.students?.[0]?.pivot?.student_level || course.students?.[0]?.level || (course.course_package || course.coursePackage)?.name || '-'}
+                                </div>
+                                {/* Date */}
+                                <div className="text-gray-500 dark:text-gray-400 text-[9px]">
+                                  {formatDate(course.start_date)}
+                                </div>
+                                {/* Time */}
+                                <div className="text-gray-500 dark:text-gray-400 font-medium text-[9px]">
+                                  {formatTime(course.lecture_time)}
+                                </div>
+                              </div>
+                            ) : null}
+                          </td>
+                        );
+                      })}
+                      
+                      {/* Actions */}
+                      <td className="py-3 px-2 text-center border border-gray-200 dark:border-gray-700 align-middle">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => openModal(trainer)}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-blue-600 transition-colors"
+                            title="تعديل"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(trainer.id)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-500 hover:text-red-600 transition-colors"
+                            title="حذف"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

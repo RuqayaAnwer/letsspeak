@@ -21,7 +21,13 @@ class TrainerController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Trainer::with('user:id,name,email');
+        $query = Trainer::with([
+            'user:id,name,email',
+            'courses' => function ($cQuery) {
+                $cQuery->where('status', 'active')
+                       ->with(['students:id,name,level', 'coursePackage:id,name']);
+            }
+        ]);
 
         // Search by name
         if ($request->has('search')) {
@@ -34,7 +40,12 @@ class TrainerController extends Controller
             });
         }
 
-        $trainers = $query->withCount('courses')->orderBy('created_at', 'desc')->get();
+        $trainers = $query->withCount('courses')
+            ->withCount(['courses as active_courses_count' => function ($q) {
+                $q->where('status', 'active');
+            }])
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         // Calculate weekly lectures count
         $trainers = $trainers->map(function ($trainer) {
@@ -107,6 +118,7 @@ class TrainerController extends Controller
             'min_level' => 'nullable|string|max:10',
             'max_level' => 'nullable|string|max:10',
             'notes' => 'nullable|string',
+            'status' => 'nullable|string|in:active,inactive',
         ]);
 
         return DB::transaction(function () use ($request) {
@@ -114,13 +126,14 @@ class TrainerController extends Controller
             $hashedPassword = Hash::make($plainPassword);
 
             $email = $request->email ?? 'trainer_' . time() . '@letspeak.online';
+            $status = $request->status ?? 'active';
 
             $user = User::create([
                 'name' => $request->name,
                 'email' => $email,
                 'password' => $hashedPassword,
                 'role' => 'trainer',
-                'status' => 'active',
+                'status' => $status,
             ]);
             $user->recoverable_password = $plainPassword;
             $user->save();
@@ -132,7 +145,7 @@ class TrainerController extends Controller
                 'min_level' => $request->min_level,
                 'max_level' => $request->max_level,
                 'notes' => $request->notes,
-                'status' => 'active',
+                'status' => $status,
                 'username' => $email,
                 'email' => $email,
                 'password' => $hashedPassword,
@@ -166,9 +179,14 @@ class TrainerController extends Controller
             'min_level' => 'nullable|string|max:10',
             'max_level' => 'nullable|string|max:10',
             'notes' => 'nullable|string',
+            'status' => 'nullable|string|in:active,inactive',
         ]);
 
-        $trainer->update($request->only(['name', 'phone', 'min_level', 'max_level', 'notes']));
+        $trainer->update($request->only(['name', 'phone', 'min_level', 'max_level', 'notes', 'status']));
+
+        if ($request->filled('status') && $trainer->user) {
+            $trainer->user->update(['status' => $request->status]);
+        }
 
         return response()->json($trainer);
     }
@@ -186,11 +204,11 @@ class TrainerController extends Controller
             // but usually deleting user is enough if constrained.
             // For safety we ensure trainer is deleted or handled by cascade.
              $trainer->delete();
-        });
-
-        return response()->json(null, 204);
+         });
+ 
+         return response()->json(null, 204);
     }
-
+ 
     /**
      * Get all trainers for dropdown
      */
@@ -198,6 +216,7 @@ class TrainerController extends Controller
     {
         $trainers = Trainer::with('user:id,name,email')
             ->whereNotNull('user_id')
+            ->where('status', 'active')
             ->get()
             ->map(function ($trainer) {
                 return [
