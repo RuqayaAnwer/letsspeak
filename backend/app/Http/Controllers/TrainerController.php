@@ -19,7 +19,13 @@ class TrainerController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Trainer::with('user:id,name,email,job_title,base_salary')->has('user');
+        $query = Trainer::with([
+            'user:id,name,email,job_title,base_salary',
+            'courses' => function ($cQuery) {
+                $cQuery->where('status', 'active')
+                       ->with(['students:id,name,level', 'coursePackage:id,name']);
+            }
+        ])->has('user');
 
         // Search by name (search in user name)
         if ($request->has('search')) {
@@ -29,7 +35,13 @@ class TrainerController extends Controller
             });
         }
 
-        $trainers = $query->withCount('courses')->latest()->get();
+        $trainers = $query->withCount('courses')
+            ->withCount(['courses as active_courses_count' => function ($q) {
+                $q->where('status', 'active');
+            }])
+            ->orderBy('active_courses_count', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         // Calculate weekly lectures count for each trainer
         $trainers = $trainers->map(function ($trainer) {
