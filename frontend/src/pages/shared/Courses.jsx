@@ -48,11 +48,15 @@ const Courses = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [trainersList, setTrainersList] = useState([]);
+  const [packagesList, setPackagesList] = useState([]);
   const [searchStudent, setSearchStudent] = useState(() => sessionStorage.getItem('coursesSearchStudent') || '');
   const [filterTrainerId, setFilterTrainerId] = useState(() => sessionStorage.getItem('coursesFilterTrainerId') || '');
   const [trainerSearchText, setTrainerSearchText] = useState('');
   const [filterCategory, setFilterCategory] = useState(() => sessionStorage.getItem('coursesFilterCategory') || 'all');
   const [filterStatus, setFilterStatus] = useState(() => sessionStorage.getItem('coursesFilterStatus') || 'all');
+  const [filterPackageId, setFilterPackageId] = useState(() => sessionStorage.getItem('coursesFilterPackageId') || 'all');
+  const [filterStartDateFrom, setFilterStartDateFrom] = useState(() => sessionStorage.getItem('coursesFilterStartDateFrom') || '');
+  const [filterStartDateTo, setFilterStartDateTo] = useState(() => sessionStorage.getItem('coursesFilterStartDateTo') || '');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,6 +79,18 @@ const Courses = () => {
   useEffect(() => {
     sessionStorage.setItem('coursesFilterStatus', filterStatus);
   }, [filterStatus]);
+
+  useEffect(() => {
+    sessionStorage.setItem('coursesFilterPackageId', filterPackageId);
+  }, [filterPackageId]);
+
+  useEffect(() => {
+    sessionStorage.setItem('coursesFilterStartDateFrom', filterStartDateFrom);
+  }, [filterStartDateFrom]);
+
+  useEffect(() => {
+    sessionStorage.setItem('coursesFilterStartDateTo', filterStartDateTo);
+  }, [filterStartDateTo]);
 
   // Synchronize trainerSearchText with filterTrainerId
   useEffect(() => {
@@ -122,6 +138,16 @@ const Courses = () => {
     }
   };
 
+  const fetchPackages = async () => {
+    try {
+      const response = await api.get('/course-packages');
+      const pkgs = response.data?.data || response.data || [];
+      setPackagesList(pkgs);
+    } catch (error) {
+      console.error('Error fetching packages list:', error);
+    }
+  };
+
   const fetchCourses = async (pageNumber = 1, showLoading = true) => {
     try {
       if (showLoading) {
@@ -147,6 +173,18 @@ const Courses = () => {
 
       if (filterStatus !== 'all') {
         params.status = filterStatus;
+      }
+
+      if (filterPackageId !== 'all') {
+        params.course_package_id = filterPackageId;
+      }
+
+      if (filterStartDateFrom) {
+        params.start_date_from = filterStartDateFrom;
+      }
+
+      if (filterStartDateTo) {
+        params.start_date_to = filterStartDateTo;
       }
 
       const response = await api.get('/courses', { params });
@@ -177,6 +215,7 @@ const Courses = () => {
 
   useEffect(() => {
     fetchTrainers();
+    fetchPackages();
   }, []);
 
   // Trigger fetch when filters change (with 500ms debounce for search input)
@@ -186,7 +225,7 @@ const Courses = () => {
     }, searchStudent.trim() ? 500 : 0);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchStudent, filterTrainerId, filterCategory, filterStatus]);
+  }, [searchStudent, filterTrainerId, filterCategory, filterStatus, filterPackageId, filterStartDateFrom, filterStartDateTo]);
 
   // Handle focus event for background refetching
   useEffect(() => {
@@ -195,7 +234,7 @@ const Courses = () => {
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [currentPage, searchStudent, filterTrainerId, filterCategory, filterStatus]);
+  }, [currentPage, searchStudent, filterTrainerId, filterCategory, filterStatus, filterPackageId, filterStartDateFrom, filterStartDateTo]);
 
 
   const getStatusBadge = (status) => {
@@ -837,31 +876,31 @@ const Courses = () => {
       </div>
 
       {/* Search Filters */}
-      <div className="card p-3 sm:p-4 mb-3 sm:mb-4">
-        <div className={`grid grid-cols-1 ${!isTrainer ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 sm:gap-4`}>
+      <div className="card p-3 sm:p-4 mb-3 sm:mb-4 bg-white dark:bg-gray-800 shadow-md rounded-xl border border-gray-100 dark:border-gray-700">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
-              البحث باسم الطالب
+            <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+              اسم الطالب
             </label>
             <input
               type="text"
               value={searchStudent}
               onChange={(e) => setSearchStudent(e.target.value)}
-              placeholder="ابحث عن كورس بإدخال اسم الطالب..."
-              className="input text-xs sm:text-sm"
+              placeholder="ابحث باسم الطالب..."
+              className="input text-xs w-full"
             />
           </div>
           {!isTrainer && (
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
-                ابحث عن مدرب
+              <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                اسم المدرب
               </label>
               <input
                 list="trainers-datalist"
                 value={trainerSearchText}
                 onChange={handleTrainerSearchChange}
-                placeholder="ابحث عن مدرب بالكتابة أو الاختيار..."
-                className="input text-xs sm:text-sm text-right"
+                placeholder="اختر المدرب..."
+                className="input text-xs w-full text-right"
                 style={{ direction: 'rtl' }}
               />
               <datalist id="trainers-datalist">
@@ -872,13 +911,28 @@ const Courses = () => {
             </div>
           )}
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+            <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+              الباقة
+            </label>
+            <select
+              value={filterPackageId}
+              onChange={(e) => setFilterPackageId(e.target.value)}
+              className="select text-xs w-full text-right cursor-pointer"
+            >
+              <option value="all">جميع الباقات</option>
+              {packagesList.map((pkg) => (
+                <option key={pkg.id} value={pkg.id}>{pkg.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
               حالة الكورس
             </label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="input text-xs sm:text-sm appearance-none cursor-pointer text-right"
+              className="select text-xs w-full text-right cursor-pointer"
             >
               <option value="all">جميع الحالات</option>
               <option value="active">نشط</option>
@@ -889,22 +943,44 @@ const Courses = () => {
             </select>
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+            <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
               تصنيف الكورس
             </label>
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="input text-xs sm:text-sm appearance-none cursor-pointer text-right"
+              className="select text-xs w-full text-right cursor-pointer"
             >
               <option value="all">جميع الكورسات</option>
               <option value="regular">الكورسات العادية (الكبار)</option>
               <option value="kids">كورسات الأطفال 👶</option>
             </select>
           </div>
+          <div>
+            <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+              تاريخ البدء (من)
+            </label>
+            <input
+              type="date"
+              value={filterStartDateFrom}
+              onChange={(e) => setFilterStartDateFrom(e.target.value)}
+              className="input text-xs w-full dark:[color-scheme:dark]"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+              تاريخ البدء (إلى)
+            </label>
+            <input
+              type="date"
+              value={filterStartDateTo}
+              onChange={(e) => setFilterStartDateTo(e.target.value)}
+              className="input text-xs w-full dark:[color-scheme:dark]"
+            />
+          </div>
         </div>
         
-        {(searchStudent || filterTrainerId || filterStatus !== 'all' || filterCategory !== 'all') && (
+        {(searchStudent || filterTrainerId || filterStatus !== 'all' || filterCategory !== 'all' || filterPackageId !== 'all' || filterStartDateFrom || filterStartDateTo) && (
           <div className="mt-2 sm:mt-3 flex items-center gap-2 text-xs sm:text-sm flex-wrap">
             <span className="text-gray-600 dark:text-gray-400">عوامل التصفية النشطة:</span>
             {searchStudent && (
@@ -922,6 +998,15 @@ const Courses = () => {
                 className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded text-xs"
               >
                 المدرب: {trainersList.find(t => String(t.id) === String(filterTrainerId))?.name || 'محدد'}
+                <X className="w-3 h-3" />
+              </button>
+            )}
+            {filterPackageId !== 'all' && (
+              <button
+                onClick={() => setFilterPackageId('all')}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 rounded text-xs"
+              >
+                الباقة: {packagesList.find(p => String(p.id) === String(filterPackageId))?.name || 'محددة'}
                 <X className="w-3 h-3" />
               </button>
             )}
@@ -943,12 +1028,33 @@ const Courses = () => {
                 <X className="w-3 h-3" />
               </button>
             )}
+            {filterStartDateFrom && (
+              <button
+                onClick={() => setFilterStartDateFrom('')}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 rounded text-xs"
+              >
+                البدء من: {filterStartDateFrom}
+                <X className="w-3 h-3" />
+              </button>
+            )}
+            {filterStartDateTo && (
+              <button
+                onClick={() => setFilterStartDateTo('')}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 rounded text-xs"
+              >
+                البدء إلى: {filterStartDateTo}
+                <X className="w-3 h-3" />
+              </button>
+            )}
             <button
               onClick={() => {
                 setSearchStudent('');
                 setFilterTrainerId('');
                 setFilterCategory('all');
                 setFilterStatus('all');
+                setFilterPackageId('all');
+                setFilterStartDateFrom('');
+                setFilterStartDateTo('');
               }}
               className="text-red-600 dark:text-red-400 hover:underline text-xs"
             >

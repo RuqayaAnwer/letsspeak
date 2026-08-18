@@ -88,6 +88,19 @@ class CourseController extends Controller
             }
         }
 
+        // Filter by package
+        if ($request->filled('course_package_id') && $request->course_package_id !== 'null' && $request->course_package_id !== 'undefined' && $request->course_package_id !== 'all') {
+            $query->where('courses.course_package_id', $request->course_package_id);
+        }
+
+        // Filter by start date range
+        if ($request->filled('start_date_from')) {
+            $query->whereDate('courses.start_date', '>=', $request->start_date_from);
+        }
+        if ($request->filled('start_date_to')) {
+            $query->whereDate('courses.start_date', '<=', $request->start_date_to);
+        }
+
         // Search
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
