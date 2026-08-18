@@ -55,8 +55,7 @@ const Courses = () => {
   const [filterCategory, setFilterCategory] = useState(() => sessionStorage.getItem('coursesFilterCategory') || 'all');
   const [filterStatus, setFilterStatus] = useState(() => sessionStorage.getItem('coursesFilterStatus') || 'all');
   const [filterPackageId, setFilterPackageId] = useState(() => sessionStorage.getItem('coursesFilterPackageId') || 'all');
-  const [filterStartDateFrom, setFilterStartDateFrom] = useState(() => sessionStorage.getItem('coursesFilterStartDateFrom') || '');
-  const [filterStartDateTo, setFilterStartDateTo] = useState(() => sessionStorage.getItem('coursesFilterStartDateTo') || '');
+  const [filterStartDate, setFilterStartDate] = useState(() => sessionStorage.getItem('coursesFilterStartDate') || '');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -85,12 +84,8 @@ const Courses = () => {
   }, [filterPackageId]);
 
   useEffect(() => {
-    sessionStorage.setItem('coursesFilterStartDateFrom', filterStartDateFrom);
-  }, [filterStartDateFrom]);
-
-  useEffect(() => {
-    sessionStorage.setItem('coursesFilterStartDateTo', filterStartDateTo);
-  }, [filterStartDateTo]);
+    sessionStorage.setItem('coursesFilterStartDate', filterStartDate);
+  }, [filterStartDate]);
 
   // Synchronize trainerSearchText with filterTrainerId
   useEffect(() => {
@@ -179,12 +174,8 @@ const Courses = () => {
         params.course_package_id = filterPackageId;
       }
 
-      if (filterStartDateFrom) {
-        params.start_date_from = filterStartDateFrom;
-      }
-
-      if (filterStartDateTo) {
-        params.start_date_to = filterStartDateTo;
+      if (filterStartDate) {
+        params.start_date = filterStartDate;
       }
 
       const response = await api.get('/courses', { params });
@@ -225,7 +216,7 @@ const Courses = () => {
     }, searchStudent.trim() ? 500 : 0);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchStudent, filterTrainerId, filterCategory, filterStatus, filterPackageId, filterStartDateFrom, filterStartDateTo]);
+  }, [searchStudent, filterTrainerId, filterCategory, filterStatus, filterPackageId, filterStartDate]);
 
   // Handle focus event for background refetching
   useEffect(() => {
@@ -234,7 +225,7 @@ const Courses = () => {
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [currentPage, searchStudent, filterTrainerId, filterCategory, filterStatus, filterPackageId, filterStartDateFrom, filterStartDateTo]);
+  }, [currentPage, searchStudent, filterTrainerId, filterCategory, filterStatus, filterPackageId, filterStartDate]);
 
 
   const getStatusBadge = (status) => {
@@ -877,7 +868,7 @@ const Courses = () => {
 
       {/* Search Filters */}
       <div className="card p-3 sm:p-4 mb-3 sm:mb-4 bg-white dark:bg-gray-800 shadow-md rounded-xl border border-gray-100 dark:border-gray-700">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div>
             <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
               اسم الطالب
@@ -958,29 +949,18 @@ const Courses = () => {
           </div>
           <div>
             <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
-              تاريخ البدء (من)
+              تاريخ البدء
             </label>
             <input
               type="date"
-              value={filterStartDateFrom}
-              onChange={(e) => setFilterStartDateFrom(e.target.value)}
-              className="input text-xs w-full dark:[color-scheme:dark]"
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
-              تاريخ البدء (إلى)
-            </label>
-            <input
-              type="date"
-              value={filterStartDateTo}
-              onChange={(e) => setFilterStartDateTo(e.target.value)}
+              value={filterStartDate}
+              onChange={(e) => setFilterStartDate(e.target.value)}
               className="input text-xs w-full dark:[color-scheme:dark]"
             />
           </div>
         </div>
         
-        {(searchStudent || filterTrainerId || filterStatus !== 'all' || filterCategory !== 'all' || filterPackageId !== 'all' || filterStartDateFrom || filterStartDateTo) && (
+        {(searchStudent || filterTrainerId || filterStatus !== 'all' || filterCategory !== 'all' || filterPackageId !== 'all' || filterStartDate) && (
           <div className="mt-2 sm:mt-3 flex items-center gap-2 text-xs sm:text-sm flex-wrap">
             <span className="text-gray-600 dark:text-gray-400">عوامل التصفية النشطة:</span>
             {searchStudent && (
@@ -1028,21 +1008,12 @@ const Courses = () => {
                 <X className="w-3 h-3" />
               </button>
             )}
-            {filterStartDateFrom && (
+            {filterStartDate && (
               <button
-                onClick={() => setFilterStartDateFrom('')}
+                onClick={() => setFilterStartDate('')}
                 className="inline-flex items-center gap-1 px-2 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 rounded text-xs"
               >
-                البدء من: {filterStartDateFrom}
-                <X className="w-3 h-3" />
-              </button>
-            )}
-            {filterStartDateTo && (
-              <button
-                onClick={() => setFilterStartDateTo('')}
-                className="inline-flex items-center gap-1 px-2 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 rounded text-xs"
-              >
-                البدء إلى: {filterStartDateTo}
+                تاريخ البدء: {filterStartDate}
                 <X className="w-3 h-3" />
               </button>
             )}
@@ -1053,8 +1024,7 @@ const Courses = () => {
                 setFilterCategory('all');
                 setFilterStatus('all');
                 setFilterPackageId('all');
-                setFilterStartDateFrom('');
-                setFilterStartDateTo('');
+                setFilterStartDate('');
               }}
               className="text-red-600 dark:text-red-400 hover:underline text-xs"
             >

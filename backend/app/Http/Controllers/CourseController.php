@@ -93,12 +93,9 @@ class CourseController extends Controller
             $query->where('courses.course_package_id', $request->course_package_id);
         }
 
-        // Filter by start date range
-        if ($request->filled('start_date_from')) {
-            $query->whereDate('courses.start_date', '>=', $request->start_date_from);
-        }
-        if ($request->filled('start_date_to')) {
-            $query->whereDate('courses.start_date', '<=', $request->start_date_to);
+        // Filter by start date
+        if ($request->filled('start_date')) {
+            $query->whereDate('courses.start_date', '=', $request->start_date);
         }
 
         // Search
