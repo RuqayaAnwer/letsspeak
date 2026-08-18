@@ -78,10 +78,12 @@ class PublicWebhooksController extends Controller
         $lead->save();
 
         // Automatic Conversion to Student
-        // Check if student with this phone already exists
+        // Check if student with this phone AND name already exists (allows siblings with same phone)
         $existingStudent = null;
         if ($lead->phone_whatsapp !== '0000000000' && $lead->phone_whatsapp !== 'بدون رقم') {
-            $existingStudent = Student::where('phone', $lead->phone_whatsapp)->first();
+            $existingStudent = Student::where('phone', $lead->phone_whatsapp)
+                ->where('name', trim($lead->name))
+                ->first();
         }
 
         if (!$existingStudent) {
