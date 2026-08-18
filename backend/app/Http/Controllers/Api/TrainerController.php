@@ -44,6 +44,7 @@ class TrainerController extends Controller
             ->withCount(['courses as active_courses_count' => function ($q) {
                 $q->where('status', 'active');
             }])
+            ->orderBy('active_courses_count', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
 
