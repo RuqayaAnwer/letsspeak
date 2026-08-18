@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Lead;
+use App\Models\Student;
 use Illuminate\Http\Request;
 
 class PublicWebhooksController extends Controller
@@ -69,11 +70,79 @@ class PublicWebhooksController extends Controller
         }
         
         // Only set status to 'new' if this is a brand new lead, to avoid resetting old ones
-        if (!$lead->exists || empty($lead->status)) {
+        $isNewLead = !$lead->exists || empty($lead->status);
+        if ($isNewLead) {
             $lead->status = 'new';
         }
         
         $lead->save();
+
+        // Automatic Conversion to Student
+        // Check if student with this phone already exists
+        $existingStudent = null;
+        if ($lead->phone_whatsapp !== '0000000000' && $lead->phone_whatsapp !== 'بدون رقم') {
+            $existingStudent = Student::where('phone', $lead->phone_whatsapp)->first();
+        }
+
+        if (!$existingStudent) {
+            // Extract level (L1-L8)
+            $level = 'L1';
+            $fieldsToCheck = [
+                $lead->current_level,
+                $lead->package_selected,
+                $lead->notes
+            ];
+
+            foreach ($fieldsToCheck as $field) {
+                if ($field) {
+                    $fieldLower = strtolower($field);
+                    if (strpos($fieldLower, 'l_prep') !== false || strpos($fieldLower, 'prep') !== false || strpos($fieldLower, 'تمهيدي') !== false) {
+                        $level = 'L_PREP';
+                        break;
+                    } elseif (preg_match('/(L[1-8])/i', $field, $matches)) {
+                        $level = strtoupper($matches[1]);
+                        break;
+                    } elseif (preg_match('/مستوى\s*([1-8])/u', $field, $matches) || preg_match('/المستوى\s*([1-8])/u', $field, $matches)) {
+                        $level = 'L' . $matches[1];
+                        break;
+                    }
+                }
+            }
+
+            // Determine if child (less than 16 years, or keywords in level/package/notes)
+            $isChild = ($lead->age !== null && $lead->age < 16);
+            if (!$isChild) {
+                // check for kids keywords
+                foreach ($fieldsToCheck as $field) {
+                    if ($field) {
+                        if (mb_strpos($field, 'اطفال') !== false || mb_strpos(strtolower($field), 'kids') !== false) {
+                            $isChild = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            $student = Student::create([
+                'name' => $lead->name,
+                'phone' => $lead->phone_whatsapp,
+                'level' => $isChild ? 'أطفال' : $level,
+                'notes' => "المستوى التقييمي: " . ($lead->current_level ?? 'غير محدد') . "\n" .
+                           "الباقة المطلوبة: " . ($lead->package_selected ?? 'غير محدد') . "\n" . 
+                           $lead->notes . "\n(تم إنشاء هذا الطالب تلقائياً من استمارة التسجيل)",
+                'lead_id' => $lead->id,
+                'is_child' => $isChild,
+                'age' => $lead->age,
+            ]);
+
+            // Set lead status to confirmed since it's converted
+            $lead->status = 'confirmed';
+            $lead->save();
+        } elseif ($existingStudent) {
+            // If student already exists, update lead status to confirmed to keep database clean
+            $lead->status = 'confirmed';
+            $lead->save();
+        }
 
         return response()->json(['message' => 'Lead securely received and processed.', 'id' => $lead->id], 201);
     }
