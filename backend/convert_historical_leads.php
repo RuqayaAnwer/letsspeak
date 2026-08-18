@@ -12,7 +12,7 @@ $converted = 0;
 $skipped = 0;
 
 foreach ($leads as $lead) {
-    $phone = trim($lead->phone);
+    $phone = trim($lead->phone_whatsapp ?? '');
     $name = trim($lead->name);
 
     if (empty($phone) || empty($name)) {
