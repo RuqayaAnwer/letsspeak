@@ -22,6 +22,20 @@ const StudentProfile = () => {
   const [error, setError] = useState(null);
   const [expandedCourse, setExpandedCourse] = useState(null);
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString;
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}/${month}/${day}`;
+    } catch (e) {
+      return dateString;
+    }
+  };
+
   // Payment Modal State
   const [paymentModal, setPaymentModal] = useState({
     open: false,
@@ -248,6 +262,15 @@ const StudentProfile = () => {
                         L8: 'المستوى 8',
                       }[profileData.student.level] || profileData.student.level
                     }
+                  </span>
+                )}
+                {(profileData?.student?.lead?.created_at || profileData?.student?.created_at) && (
+                  <span className="flex items-center gap-1.5 bg-black/10 px-2 py-1 rounded-md" title="تاريخ التسجيل بالاستمارة">
+                    <Calendar className="w-4 h-4" />
+                    <span>تاريخ التسجيل: </span>
+                    <span>
+                      {formatDate(profileData.student.lead?.created_at || profileData.student.created_at)}
+                    </span>
                   </span>
                 )}
                 {profileData?.student?.lead?.telegram_id && (
