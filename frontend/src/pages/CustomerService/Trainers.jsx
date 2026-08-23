@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../api/axios';
 import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -9,8 +9,8 @@ import { Link } from 'react-router-dom';
 const Trainers = () => {
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [weeklyFilter, setWeeklyFilter] = useState('');
+  const [search, setSearch] = useState(() => sessionStorage.getItem('trainers_search') || '');
+  const [weeklyFilter, setWeeklyFilter] = useState(() => sessionStorage.getItem('trainers_weeklyFilter') || '');
   const [notesPopup, setNotesPopup] = useState({ open: false, notes: '', trainerName: '' });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTrainer, setEditingTrainer] = useState(null);
@@ -26,7 +26,10 @@ const Trainers = () => {
   });
   const [newTrainerCredentials, setNewTrainerCredentials] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => {
+    const savedPage = sessionStorage.getItem('trainers_page');
+    return savedPage ? parseInt(savedPage, 10) : 1;
+  });
   const [totalPages, setTotalPages] = useState(1);
   const [totalTrainers, setTotalTrainers] = useState(0);
 
@@ -152,6 +155,8 @@ const Trainers = () => {
     }
   };
 
+  const isFirstRender = useRef(true);
+
   // Fetch whenever page, search, or weeklyFilter changes with debounce
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -161,8 +166,25 @@ const Trainers = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [search, weeklyFilter, page]);
 
-  // Reset page to 1 whenever filters change
+  // Save filters and page state to sessionStorage when they change
   useEffect(() => {
+    sessionStorage.setItem('trainers_search', search);
+  }, [search]);
+
+  useEffect(() => {
+    sessionStorage.setItem('trainers_weeklyFilter', weeklyFilter);
+  }, [weeklyFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem('trainers_page', page.toString());
+  }, [page]);
+
+  // Reset page to 1 whenever filters change, skipping initial render to preserve page state
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     setPage(1);
   }, [search, weeklyFilter]);
 
