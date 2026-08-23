@@ -34,7 +34,7 @@ class AdminController extends Controller
             'users_count'           => User::where('role', '!=', 'trainer')->count(),
             'customer_service_count'=> User::where('role', 'customer_service')->count(),
             'finance_count'         => User::where('role', 'finance')->count(),
-            'trainers_count'        => Trainer::count(),
+            'trainers_count'        => Trainer::where('status', 'active')->count(),
             'active_users'          => User::where('status', 'active')->where('role', '!=', 'trainer')->count(),
             'inactive_users'        => User::where('status', 'inactive')->where('role', '!=', 'trainer')->count(),
         ];
@@ -79,7 +79,7 @@ class AdminController extends Controller
             ]);
 
         $totalUsers = User::count();
-        $totalTrainers = Trainer::count();
+        $totalTrainers = Trainer::where('status', 'active')->count();
 
         return response()->json([
             'success' => true,

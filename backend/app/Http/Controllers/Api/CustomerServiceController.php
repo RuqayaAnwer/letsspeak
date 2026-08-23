@@ -55,7 +55,7 @@ class CustomerServiceController extends Controller
         try {
             $stats = [
                 'students' => Student::count(),
-                'trainers' => Trainer::count(),
+                'trainers' => Trainer::where('status', 'active')->count(),
                 'courses' => Course::where('status', 'active')->count(),
                 'packages' => CoursePackage::count(),
             ];

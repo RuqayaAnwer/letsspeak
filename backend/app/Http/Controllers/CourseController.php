@@ -1162,7 +1162,7 @@ class CourseController extends Controller
 
         if (!$user->isTrainer()) {
             $stats['total_students'] = \App\Models\Student::count();
-            $stats['total_trainers'] = \App\Models\Trainer::count();
+            $stats['total_trainers'] = \App\Models\Trainer::where('status', 'active')->count();
         }
 
         return response()->json($stats);

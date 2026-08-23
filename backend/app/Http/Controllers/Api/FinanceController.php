@@ -729,7 +729,7 @@ class FinanceController extends Controller
             $activeCourses = Course::where('status', 'active')->count();
             $finishedCourses = Course::where('status', 'finished')->count();
             $studentsCount = Student::count();
-            $trainersCount = Trainer::count();
+            $trainersCount = Trainer::where('status', 'active')->count();
             
             \Log::info('Statistics calculated', [
                 'active_courses' => $activeCourses,
