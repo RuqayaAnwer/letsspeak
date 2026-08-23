@@ -75,7 +75,8 @@ class StaffProfileController extends Controller
                 'avatar' => $trainer->user ? $trainer->user->avatar : null,
                 'base_salary' => $trainer->user ? $trainer->user->base_salary : 0,
                 'created_at' => $trainer->created_at,
-                'type' => 'trainer'
+                'type' => 'trainer',
+                'renewals_count' => $trainer->courses()->where('renewed_with_trainer', true)->count(),
             ];
 
             // Map Courses
@@ -96,6 +97,8 @@ class StaffProfileController extends Controller
                     'total_lectures' => $course->lectures_count,
                     'progress' => $course->progress,
                     'is_kids' => $course->is_kids,
+                    'renewed_with_trainer' => (bool)$course->renewed_with_trainer,
+                    'renewal_iteration' => (int)$course->renewal_iteration,
                 ];
             });
 

@@ -378,6 +378,13 @@ const Trainers = () => {
                       </div>
 
                       <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">التجديدات</span>
+                        <span className="badge badge-success text-xs px-1.5 py-0.5 font-bold">
+                          {trainer.renewals_count || 0}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-gray-500 dark:text-gray-400">محاضرات الأسبوع</span>
                         <span className={`badge text-xs px-1.5 py-0.5 ${
                           trainer.weekly_lectures_count >= 3
@@ -486,9 +493,14 @@ const Trainers = () => {
                       
                       {/* Trainer's Name */}
                       <td className="py-3 px-2 text-center border border-gray-200 dark:border-gray-700 font-semibold text-gray-800 dark:text-white">
-                        <Link to={`/staff-profile/trainer/${trainer.id}`} className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
+                        <Link to={`/staff-profile/trainer/${trainer.id}`} className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline block">
                           {trainer.user?.name || trainer.name}
                         </Link>
+                        {trainer.renewals_count > 0 && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 text-[10px] font-bold mt-1">
+                            ✨ تجديد: {trainer.renewals_count}
+                          </span>
+                        )}
                       </td>
                       
                       {/* Levels */}

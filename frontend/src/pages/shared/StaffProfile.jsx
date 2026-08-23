@@ -417,6 +417,15 @@ const StaffProfile = () => {
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">الراتب الثابت</p>
                                         <p className="font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(profile.base_salary || 0)}</p>
                                     </div>
+                                    <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-lg animate-fade-in flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs text-green-700 dark:text-green-400 mb-1 font-bold">إجمالي التجديدات الناجحة</p>
+                                            <p className="text-lg font-bold text-green-800 dark:text-green-300">
+                                                {profile.renewals_count || 0} تجديد
+                                            </p>
+                                        </div>
+                                        <span className="text-2xl">✨</span>
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -476,6 +485,8 @@ const StaffProfile = () => {
                                              <h4 className="font-bold text-gray-800 dark:text-gray-100 text-sm sm:text-base flex items-center gap-1.5 flex-wrap">
                                                  {course.title || 'كورس مخصص'}
                                                  {course.is_kids && <span className="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 text-xs px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1">كورس أطفال 👶</span>}
+                                                 {course.renewed_with_trainer && <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1">✨ تجديد ناجح</span>}
+                                                 {course.renewal_iteration > 0 && <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1">🔄 تجديد #{course.renewal_iteration}</span>}
                                              </h4>
                                              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
                                                  <span className="flex items-center gap-1"><User className="w-3 h-3"/> الطالب: {course.student?.name}</span>

@@ -43,6 +43,9 @@ class TrainerController extends Controller
                 $q->where('status', 'active')
                   ->where('start_date', '>=', $thresholdDate);
             }])
+            ->withCount(['courses as renewals_count' => function ($q) {
+                $q->where('renewed_with_trainer', true);
+            }])
             ->orderBy('active_courses_count', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
