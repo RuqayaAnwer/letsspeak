@@ -23,6 +23,8 @@ DB::beginTransaction();
 
 try {
     foreach ($trainers as $trainer) {
+        $trainerName = $trainer->user ? $trainer->user->name : ($trainer->name ?? 'Trainer ID ' . $trainer->id);
+
         // Skip if already inactive
         if ($trainer->status === 'inactive') {
             continue;
@@ -30,7 +32,7 @@ try {
 
         // Check if created recently (in last 30 days)
         if ($trainer->created_at && $trainer->created_at->gt($creationThreshold)) {
-            echo "Trainer '{$trainer->user->name}' was created recently ({$trainer->created_at->toDateString()}). Keeping ACTIVE.\n";
+            echo "Trainer '{$trainerName}' was created recently ({$trainer->created_at->toDateString()}). Keeping ACTIVE.\n";
             continue;
         }
 
@@ -49,7 +51,7 @@ try {
                 $trainer->user->save();
             }
 
-            echo "Deactivated trainer: '{$trainer->user->name}' (No recent courses since $courseThreshold)\n";
+            echo "Deactivated trainer: '{$trainerName}' (No recent courses since $courseThreshold)\n";
             $deactivatedCount++;
         }
     }
@@ -61,4 +63,5 @@ try {
 } catch (\Exception $e) {
     DB::rollBack();
     echo "Error during deactivation: " . $e->getMessage() . "\n";
+    echo $e->getTraceAsString() . "\n";
 }
