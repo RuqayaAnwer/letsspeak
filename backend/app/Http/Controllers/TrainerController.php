@@ -90,9 +90,12 @@ class TrainerController extends Controller
      */
     private function calculateWeeklyLecturesCount($trainerId): int
     {
-        // Get all active courses for this trainer
+        $thresholdDate = now()->subMonths(4)->toDateString();
+
+        // Get all active courses for this trainer within the last 4 months
         $courses = Course::where('trainer_id', $trainerId)
             ->where('status', 'active')
+            ->where('start_date', '>=', $thresholdDate)
             ->get();
 
         $weeklyCount = 0;
