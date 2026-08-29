@@ -4,9 +4,10 @@ import Modal from '../../components/Modal';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { Plus, Search, Edit2, Trash2, GraduationCap, Phone, Filter, MessageSquare, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Trainers = () => {
+  const navigate = useNavigate();
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(() => sessionStorage.getItem('trainers_search') || '');
@@ -187,6 +188,27 @@ const Trainers = () => {
     }
     setPage(1);
   }, [search, weeklyFilter]);
+
+  // Save and restore scroll position to preserve list location on page back/navigation
+  useEffect(() => {
+    const savedScrollY = sessionStorage.getItem('trainers_scrollY');
+    if (savedScrollY && !loading) {
+      const timer = setTimeout(() => {
+        window.scrollTo(0, Number(savedScrollY));
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      sessionStorage.setItem('trainers_scrollY', window.scrollY.toString());
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -434,7 +456,14 @@ const Trainers = () => {
                           <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 block mb-1.5">الكورسات النشطة ({trainerCourses.length}):</span>
                           <div className="space-y-1.5">
                             {trainerCourses.map((course) => (
-                              <div key={course.id} className="p-1.5 bg-blue-50/40 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/40 rounded text-[11px] flex justify-between items-center">
+                              <div 
+                                key={course.id} 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/courses/${course.id}`);
+                                }}
+                                className="p-1.5 bg-blue-50/40 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/40 rounded text-[11px] flex justify-between items-center cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-all"
+                              >
                                 <div className="font-semibold text-blue-600 dark:text-blue-400">
                                   {course.is_dual && course.students && course.students.length > 0 ? (
                                     course.students.map((s, idx) => (
@@ -521,18 +550,21 @@ const Trainers = () => {
                         return (
                           <td key={colIndex} className="p-2 border border-gray-200 dark:border-gray-700 align-middle text-center">
                             {course ? (
-                              <div className="flex flex-col gap-1 text-[10px] text-right p-1.5 rounded bg-blue-50/40 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/40 min-w-[120px] max-w-[160px] mx-auto shadow-sm">
+                              <div 
+                                onClick={() => navigate(`/courses/${course.id}`)}
+                                className="flex flex-col gap-1 text-[10px] text-right p-1.5 rounded bg-blue-50/40 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/40 min-w-[120px] max-w-[160px] mx-auto shadow-sm cursor-pointer hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all"
+                              >
                                 {/* Student Name */}
                                 <div className="font-bold text-blue-600 dark:text-blue-400 hover:underline">
                                   {course.is_dual && course.students && course.students.length > 0 ? (
                                     course.students.map((s, idx) => (
                                       <span key={s.id}>
                                         {idx > 0 && ' و '}
-                                        <Link to={`/students/${s.id}`} className="hover:underline">{s.name}</Link>
+                                        <Link to={`/students/${s.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{s.name}</Link>
                                       </span>
                                     ))
                                   ) : (
-                                    <Link to={`/students/${course.students?.[0]?.id || course.student_id}`} className="hover:underline">
+                                    <Link to={`/students/${course.students?.[0]?.id || course.student_id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
                                       {course.students?.[0]?.name || course.student_name || '-'}
                                     </Link>
                                   )}
