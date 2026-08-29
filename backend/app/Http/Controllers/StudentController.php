@@ -33,11 +33,11 @@ class StudentController extends Controller
         }
 
         if ($request->has('all') && $request->all == 'true') {
-            $students = $query->with('lead')->latest()->get();
+            $students = $query->with('lead')->orderBy('name', 'asc')->get();
             return response()->json(['data' => $students]);
         }
 
-        $students = $query->with('lead')->withCount('courses')->latest()->paginate(15);
+        $students = $query->with('lead')->withCount('courses')->orderBy('name', 'asc')->paginate(15);
 
         return response()->json($students);
     }

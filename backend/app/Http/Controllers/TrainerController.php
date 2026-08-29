@@ -21,21 +21,21 @@ class TrainerController extends Controller
     {
         $thresholdDate = now()->subMonths(4)->toDateString();
 
-        $query = Trainer::with([
-            'user:id,name,email,job_title,base_salary',
-            'courses' => function ($cQuery) use ($thresholdDate) {
-                $cQuery->where('status', 'active')
-                       ->where('start_date', '>=', $thresholdDate)
-                       ->with(['students:id,name,level', 'coursePackage:id,name']);
-            }
-        ])->has('user');
+        $query = Trainer::join('users', 'trainers.user_id', '=', 'users.id')
+            ->select('trainers.*')
+            ->with([
+                'user:id,name,email,job_title,base_salary',
+                'courses' => function ($cQuery) use ($thresholdDate) {
+                    $cQuery->where('status', 'active')
+                           ->where('start_date', '>=', $thresholdDate)
+                           ->with(['students:id,name,level', 'coursePackage:id,name']);
+                }
+            ]);
 
         // Search by name (search in user name)
         if ($request->has('search')) {
             $search = $request->search;
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
-            });
+            $query->where('users.name', 'like', "%{$search}%");
         }
 
         $trainers = $query->withCount('courses')
@@ -46,8 +46,7 @@ class TrainerController extends Controller
             ->withCount(['courses as renewals_count' => function ($q) {
                 $q->where('renewed_with_trainer', true);
             }])
-            ->orderBy('active_courses_count', 'desc')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('users.name', 'asc')
             ->get();
 
         // Calculate weekly lectures count for each trainer
@@ -258,8 +257,10 @@ public function store(Request $request)
      */
     public function list()
     {
-        $trainers = Trainer::with('user:id,name,email,job_title,base_salary')
-            ->has('user')
+        $trainers = Trainer::join('users', 'trainers.user_id', '=', 'users.id')
+            ->select('trainers.*')
+            ->orderBy('users.name', 'asc')
+            ->with('user:id,name,email,job_title,base_salary')
             ->get()
             ->map(function ($trainer) {
                 return [

@@ -215,9 +215,12 @@ class TrainerController extends Controller
      */
     public function list()
     {
-        $trainers = Trainer::with('user:id,name,email')
+        $trainers = Trainer::join('users', 'trainers.user_id', '=', 'users.id')
+            ->select('trainers.*')
+            ->orderBy('users.name', 'asc')
+            ->with('user:id,name,email')
             ->whereNotNull('user_id')
-            ->where('status', 'active')
+            ->where('trainers.status', 'active')
             ->get()
             ->map(function ($trainer) {
                 return [
