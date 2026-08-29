@@ -26,7 +26,7 @@ echo "LetSpeak Google Sheet Importer V2\n";
 echo "Mode: " . ($isLive ? "LIVE IMPORT (Changes will be saved)" : "DRY RUN (No database changes will be saved)") . "\n";
 echo "==================================================\n\n";
 
-$googleSheetUrl = 'https://docs.google.com/spreadsheets/d/1db0NYPAOunswRyxOMfprGcU-zCfUfMBsxZfKbMcpLAY/export?format=csv&gid=556864345';
+$googleSheetUrl = 'https://docs.google.com/spreadsheets/d/18C1TCt-pqU2By1QtCv3pcnQfb0K81XWsgYTIYdvl0o8/export?format=csv&gid=412213874';
 
 // Helper parsers
 function normalizeTrainerName($name) {
@@ -273,19 +273,19 @@ function checkDuplicateCourse($studentIds, $startDate, $simulatedCourses) {
         if (!empty($commonStudents)) {
             $scDate = Carbon::parse($sc['start_date']);
             if ($scDate->between($minDate, $maxDate)) {
-                return true;
+                return 'simulated';
             }
         }
     }
     
     // 2. Check in database
-    $existingCourses = Course::whereBetween('start_date', [$minDate, $maxDate])
+    $existingCourse = Course::whereBetween('start_date', [$minDate, $maxDate])
         ->whereHas('students', function ($query) use ($studentIds) {
             $query->whereIn('students.id', $studentIds);
         })
-        ->exists();
+        ->first();
         
-    return $existingCourses;
+    return $existingCourse;
 }
 
 function generateLectureSchedule(Course $course, $isLive) {
@@ -554,7 +554,22 @@ try {
         // 4. Duplicate Check: Prevent duplicate import based on student & date overlap
         $dup = checkDuplicateCourse($studentIds, $startDate, $simulatedCourses);
         if ($dup) {
-            $duplicateCount++;
+            if ($dup instanceof Course) {
+                if ($isLive) {
+                    $dup->trainer_id = $trainerId;
+                    $dup->trainer_name = $courseTrainerNameColumn;
+                    $dup->save();
+                    echo "Updated existing course ID {$dup->id} to trainer: " . ($trainerId ? "ID $trainerId" : $courseTrainerNameColumn) . "\n";
+                }
+                
+                $simulatedCourses[] = [
+                    'student_ids' => $studentIds,
+                    'start_date' => $startDate,
+                ];
+                $importedCount++;
+            } else {
+                $duplicateCount++;
+            }
             continue;
         }
 
