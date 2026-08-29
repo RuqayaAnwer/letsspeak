@@ -78,7 +78,7 @@ class AdminController extends Controller
                 'created_at' => $u->created_at?->format('Y-m-d'),
             ]);
 
-        $totalUsers = User::count();
+        $totalUsers = User::where('role', '!=', 'trainer')->count();
         $totalTrainers = Trainer::where('status', 'active')->count();
 
         return response()->json([
