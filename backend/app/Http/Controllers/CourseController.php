@@ -193,7 +193,7 @@ class CourseController extends Controller
                 foreach ($c->students as $student) {
                     $studentCoursesMap[$student->id][] = [
                         'course_id' => $c->id,
-                        'trainer_name' => $c->trainer && $c->trainer->user ? $c->trainer->user->name : ($c->trainer ? $c->trainer->name : '-')
+                        'trainer_name' => $c->trainer_name
                     ];
                 }
             }
@@ -1216,7 +1216,7 @@ class CourseController extends Controller
                 'student_name' => $course->student ? $course->student->name : null,
                 'student_id' => $course->student_id,
                 'trainer' => $course->trainer,
-                'trainer_name' => $course->trainer ? ($course->trainer->name ?: 'مدرب محذوف') : 'بدون مدرب',
+                'trainer_name' => $course->trainer_name,
                 'completed_lectures' => $course->completed_lectures,
                 'total_lectures' => $total,
                 'remaining_lectures' => max(0, $total - $course->completed_lectures),

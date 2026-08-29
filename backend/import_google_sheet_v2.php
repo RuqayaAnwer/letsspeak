@@ -423,19 +423,27 @@ try {
             $startDate = now()->toDateString();
         }
 
-        if ($startDate >= '2026-08-01') {
+        if ($startDate >= '2026-09-01') {
             $dateFilteredCount++;
             continue;
         }
 
         // 2. Process Trainer
         $trainerId = null;
+        $courseTrainerNameColumn = null;
         if (!empty($trainerName)) {
             if (array_key_exists($trainerName, $dryRunTrainers)) {
                 $trainerId = $dryRunTrainers[$trainerName];
+                if ($trainerId === null) {
+                    $courseTrainerNameColumn = $trainerName;
+                }
             } else {
-                // Find trainer user by comparing normalized names to avoid duplicates (e.g., سارة vs ساره, spaces, casing)
-                $trainerUser = User::where('role', 'trainer')->get()->first(function ($u) use ($trainerName) {
+                // Find active/existing trainers from users table
+                $allTrainerUsers = User::where('role', 'trainer')->get();
+                $words = preg_split('/\s+/', trim($trainerName));
+                $isSingleWord = (count($words) === 1);
+                
+                $trainerUser = $allTrainerUsers->first(function ($u) use ($trainerName) {
                     $n1 = mb_strtolower(trim($u->name));
                     $n1 = str_replace(['أ', 'إ', 'آ'], 'ا', $n1);
                     $n1 = str_replace('ة', 'ه', $n1);
@@ -451,27 +459,27 @@ try {
                     return $n1 === $n2;
                 });
                 
-                if (!$trainerUser) {
-                    $email = strtolower(str_replace(' ', '', $trainerName)) . '@letspeak.com';
-                    $trainerUser = User::where('email', $email)->first();
+                // If single-word, ensure it is not ambiguous
+                if ($trainerUser && $isSingleWord) {
+                    $matchingFirstNames = $allTrainerUsers->filter(function ($u) use ($trainerName) {
+                        $firstWord = preg_split('/\s+/', trim($u->name))[0];
+                        $n1 = mb_strtolower(trim($firstWord));
+                        $n1 = str_replace(['أ', 'إ', 'آ'], 'ا', $n1);
+                        $n1 = str_replace('ة', 'ه', $n1);
+                        $n1 = str_replace('ى', 'ي', $n1);
+                        $n1 = str_replace([' ', '-', '_'], '', $n1);
+
+                        $n2 = mb_strtolower(trim($trainerName));
+                        $n2 = str_replace(['أ', 'إ', 'آ'], 'ا', $n2);
+                        $n2 = str_replace('ة', 'ه', $n2);
+                        $n2 = str_replace('ى', 'ي', $n2);
+                        $n2 = str_replace([' ', '-', '_'], '', $n2);
+
+                        return $n1 === $n2;
+                    });
                     
-                    if (!$trainerUser) {
-                        if ($isLive) {
-                            $trainerUser = User::create([
-                                'name' => $trainerName,
-                                'email' => $email,
-                                'password' => bcrypt('password'),
-                                'role' => 'trainer',
-                                'status' => 'active',
-                            ]);
-                        } else {
-                            $trainerUser = new User();
-                            $trainerUser->id = 9999 + $newTrainersCount;
-                            $trainerUser->name = $trainerName;
-                            $trainerUser->email = $email;
-                            $trainerUser->role = 'trainer';
-                        }
-                        $newTrainersCount++;
+                    if ($matchingFirstNames->count() > 1) {
+                        $trainerUser = null; // Ambiguous match, do not associate
                     }
                 }
 
@@ -493,6 +501,10 @@ try {
                     }
                     $trainerId = $trainer->id;
                     $dryRunTrainers[$trainerName] = $trainerId;
+                } else {
+                    // Trainer not found or ambiguous: set trainer_id = null and store the sheet name as courseTrainerNameColumn
+                    $courseTrainerNameColumn = $trainerName;
+                    $dryRunTrainers[$trainerName] = null;
                 }
             }
         }
@@ -620,6 +632,7 @@ try {
 
             $courseData = [
                 'trainer_id' => $trainerId,
+                'trainer_name' => $courseTrainerNameColumn,
                 'course_package_id' => $packageId,
                 'title' => $roundTitle,
                 'lectures_count' => $baseLectures,

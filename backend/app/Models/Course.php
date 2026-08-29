@@ -44,6 +44,7 @@ class Course extends Model
         'trainer_max_postponements_override',
         'renewal_iteration',
         'is_kids',
+        'trainer_name',
     ];
 
     protected $casts = [
@@ -65,7 +66,8 @@ class Course extends Model
         'trainer_postponement_count',
         'max_student_postponements',
         'max_trainer_postponements',
-        'has_trainer_changed'
+        'has_trainer_changed',
+        'trainer_name'
     ];
 
     /**
@@ -319,7 +321,6 @@ class Course extends Model
             'Friday' => 'الجمعة',
             'Saturday' => 'السبت',
         ];
-
         $days = $this->lecture_days ?? [];
         return array_map(fn($day) => $dayNames[$day] ?? $day, $days);
     }
@@ -330,6 +331,26 @@ class Course extends Model
     public function getIsCustomAttribute(): bool
     {
         return $this->course_package_id === null;
+    }
+
+    /**
+     * Get the trainer name dynamically.
+     */
+    public function getTrainerNameAttribute(): string
+    {
+        if ($this->relationLoaded('trainer') && $this->trainer) {
+            if ($this->trainer->user) {
+                return $this->trainer->user->name;
+            }
+            return $this->trainer->name ?? '';
+        }
+
+        $trainer = $this->trainer;
+        if ($trainer) {
+            return $trainer->user ? $trainer->user->name : ($trainer->name ?? '');
+        }
+
+        return $this->attributes['trainer_name'] ?? '-';
     }
 
     /**
