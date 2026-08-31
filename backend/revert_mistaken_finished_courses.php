@@ -5,26 +5,21 @@ $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
 use App\Models\Course;
-use Carbon\Carbon;
 
-$today = Carbon::today()->toDateString();
-echo "Reverting mistakenly finished courses...\n";
+echo "Reverting ALL courses auto-closed by the script...\n";
 
-// Find finished courses updated today where generated lectures count is less than required lectures_count
+// Find finished courses where finished_at is set to end of day time
 $finishedCourses = Course::where('status', 'finished')
-    ->whereDate('updated_at', $today)
+    ->where('finished_at', 'like', '%23:59:59%')
     ->get();
 
 $revertedCount = 0;
 foreach ($finishedCourses as $course) {
-    $lecturesCount = $course->lectures()->count();
-    if ($lecturesCount < $course->lectures_count) {
-        echo "Reverting Course ID: {$course->id} (Title: {$course->title}) - Lectures in DB: {$lecturesCount}/{$course->lectures_count}\n";
-        $course->status = 'active';
-        $course->finished_at = null;
-        $course->save();
-        $revertedCount++;
-    }
+    echo "Reverting Course ID: {$course->id} (Title: {$course->title})\n";
+    $course->status = 'active';
+    $course->finished_at = null;
+    $course->save();
+    $revertedCount++;
 }
 
 echo "Total reverted courses: $revertedCount\n";

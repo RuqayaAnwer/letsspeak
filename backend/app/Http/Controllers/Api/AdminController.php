@@ -31,8 +31,6 @@ class AdminController extends Controller
     {
         if ($err = $this->requireAdmin($request)) return $err;
 
-        Course::closePastCourses();
-
         $stats = [
             'users_count'           => User::where('role', '!=', 'trainer')->count(),
             'customer_service_count'=> User::where('role', 'customer_service')->count(),

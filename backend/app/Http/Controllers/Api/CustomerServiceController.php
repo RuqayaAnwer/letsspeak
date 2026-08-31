@@ -53,8 +53,6 @@ class CustomerServiceController extends Controller
     public function dashboardStats(Request $request): JsonResponse
     {
         try {
-            Course::closePastCourses();
-
             $stats = [
                 'students' => Student::count(),
                 'trainers' => Trainer::where('status', 'active')->count(),

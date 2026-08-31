@@ -641,8 +641,20 @@ try {
 
             // Determine status of split round
             $roundStatus = $status;
-            if ($status === 'finished') {
-                $roundStatus = 'finished';
+            
+            // If the sheet status is not explicitly set (i.e. empty or active),
+            // but the course dates indicate it should be finished, override it to finished.
+            if ($roundStatus === 'active') {
+                $daysPerWeek = count($lectureDays) ?: 3;
+                $weeksNeeded = ceil($baseLectures / $daysPerWeek);
+                $daysNeeded = $weeksNeeded * 7;
+                
+                // Add a buffer of 14 days for postponements/delays to be safe
+                $estimatedEndDate = date('Y-m-d', strtotime($currentRoundStartDate . " + " . ($daysNeeded + 14) . " days"));
+                
+                if ($estimatedEndDate < date('Y-m-d')) {
+                    $roundStatus = 'finished';
+                }
             }
 
             $courseData = [
