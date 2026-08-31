@@ -423,29 +423,22 @@ class Course extends Model
         $count = 0;
         
         foreach ($activeCourses as $course) {
-            $lastLecture = $course->lectures()->orderBy('date', 'desc')->first();
-            if ($lastLecture) {
-                $lectureDate = $lastLecture->date;
-                $dateStr = ($lectureDate instanceof \Carbon\Carbon || $lectureDate instanceof \Illuminate\Support\Carbon) 
-                    ? $lectureDate->toDateString() 
-                    : substr((string)$lectureDate, 0, 10);
+            // Check the number of generated lectures in the database
+            $lecturesCount = $course->lectures()->count();
+            
+            // Only auto-close if the course has a valid required lectures count,
+            // and we have generated at least that many lectures in the database.
+            if ($course->lectures_count > 0 && $lecturesCount >= $course->lectures_count) {
+                $lastLecture = $course->lectures()->orderBy('date', 'desc')->first();
+                if ($lastLecture) {
+                    $lectureDate = $lastLecture->date;
+                    $dateStr = ($lectureDate instanceof \Carbon\Carbon || $lectureDate instanceof \Illuminate\Support\Carbon) 
+                        ? $lectureDate->toDateString() 
+                        : substr((string)$lectureDate, 0, 10);
 
-                if ($dateStr < $today) {
-                    $course->status = 'finished';
-                    $course->finished_at = $dateStr . ' 23:59:59';
-                    $course->save();
-                    $count++;
-                }
-            } else {
-                if ($course->start_date) {
-                    $startDate = $course->start_date;
-                    $dateStr = ($startDate instanceof \Carbon\Carbon || $startDate instanceof \Illuminate\Support\Carbon) 
-                        ? $startDate->toDateString() 
-                        : substr((string)$startDate, 0, 10);
-
-                    if ($dateStr < now()->subDays(60)->toDateString()) {
+                    if ($dateStr < $today) {
                         $course->status = 'finished';
-                        $course->finished_at = \Carbon\Carbon::parse($dateStr)->addDays(30)->toDateString() . ' 23:59:59';
+                        $course->finished_at = $dateStr . ' 23:59:59';
                         $course->save();
                         $count++;
                     }
