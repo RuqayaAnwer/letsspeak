@@ -672,7 +672,7 @@ const Courses = () => {
                         >
                           التفاصيل
                         </Link>
-                        {(course.status === 'finished' || completionPercentage >= 100) && (
+                        {course.status === 'finished' && (
                           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded mt-0.5">
                             ✅ كورس مكتمل
                           </span>
