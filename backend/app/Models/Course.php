@@ -425,21 +425,35 @@ class Course extends Model
         foreach ($activeCourses as $course) {
             $lastLecture = $course->lectures()->orderBy('date', 'desc')->first();
             if ($lastLecture) {
-                if ($lastLecture->date < $today) {
+                $lectureDate = $lastLecture->date;
+                $dateStr = ($lectureDate instanceof \Carbon\Carbon || $lectureDate instanceof \Illuminate\Support\Carbon) 
+                    ? $lectureDate->toDateString() 
+                    : substr((string)$lectureDate, 0, 10);
+
+                if ($dateStr < $today) {
                     $course->status = 'finished';
-                    $course->finished_at = $lastLecture->date . ' 23:59:59';
+                    $course->finished_at = $dateStr . ' 23:59:59';
                     $course->save();
                     $count++;
                 }
             } else {
-                if ($course->start_date && $course->start_date->toDateString() < now()->subDays(60)->toDateString()) {
-                    $course->status = 'finished';
-                    $course->finished_at = $course->start_date->copy()->addDays(30)->toDateString() . ' 23:59:59';
-                    $course->save();
-                    $count++;
+                if ($course->start_date) {
+                    $startDate = $course->start_date;
+                    $dateStr = ($startDate instanceof \Carbon\Carbon || $startDate instanceof \Illuminate\Support\Carbon) 
+                        ? $startDate->toDateString() 
+                        : substr((string)$startDate, 0, 10);
+
+                    if ($dateStr < now()->subDays(60)->toDateString()) {
+                        $course->status = 'finished';
+                        $course->finished_at = \Carbon\Carbon::parse($dateStr)->addDays(30)->toDateString() . ' 23:59:59';
+                        $course->save();
+                        $count++;
+                    }
                 }
             }
         }
         return $count;
     }
 }
+
+
