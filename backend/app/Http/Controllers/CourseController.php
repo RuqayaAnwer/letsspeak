@@ -21,6 +21,8 @@ class CourseController extends Controller
      */
     public function index(Request $request)
     {
+        Course::closePastCourses();
+
         $query = Course::select([
                 'courses.*',
                 DB::raw("SUM(CASE WHEN lectures.id IS NOT NULL AND (lectures.attendance IS NULL OR lectures.attendance NOT LIKE 'postponed_%') THEN 1 ELSE 0 END) as total_lectures_count"),

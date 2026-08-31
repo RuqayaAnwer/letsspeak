@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Trainer;
+use App\Models\Course;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
@@ -29,6 +30,8 @@ class AdminController extends Controller
     public function dashboard(Request $request): JsonResponse
     {
         if ($err = $this->requireAdmin($request)) return $err;
+
+        Course::closePastCourses();
 
         $stats = [
             'users_count'           => User::where('role', '!=', 'trainer')->count(),

@@ -415,4 +415,31 @@ class Course extends Model
 
         return $packagePrice + $extraFee;
     }
+
+    public static function closePastCourses()
+    {
+        $today = now()->toDateString();
+        $activeCourses = self::where('status', 'active')->get();
+        $count = 0;
+        
+        foreach ($activeCourses as $course) {
+            $lastLecture = $course->lectures()->orderBy('date', 'desc')->first();
+            if ($lastLecture) {
+                if ($lastLecture->date < $today) {
+                    $course->status = 'finished';
+                    $course->finished_at = $lastLecture->date . ' 23:59:59';
+                    $course->save();
+                    $count++;
+                }
+            } else {
+                if ($course->start_date && $course->start_date->toDateString() < now()->subDays(60)->toDateString()) {
+                    $course->status = 'finished';
+                    $course->finished_at = $course->start_date->copy()->addDays(30)->toDateString() . ' 23:59:59';
+                    $course->save();
+                    $count++;
+                }
+            }
+        }
+        return $count;
+    }
 }

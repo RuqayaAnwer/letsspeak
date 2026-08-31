@@ -76,6 +76,8 @@ class FinanceController extends Controller
     public function trainerPayroll(Request $request): JsonResponse
     {
         try {
+            Course::closePastCourses();
+
             if (!$this->isAuthorized($request)) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
             }
