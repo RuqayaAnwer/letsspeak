@@ -536,21 +536,23 @@ class SyncCourseStatuses extends Command
      */
     protected function findTrainer(string $name, $allTrainers, $allTrainerUsers): ?Trainer
     {
-        $cleanSearch = $this->normalizeName($name);
+        $normalizedName = $this->normalizeTrainerName($name);
+        $cleanSearch = $this->normalizeName($normalizedName);
+        $rawCleanSearch = $this->normalizeName($name);
 
         // 1. Direct trainer name match
         foreach ($allTrainers as $t) {
-            if ($this->normalizeName($t->name) === $cleanSearch) {
-                return $t;
-            }
-            if ($t->user && $this->normalizeName($t->user->name) === $cleanSearch) {
+            $tNorm = $this->normalizeName($t->name);
+            $uNorm = $t->user ? $this->normalizeName($t->user->name) : '';
+            if ($tNorm === $cleanSearch || $tNorm === $rawCleanSearch || $uNorm === $cleanSearch || $uNorm === $rawCleanSearch) {
                 return $t;
             }
         }
 
         // 2. Trainer user match
         foreach ($allTrainerUsers as $u) {
-            if ($this->normalizeName($u->name) === $cleanSearch) {
+            $uNorm = $this->normalizeName($u->name);
+            if ($uNorm === $cleanSearch || $uNorm === $rawCleanSearch) {
                 if ($u->trainer) {
                     return $u->trainer;
                 }
