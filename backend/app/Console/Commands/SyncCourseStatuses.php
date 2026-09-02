@@ -18,7 +18,7 @@ class SyncCourseStatuses extends Command
      *
      * @var string
      */
-    protected $signature = 'courses:sync-statuses {--live : Apply changes to the database}';
+    protected $signature = 'courses:sync-statuses {--live : Apply changes to the database} {--details : Show individual details for every course}';
 
     /**
      * The console command description.
@@ -148,6 +148,12 @@ class SyncCourseStatuses extends Command
             'lectures_updated' => 0,
         ];
 
+        $progressBar = null;
+        if (!$this->option('details')) {
+            $progressBar = $this->output->createProgressBar($courses->count());
+            $progressBar->start();
+        }
+
         if ($isLive) {
             DB::beginTransaction();
         }
@@ -251,7 +257,11 @@ class SyncCourseStatuses extends Command
                 elseif ($targetStatus === 'paused') $stats['to_paused']++;
                 elseif ($targetStatus === 'cancelled') $stats['to_cancelled']++;
 
-                $this->line("Course ID #{$course->id} [{$course->title}]: Current Status '{$course->status}' -> Target Status '{$targetStatus}' ({$matchedSource})");
+                if ($this->option('details')) {
+                    $this->line("Course ID #{$course->id} [{$course->title}]: Current Status '{$course->status}' -> Target Status '{$targetStatus}' ({$matchedSource})");
+                } else {
+                    $progressBar->advance();
+                }
 
                 if ($isLive) {
                     if ($targetStatus === 'finished') {
@@ -305,9 +315,14 @@ class SyncCourseStatuses extends Command
                 }
             }
 
+            if ($progressBar) {
+                $progressBar->finish();
+                $this->newLine(2);
+            }
+
             if ($isLive) {
                 DB::commit();
-                $this->info("\n✓ Database Transaction Committed Successfully!");
+                $this->info("✓ Database Transaction Committed Successfully!");
             }
         } catch (\Exception $e) {
             if ($isLive) {
