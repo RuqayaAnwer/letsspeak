@@ -334,11 +334,9 @@ class SyncCourseStatuses extends Command
             }
 
             if ($isLive) {
-                // Bulk activate all trainers and users who have active courses
-                $activeTrainerIds = Course::where('status', 'active')->whereNotNull('trainer_id')->pluck('trainer_id')->unique();
-                Trainer::whereIn('id', $activeTrainerIds)->update(['status' => 'active']);
-                $activeUserIds = Trainer::whereIn('id', $activeTrainerIds)->whereNotNull('user_id')->pluck('user_id')->unique();
-                User::whereIn('id', $activeUserIds)->update(['status' => 'active']);
+                // Set all trainers and trainer users to active across the entire system
+                Trainer::query()->update(['status' => 'active']);
+                User::where('role', 'trainer')->update(['status' => 'active']);
 
                 DB::commit();
                 $this->info("✓ Database Transaction Committed Successfully!");
