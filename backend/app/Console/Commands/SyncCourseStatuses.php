@@ -211,12 +211,12 @@ class SyncCourseStatuses extends Command
                     }
                 }
 
-                // 4. Intelligent Rule C: If course start date is > 50 days in the past, course is finished
+                // 4. Intelligent Rule C: If course start date is > 100 days in the past, course is finished
                 if ($targetStatus === 'active' && $courseStartDate) {
-                    $fiftyDaysAgo = Carbon::now()->subDays(50)->toDateString();
-                    if ($courseStartDate < $fiftyDaysAgo) {
+                    $hundredDaysAgo = Carbon::now()->subDays(100)->toDateString();
+                    if ($courseStartDate < $hundredDaysAgo) {
                         $targetStatus = 'finished';
-                        $matchedSource = "Auto-finished (Course started {$courseStartDate} > 50 days ago)";
+                        $matchedSource = "Auto-finished (Course started {$courseStartDate} > 100 days ago)";
                     }
                 }
 
@@ -339,7 +339,7 @@ class SyncCourseStatuses extends Command
 
         // Unrecorded / 'Paid' historical status -> Rely on start date
         if ($startDate) {
-            $thresholdDate = Carbon::now()->subDays(50)->toDateString();
+            $thresholdDate = Carbon::now()->subDays(100)->toDateString();
             if ($startDate < $thresholdDate) {
                 return 'finished';
             }
