@@ -346,8 +346,9 @@ class SyncCourseStatuses extends Command
                     }
                 }
 
-                // 2. Intelligent Rule A: If student has a newer course that started after this course, this older course is finished!
-                if ($targetStatus === 'active' && $courseStartDate) {
+                // 2. Intelligent Rule A: If student has a newer course that started after this course, this older course is finished
+                // (Only apply if this course is NOT explicitly active in the Google Sheet)
+                if ($targetStatus === 'active' && $courseStartDate && (!$matchedSheetRow || $matchedSheetRow['status'] !== 'active')) {
                     foreach ($course->students as $student) {
                         if (isset($studentCoursesTimeline[$student->id])) {
                             $newerCourses = $studentCoursesTimeline[$student->id]->filter(function ($c) use ($course, $courseStartDate) {

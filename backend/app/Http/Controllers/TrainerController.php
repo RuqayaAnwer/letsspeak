@@ -19,15 +19,12 @@ class TrainerController extends Controller
      */
     public function index(Request $request)
     {
-        $thresholdDate = now()->subMonths(4)->toDateString();
-
         $query = Trainer::join('users', 'trainers.user_id', '=', 'users.id')
             ->select('trainers.*')
             ->with([
                 'user:id,name,email,job_title,base_salary',
-                'courses' => function ($cQuery) use ($thresholdDate) {
+                'courses' => function ($cQuery) {
                     $cQuery->where('status', 'active')
-                           ->where('start_date', '>=', $thresholdDate)
                            ->with(['students:id,name,level', 'coursePackage:id,name']);
                 }
             ]);
@@ -39,9 +36,8 @@ class TrainerController extends Controller
         }
 
         $trainers = $query->withCount('courses')
-            ->withCount(['courses as active_courses_count' => function ($q) use ($thresholdDate) {
-                $q->where('status', 'active')
-                  ->where('start_date', '>=', $thresholdDate);
+            ->withCount(['courses as active_courses_count' => function ($q) {
+                $q->where('status', 'active');
             }])
             ->withCount(['courses as renewals_count' => function ($q) {
                 $q->where('renewed_with_trainer', true);

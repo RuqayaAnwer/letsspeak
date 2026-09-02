@@ -50,7 +50,7 @@ class StaffProfileController extends Controller
         $trainerId = null;
 
         if ($type === 'trainer') {
-            $trainer = Trainer::with(['user:id,name,email,job_title,role,created_at,base_salary,avatar', 'courses.student', 'courses.package'])->find($id);
+            $trainer = Trainer::with(['user:id,name,email,job_title,role,created_at,base_salary,avatar', 'courses.students', 'courses.package'])->find($id);
 
             if (!$trainer) {
                 return response()->json(['success' => false, 'message' => 'Trainer not found'], 404);
@@ -87,7 +87,8 @@ class StaffProfileController extends Controller
                         $course->coursePackage ? $course->coursePackage->name : 'كورس مخصص',
                         $course->is_dual ? '(ثنائي)' : '(فردي)'
                     ])->filter()->join(' '),
-                    'student' => $course->student,
+                    'student' => $course->student ?: $course->students->first(),
+                    'students' => $course->students,
                     'package' => $course->package,
                     'status' => $course->status,
                     'start_date' => $course->start_date,
