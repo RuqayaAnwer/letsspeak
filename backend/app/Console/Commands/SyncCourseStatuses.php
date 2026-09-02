@@ -25,7 +25,7 @@ class SyncCourseStatuses extends Command
      *
      * @var string
      */
-    protected $description = 'Synchronize course statuses, lecture completions, and trainer linkages with Excel/Google Sheet and intelligent business rules';
+    protected $description = 'Synchronize course statuses, ensure active courses exist, link trainers and generate lectures';
 
     /**
      * Google Sheet CSV URL
@@ -64,6 +64,7 @@ class SyncCourseStatuses extends Command
         $headers = fgetcsv($handle);
 
         $sheetMap = []; // Key: normalized_student_name . '_' . start_date => status & trainer
+        $activeSheetRows = [];
         $sheetRowsCount = 0;
 
         while (($row = fgetcsv($handle)) !== false) {
@@ -73,9 +74,13 @@ class SyncCourseStatuses extends Command
             $timestamp = trim($row[0]);
             $studentName = trim($row[1]);
             $partnerName = trim($row[2]);
+            $timeStr = trim($row[3] ?? '');
             $rawTrainer = trim($row[4] ?? '');
-            $startDateStr = trim($row[8]);
-            $rawStatus = trim($row[10]);
+            $level = trim($row[5] ?? 'L1');
+            $notes = trim($row[7] ?? '');
+            $startDateStr = trim($row[8] ?? '');
+            $daysStr = trim($row[9] ?? '');
+            $rawStatus = trim($row[10] ?? '');
 
             if (empty($studentName) || mb_strpos($studentName, 'حذف') !== false || mb_strpos($studentName, 'مكرر') !== false) {
                 continue;
@@ -95,6 +100,12 @@ class SyncCourseStatuses extends Command
                 'start_date' => $startDate,
                 'raw_trainer' => $rawTrainer,
                 'normalized_trainer' => $normalizedTrainer,
+                'student_name' => $studentName,
+                'partner_name' => $partnerName,
+                'level' => $level,
+                'time' => $timeStr,
+                'days' => $daysStr,
+                'notes' => $notes,
             ];
 
             // Index by student name and partner name
@@ -108,57 +119,166 @@ class SyncCourseStatuses extends Command
                     $sheetMap[$normPartner . '|' . $startDate] = $rowData;
                 }
             }
+
+            // Track genuine active rows within 100 days
+            if ($targetStatus === 'active' && $startDate) {
+                $hundredDaysAgo = Carbon::now()->subDays(100)->toDateString();
+                if ($startDate >= $hundredDaysAgo) {
+                    $activeSheetRows[] = $rowData;
+                }
+            }
         }
 
         fclose($handle);
         unlink($tempFile);
 
         $this->info("Indexed {$sheetRowsCount} rows from Google Sheet.\n");
+        $this->info("Found " . count($activeSheetRows) . " active course terms in Google Sheet.\n");
 
         // Pre-fetch all trainers and trainer users
         $allTrainers = Trainer::with('user')->get();
         $allTrainerUsers = User::where('role', 'trainer')->with('trainer')->get();
 
-        // Pre-fetch all students with all their courses to check renewals & subsequent courses
-        $allStudents = Student::with(['courses' => function ($q) {
-            $q->orderBy('start_date', 'asc');
-        }])->get();
-
-        // Build student max start_dates map to detect subsequent renewal courses
-        $studentCoursesTimeline = [];
-        foreach ($allStudents as $st) {
-            $studentCoursesTimeline[$st->id] = $st->courses->sortBy('start_date')->values();
-        }
-
-        // Now inspect all courses in Database
-        $courses = Course::with(['students', 'lectures', 'trainer.user'])->get();
-        $this->info("Total Courses in Database: " . $courses->count() . "\n");
-
-        $stats = [
-            'total' => $courses->count(),
-            'matched_sheet' => 0,
-            'fallback_date' => 0,
-            'superceded_renewal' => 0,
-            'completed_lectures' => 0,
-            'trainers_linked' => 0,
-            'to_active' => 0,
-            'to_finished' => 0,
-            'to_paused' => 0,
-            'to_cancelled' => 0,
-            'lectures_updated' => 0,
-        ];
-
-        $progressBar = null;
-        if (!$this->option('details')) {
-            $progressBar = $this->output->createProgressBar($courses->count());
-            $progressBar->start();
-        }
-
         if ($isLive) {
             DB::beginTransaction();
         }
 
+        $createdMissingCoursesCount = 0;
+
         try {
+            // STEP 1: Ensure every active course in the Google Sheet exists in DB and is linked to the trainer
+            foreach ($activeSheetRows as $actRow) {
+                $sName = $actRow['student_name'];
+                $sDate = $actRow['start_date'];
+                $tName = $actRow['normalized_trainer'];
+
+                $foundTrainer = $this->findTrainer($tName, $allTrainers, $allTrainerUsers);
+
+                // Find existing course
+                $cDate = Carbon::parse($sDate);
+                $minDate = $cDate->copy()->subDays(10)->toDateString();
+                $maxDate = $cDate->copy()->addDays(10)->toDateString();
+
+                $existingCourse = Course::whereBetween('start_date', [$minDate, $maxDate])
+                    ->whereHas('students', function ($q) use ($sName) {
+                        $q->where('name', 'like', "%{$sName}%");
+                    })->first();
+
+                if ($existingCourse) {
+                    // Update existing course to be active and properly linked
+                    if ($isLive) {
+                        $existingCourse->status = 'active';
+                        $existingCourse->finished_at = null;
+                        if ($foundTrainer) {
+                            $existingCourse->trainer_id = $foundTrainer->id;
+                            $existingCourse->trainer_name = $foundTrainer->name ?: ($foundTrainer->user->name ?? $tName);
+                        }
+                        $existingCourse->save();
+
+                        if ($foundTrainer) {
+                            if ($foundTrainer->status !== 'active') {
+                                $foundTrainer->status = 'active';
+                                $foundTrainer->save();
+                            }
+                            if ($foundTrainer->user && $foundTrainer->user->status !== 'active') {
+                                $foundTrainer->user->status = 'active';
+                                $foundTrainer->user->save();
+                            }
+                        }
+                    }
+                } else {
+                    // Course does not exist in DB: Create it!
+                    $createdMissingCoursesCount++;
+                    if ($isLive) {
+                        $student = Student::where('name', 'like', "%{$sName}%")->first();
+                        if (!$student) {
+                            $student = Student::create([
+                                'name' => $sName,
+                                'level' => $actRow['level'] ?: 'L1',
+                                'status' => 'active',
+                                'phone' => '',
+                            ]);
+                        }
+
+                        $parsedDays = $this->parseArabicDays($actRow['days']);
+                        $newCourse = Course::create([
+                            'trainer_id' => $foundTrainer ? $foundTrainer->id : null,
+                            'trainer_name' => $foundTrainer ? ($foundTrainer->name ?: ($foundTrainer->user->name ?? $tName)) : $tName,
+                            'course_package_id' => 1,
+                            'title' => 'كورس ' . $sName,
+                            'lectures_count' => 12,
+                            'lecture_time' => !empty($actRow['time']) ? $actRow['time'] : '14:00:00',
+                            'lecture_days' => !empty($parsedDays) ? $parsedDays : ['sun', 'tue', 'thu'],
+                            'start_date' => $sDate,
+                            'status' => 'active',
+                            'trainer_payment_status' => 'unpaid',
+                            'total_amount' => 150000,
+                            'amount_paid' => 150000,
+                        ]);
+
+                        $newCourse->students()->attach($student->id, ['is_primary' => true, 'student_level' => $actRow['level'] ?: 'L1']);
+
+                        // Generate 12 lectures
+                        $lectureDates = $this->generateLectureDates($sDate, $parsedDays, 12);
+                        foreach ($lectureDates as $lIdx => $lDate) {
+                            Lecture::create([
+                                'course_id' => $newCourse->id,
+                                'lecture_number' => $lIdx + 1,
+                                'date' => $lDate,
+                                'attendance' => 'pending',
+                                'trainer_payment_status' => 'unpaid',
+                            ]);
+                        }
+
+                        if ($foundTrainer) {
+                            if ($foundTrainer->status !== 'active') {
+                                $foundTrainer->status = 'active';
+                                $foundTrainer->save();
+                            }
+                            if ($foundTrainer->user && $foundTrainer->user->status !== 'active') {
+                                $foundTrainer->user->status = 'active';
+                                $foundTrainer->user->save();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Pre-fetch all students with all their courses to check renewals & subsequent courses
+            $allStudents = Student::with(['courses' => function ($q) {
+                $q->orderBy('start_date', 'asc');
+            }])->get();
+
+            // Build student max start_dates map to detect subsequent renewal courses
+            $studentCoursesTimeline = [];
+            foreach ($allStudents as $st) {
+                $studentCoursesTimeline[$st->id] = $st->courses->sortBy('start_date')->values();
+            }
+
+            // Now inspect all courses in Database
+            $courses = Course::with(['students', 'lectures', 'trainer.user'])->get();
+            $this->info("Total Courses in Database to Process: " . $courses->count() . "\n");
+
+            $stats = [
+                'total' => $courses->count(),
+                'matched_sheet' => 0,
+                'fallback_date' => 0,
+                'superceded_renewal' => 0,
+                'completed_lectures' => 0,
+                'trainers_linked' => 0,
+                'to_active' => 0,
+                'to_finished' => 0,
+                'to_paused' => 0,
+                'to_cancelled' => 0,
+                'lectures_updated' => 0,
+            ];
+
+            $progressBar = null;
+            if (!$this->option('details')) {
+                $progressBar = $this->output->createProgressBar($courses->count());
+                $progressBar->start();
+            }
+
             foreach ($courses as $course) {
                 $courseStartDate = $course->start_date ? $course->start_date->format('Y-m-d') : null;
                 $targetStatus = null;
@@ -272,7 +392,7 @@ class SyncCourseStatuses extends Command
 
                 if ($this->option('details')) {
                     $this->line("Course ID #{$course->id} [{$course->title}]: Current Status '{$course->status}' -> Target Status '{$targetStatus}' ({$matchedSource})");
-                } else {
+                } elseif ($progressBar) {
                     $progressBar->advance();
                 }
 
@@ -294,18 +414,6 @@ class SyncCourseStatuses extends Command
                         $course->status = 'active';
                         $course->finished_at = null;
                         $course->save();
-
-                        // Ensure trainer is active
-                        if ($course->trainer) {
-                            if ($course->trainer->status !== 'active') {
-                                $course->trainer->status = 'active';
-                                $course->trainer->save();
-                            }
-                            if ($course->trainer->user && $course->trainer->user->status !== 'active') {
-                                $course->trainer->user->status = 'active';
-                                $course->trainer->user->save();
-                            }
-                        }
 
                         // For active courses, ensure future lectures are not erroneously marked as paid/present if not attended
                         $today = now()->toDateString();
@@ -351,6 +459,7 @@ class SyncCourseStatuses extends Command
 
         $this->info("\n=================== SYNC SUMMARY ===================");
         $this->info("Total Courses Checked:             {$stats['total']}");
+        $this->info("Missing Active Courses Created:    {$createdMissingCoursesCount}");
         $this->info("Matched from Sheet:                {$stats['matched_sheet']}");
         $this->info("Fallback to Date Rules:            {$stats['fallback_date']}");
         $this->info("Older Courses Ended by Renewal:    {$stats['superceded_renewal']}");
@@ -366,6 +475,68 @@ class SyncCourseStatuses extends Command
         $this->info("====================================================");
 
         return 0;
+    }
+
+    /**
+     * Generate dates for regular lecture days
+     */
+    protected function generateLectureDates(string $startDate, array $days, int $count): array
+    {
+        $dates = [];
+        $current = Carbon::parse($startDate);
+        $dayMap = [
+            'sun' => Carbon::SUNDAY,
+            'mon' => Carbon::MONDAY,
+            'tue' => Carbon::TUESDAY,
+            'wed' => Carbon::WEDNESDAY,
+            'thu' => Carbon::THURSDAY,
+            'fri' => Carbon::FRIDAY,
+            'sat' => Carbon::SATURDAY,
+        ];
+
+        $targetDays = array_map(fn($d) => $dayMap[strtolower($d)] ?? null, $days);
+        $targetDays = array_filter($targetDays, fn($d) => $d !== null);
+
+        if (empty($targetDays)) {
+            $targetDays = [Carbon::SUNDAY, Carbon::TUESDAY, Carbon::THURSDAY];
+        }
+
+        while (count($dates) < $count) {
+            if (in_array($current->dayOfWeek, $targetDays)) {
+                $dates[] = $current->toDateString();
+            }
+            $current->addDay();
+        }
+
+        return $dates;
+    }
+
+    /**
+     * Parse Arabic days string
+     */
+    protected function parseArabicDays(?string $str): array
+    {
+        if (empty($str)) return ['sun', 'tue', 'thu'];
+        $days = [];
+        $map = [
+            'احد' => 'sun',
+            'أحد' => 'sun',
+            'اثنين' => 'mon',
+            'إثنين' => 'mon',
+            'ثلاثاء' => 'tue',
+            'اربعاء' => 'wed',
+            'أربعاء' => 'wed',
+            'خميس' => 'thu',
+            'جمعة' => 'fri',
+            'جمعه' => 'fri',
+            'سبت' => 'sat',
+        ];
+        foreach ($map as $ar => $en) {
+            if (mb_strpos($str, $ar) !== false) {
+                $days[] = $en;
+            }
+        }
+        return !empty($days) ? array_unique($days) : ['sun', 'tue', 'thu'];
     }
 
     /**

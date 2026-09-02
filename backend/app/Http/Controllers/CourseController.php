@@ -31,8 +31,7 @@ class CourseController extends Controller
             ])
             ->leftJoin('lectures', 'courses.id', '=', 'lectures.course_id')
             ->groupBy('courses.id')
-            ->with(['trainer.user', 'students', 'coursePackage'])
-            ->whereHas('trainer.user');
+            ->with(['trainer.user', 'students', 'coursePackage']);
 
 
         // Filter by trainer for trainer role (if user is authenticated)
