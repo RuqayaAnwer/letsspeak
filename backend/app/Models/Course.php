@@ -416,6 +416,24 @@ class Course extends Model
         return $packagePrice + $extraFee;
     }
 
+    /**
+     * Mark this course as finished, ensuring all lectures are marked completed (present)
+     * and trainer payment status is set to paid for both course and lectures.
+     */
+    public function markAsFinished($finishedAt = null): void
+    {
+        $this->status = 'finished';
+        $this->finished_at = $finishedAt ?: now();
+        $this->trainer_payment_status = 'paid';
+        $this->save();
+
+        // Update all lectures of this course to completed and paid
+        $this->lectures()->update([
+            'attendance' => 'present',
+            'trainer_payment_status' => 'paid',
+        ]);
+    }
+
     public static function closePastCourses()
     {
         $today = now()->toDateString();
@@ -437,9 +455,7 @@ class Course extends Model
                         : substr((string)$lectureDate, 0, 10);
 
                     if ($dateStr < $today) {
-                        $course->status = 'finished';
-                        $course->finished_at = $dateStr . ' 23:59:59';
-                        $course->save();
+                        $course->markAsFinished($dateStr . ' 23:59:59');
                         $count++;
                     }
                 }
@@ -448,5 +464,6 @@ class Course extends Model
         return $count;
     }
 }
+
 
 

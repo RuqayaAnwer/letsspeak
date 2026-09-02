@@ -308,8 +308,13 @@ function generateLectureSchedule(Course $course, $isLive) {
         if (in_array($currentDate->dayOfWeek, $lectureDays)) {
             $lectureDate = $currentDate->format('Y-m-d');
             $attendance = 'pending';
+            $trainerPaymentStatus = 'unpaid';
+            $isCompleted = false;
+
             if ($course->status === 'finished') {
                 $attendance = 'present';
+                $trainerPaymentStatus = 'paid';
+                $isCompleted = true;
             } else {
                 if ($currentDate->lt($today)) {
                     $attendance = 'present';
@@ -322,6 +327,7 @@ function generateLectureSchedule(Course $course, $isLive) {
                     'lecture_number' => $lecturesCreated + 1,
                     'date' => $lectureDate,
                     'attendance' => $attendance,
+                    'trainer_payment_status' => $trainerPaymentStatus,
                 ]);
             }
             $lecturesCreated++;
@@ -596,31 +602,41 @@ try {
             continue;
         }
 
-        // Parse Status
+        // 5. Parse Status according to refined business rules
         $status = 'active';
-        $statusStrLower = strtolower($statusStr);
-        if (strpos($statusStr, 'تم') !== false 
+        $statusStrLower = strtolower(trim($statusStr));
+        
+        if (strpos($statusStrLower, 'finish') !== false 
+            || strpos($statusStr, 'تم') !== false 
             || strpos($statusStr, 'مكتمل') !== false 
-            || strpos($statusStr, 'مدفوع') !== false 
-            || $statusStrLower === 'paid' 
-            || $statusStrLower === 'finished'
+            || strpos($statusStr, 'منتهي') !== false
         ) {
             $status = 'finished';
-        } elseif (strpos($statusStr, 'مأجل') !== false 
+        } elseif (strpos($statusStrLower, 'pause') !== false 
+            || strpos($statusStr, 'مأجل') !== false 
             || strpos($statusStr, 'مؤجل') !== false 
-            || $statusStrLower === 'paused'
+            || strpos($statusStr, 'متوقف') !== false
         ) {
             $status = 'paused';
-        } elseif (strpos($statusStr, 'ملغي') !== false 
-            || strpos($statusStr, 'ملغى') !== false 
-            || $statusStrLower === 'cancelled'
+        } elseif (strpos($statusStrLower, 'cancel') !== false 
+            || strpos($statusStr, 'ملغي') !== false 
+            || strpos($statusStr, 'ملغى') !== false
         ) {
             $status = 'cancelled';
-        }
-
-        // Enforce finished status for old courses or old trainers
-        if (!$isTrainerActive || $startDate < $activeTrainersThreshold) {
-            $status = 'finished';
+        } elseif (strpos($statusStrLower, 'active') !== false 
+            || strpos($statusStr, 'نشط') !== false 
+            || strpos($statusStr, 'جاري') !== false 
+            || strpos($statusStr, 'مستمر') !== false
+        ) {
+            $status = 'active';
+        } else {
+            // Unrecorded / 'Paid' historical status: Rely on start date
+            $thresholdDate = Carbon::now()->subDays(60)->toDateString();
+            if ($startDate < $thresholdDate) {
+                $status = 'finished';
+            } else {
+                $status = 'active';
+            }
         }
 
         // Parse Amounts & Package Splitting
@@ -677,6 +693,8 @@ try {
                 'lecture_time' => $lectureTime,
                 'lecture_days' => $lectureDays,
                 'status' => $status,
+                'trainer_payment_status' => ($status === 'finished' ? 'paid' : 'unpaid'),
+                'finished_at' => ($status === 'finished' ? ($currentRoundStartDate . ' 23:59:59') : null),
                 'payment_method' => !empty($paymentMethod) ? $paymentMethod : 'cash',
                 'subscription_source' => !empty($subSource) ? $subSource : 'direct',
                 'total_amount' => $roundTotal,

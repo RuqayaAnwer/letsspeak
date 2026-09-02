@@ -640,7 +640,9 @@ class CourseController extends Controller
 
         $newStatus = $course->status;
         
-        if ($newStatus === 'active' && $oldStatus === 'paused') {
+        if ($newStatus === 'finished') {
+            $course->markAsFinished();
+        } elseif ($newStatus === 'active' && $oldStatus === 'paused') {
             $resumptionDate = $request->input('resumption_date', now()->toDateString());
             $this->reschedulePendingLectures($course, $resumptionDate);
         } else {
@@ -774,11 +776,14 @@ class CourseController extends Controller
         $newStatus = $request->status;
 
         // Update course status
-        $course->update(['status' => $newStatus]);
-
-        if ($newStatus === 'active' && $oldStatus === 'paused') {
-            $resumptionDate = $request->input('resumption_date', now()->toDateString());
-            $this->reschedulePendingLectures($course, $resumptionDate);
+        if ($newStatus === 'finished') {
+            $course->markAsFinished();
+        } else {
+            $course->update(['status' => $newStatus]);
+            if ($newStatus === 'active' && $oldStatus === 'paused') {
+                $resumptionDate = $request->input('resumption_date', now()->toDateString());
+                $this->reschedulePendingLectures($course, $resumptionDate);
+            }
         }
 
         // Log status change in CourseStatusHistory

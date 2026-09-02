@@ -315,8 +315,13 @@ function generateLectureSchedule(Course $course, $isLive) {
         if (in_array($currentDate->dayOfWeek, $lectureDays)) {
             $lectureDate = $currentDate->format('Y-m-d');
             $attendance = 'pending';
+            $trainerPaymentStatus = 'unpaid';
+            $isCompleted = false;
+
             if ($course->status === 'finished') {
                 $attendance = 'present';
+                $trainerPaymentStatus = 'paid';
+                $isCompleted = true;
             } else {
                 if ($currentDate->lt($today)) {
                     $attendance = 'present';
@@ -329,6 +334,7 @@ function generateLectureSchedule(Course $course, $isLive) {
                     'lecture_number' => $lecturesCreated + 1,
                     'date' => $lectureDate,
                     'attendance' => $attendance,
+                    'trainer_payment_status' => $trainerPaymentStatus,
                 ]);
             }
             $lecturesCreated++;
@@ -369,8 +375,8 @@ $dryRunTrainers = [];
 $dryRunStudents = [];
 $newTrainersCount = 0;
 $newStudentsCount = 0;
-
 $simulatedCourses = [];
+$statusCounts = ['active' => 0, 'finished' => 0, 'paused' => 0, 'cancelled' => 0];
 
 // Start DB transaction
 DB::beginTransaction();
@@ -573,26 +579,41 @@ try {
             continue;
         }
 
-        // 5. Parse Status
+        // 5. Parse Status according to refined business rules
         $status = 'active';
-        $statusStrLower = strtolower($statusStr);
-        if (strpos($statusStr, 'تم') !== false 
+        $statusStrLower = strtolower(trim($statusStr));
+        
+        if (strpos($statusStrLower, 'finish') !== false 
+            || strpos($statusStr, 'تم') !== false 
             || strpos($statusStr, 'مكتمل') !== false 
-            || strpos($statusStr, 'مدفوع') !== false 
-            || $statusStrLower === 'paid' 
-            || $statusStrLower === 'finished'
+            || strpos($statusStr, 'منتهي') !== false
         ) {
             $status = 'finished';
-        } elseif (strpos($statusStr, 'مأجل') !== false 
+        } elseif (strpos($statusStrLower, 'pause') !== false 
+            || strpos($statusStr, 'مأجل') !== false 
             || strpos($statusStr, 'مؤجل') !== false 
-            || $statusStrLower === 'paused'
+            || strpos($statusStr, 'متوقف') !== false
         ) {
             $status = 'paused';
-        } elseif (strpos($statusStr, 'ملغي') !== false 
-            || strpos($statusStr, 'ملغى') !== false 
-            || $statusStrLower === 'cancelled'
+        } elseif (strpos($statusStrLower, 'cancel') !== false 
+            || strpos($statusStr, 'ملغي') !== false 
+            || strpos($statusStr, 'ملغى') !== false
         ) {
             $status = 'cancelled';
+        } elseif (strpos($statusStrLower, 'active') !== false 
+            || strpos($statusStr, 'نشط') !== false 
+            || strpos($statusStr, 'جاري') !== false 
+            || strpos($statusStr, 'مستمر') !== false
+        ) {
+            $status = 'active';
+        } else {
+            // Unrecorded / 'Paid' historical status: Rely on start date
+            $thresholdDate = Carbon::now()->subDays(60)->toDateString();
+            if ($startDate < $thresholdDate) {
+                $status = 'finished';
+            } else {
+                $status = 'active';
+            }
         }
 
         // 6. Parse Amounts & Package Splitting
@@ -639,23 +660,8 @@ try {
             $remainingTotal -= $roundTotal;
             $remainingPaid -= $roundPaid;
 
-            // Determine status of split round
+            // Status of split round
             $roundStatus = $status;
-            
-            // If the sheet status is not explicitly set (i.e. empty or active),
-            // but the course dates indicate it should be finished, override it to finished.
-            if ($roundStatus === 'active') {
-                $daysPerWeek = count($lectureDays) ?: 3;
-                $weeksNeeded = ceil($baseLectures / $daysPerWeek);
-                $daysNeeded = $weeksNeeded * 7;
-                
-                // Add a buffer of 14 days for postponements/delays to be safe
-                $estimatedEndDate = date('Y-m-d', strtotime($currentRoundStartDate . " + " . ($daysNeeded + 14) . " days"));
-                
-                if ($estimatedEndDate < date('Y-m-d')) {
-                    $roundStatus = 'finished';
-                }
-            }
 
             $courseData = [
                 'trainer_id' => $trainerId,
@@ -667,6 +673,8 @@ try {
                 'lecture_time' => $lectureTime,
                 'lecture_days' => $lectureDays,
                 'status' => $roundStatus,
+                'trainer_payment_status' => ($roundStatus === 'finished' ? 'paid' : 'unpaid'),
+                'finished_at' => ($roundStatus === 'finished' ? ($currentRoundStartDate . ' 23:59:59') : null),
                 'payment_method' => !empty($paymentMethod) ? $paymentMethod : 'cash',
                 'subscription_source' => !empty($subSource) ? $subSource : 'direct',
                 'total_amount' => $roundTotal,
@@ -714,6 +722,7 @@ try {
             // Set the start date for the next round to be 1 day after the current round's end date
             $currentRoundStartDate = Carbon::parse($endDate)->addDay()->format('Y-m-d');
             $importedCount++;
+            $statusCounts[$roundStatus] = ($statusCounts[$roundStatus] ?? 0) + 1;
         }
     }
 
@@ -737,6 +746,10 @@ try {
 echo "\n--- IMPORT SUMMARY ---\n";
 echo "Total Rows Parsed: {$rowCount}\n";
 echo "Successfully Mapped Course Terms: {$importedCount}\n";
+echo "  * Active Courses:    " . ($statusCounts['active'] ?? 0) . "\n";
+echo "  * Finished Courses:  " . ($statusCounts['finished'] ?? 0) . "\n";
+echo "  * Paused Courses:    " . ($statusCounts['paused'] ?? 0) . "\n";
+echo "  * Cancelled Courses: " . ($statusCounts['cancelled'] ?? 0) . "\n";
 echo "Skipped Rows (Empty/Trash): {$skippedCount}\n";
 echo "Skipped Duplicates: {$duplicateCount}\n";
 echo "Skipped Post-August 2026: {$dateFilteredCount}\n";
