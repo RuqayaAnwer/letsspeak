@@ -204,12 +204,25 @@ class SyncCourseStatuses extends Command
                 $sheetTrainer = $matchedSheetRow['normalized_trainer'] ?? $matchedSheetRow['raw_trainer'] ?? $course->trainer_name;
                 if (!empty($sheetTrainer) && mb_strpos($sheetTrainer, 'بانتظار') === false && mb_strpos($sheetTrainer, 'waiting') === false) {
                     $foundTrainer = $this->findTrainer($sheetTrainer, $allTrainers, $allTrainerUsers);
-                    if ($foundTrainer && $course->trainer_id !== $foundTrainer->id) {
-                        if ($isLive) {
-                            $course->trainer_id = $foundTrainer->id;
-                            $course->trainer_name = $foundTrainer->name ?: ($foundTrainer->user->name ?? $sheetTrainer);
+                    if ($foundTrainer) {
+                        if ($course->trainer_id !== $foundTrainer->id) {
+                            if ($isLive) {
+                                $course->trainer_id = $foundTrainer->id;
+                                $course->trainer_name = $foundTrainer->name ?: ($foundTrainer->user->name ?? $sheetTrainer);
+                                $course->save();
+                            }
+                            $stats['trainers_linked']++;
                         }
-                        $stats['trainers_linked']++;
+                        if ($isLive && $targetStatus === 'active') {
+                            if ($foundTrainer->status !== 'active') {
+                                $foundTrainer->status = 'active';
+                                $foundTrainer->save();
+                            }
+                            if ($foundTrainer->user && $foundTrainer->user->status !== 'active') {
+                                $foundTrainer->user->status = 'active';
+                                $foundTrainer->user->save();
+                            }
+                        }
                     }
                 }
 
@@ -321,6 +334,12 @@ class SyncCourseStatuses extends Command
             }
 
             if ($isLive) {
+                // Bulk activate all trainers and users who have active courses
+                $activeTrainerIds = Course::where('status', 'active')->whereNotNull('trainer_id')->pluck('trainer_id')->unique();
+                Trainer::whereIn('id', $activeTrainerIds)->update(['status' => 'active']);
+                $activeUserIds = Trainer::whereIn('id', $activeTrainerIds)->whereNotNull('user_id')->pluck('user_id')->unique();
+                User::whereIn('id', $activeUserIds)->update(['status' => 'active']);
+
                 DB::commit();
                 $this->info("✓ Database Transaction Committed Successfully!");
             }
