@@ -6,6 +6,8 @@ use Illuminate\Console\Command;
 use App\Models\Course;
 use App\Models\Lecture;
 use App\Models\Student;
+use App\Models\Trainer;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -23,7 +25,7 @@ class SyncCourseStatuses extends Command
      *
      * @var string
      */
-    protected $description = 'Synchronize course statuses and lecture completions with Excel/Google Sheet and intelligent business rules';
+    protected $description = 'Synchronize course statuses, lecture completions, and trainer linkages with Excel/Google Sheet and intelligent business rules';
 
     /**
      * Google Sheet CSV URL
@@ -38,7 +40,7 @@ class SyncCourseStatuses extends Command
         $isLive = $this->option('live');
 
         $this->info("==========================================================");
-        $this->info("Let's Speak - Smart Course Status & Lecture Sync");
+        $this->info("Let's Speak - Smart Course Status, Lecture & Trainer Sync");
         $this->info("Mode: " . ($isLive ? "LIVE (Changes will be written to DB)" : "DRY RUN (Preview only, no DB changes)"));
         $this->info("==========================================================\n");
 
@@ -61,7 +63,7 @@ class SyncCourseStatuses extends Command
         // Read header
         $headers = fgetcsv($handle);
 
-        $sheetMap = []; // Key: normalized_student_name . '_' . start_date => status
+        $sheetMap = []; // Key: normalized_student_name . '_' . start_date => status & trainer
         $sheetRowsCount = 0;
 
         while (($row = fgetcsv($handle)) !== false) {
@@ -71,6 +73,7 @@ class SyncCourseStatuses extends Command
             $timestamp = trim($row[0]);
             $studentName = trim($row[1]);
             $partnerName = trim($row[2]);
+            $rawTrainer = trim($row[4] ?? '');
             $startDateStr = trim($row[8]);
             $rawStatus = trim($row[10]);
 
@@ -84,24 +87,25 @@ class SyncCourseStatuses extends Command
             }
 
             $targetStatus = $this->determineStatus($rawStatus, $startDate);
+            $normalizedTrainer = $this->normalizeTrainerName($rawTrainer);
+
+            $rowData = [
+                'status' => $targetStatus,
+                'raw_status' => $rawStatus,
+                'start_date' => $startDate,
+                'raw_trainer' => $rawTrainer,
+                'normalized_trainer' => $normalizedTrainer,
+            ];
 
             // Index by student name and partner name
             $normStudent = $this->normalizeName($studentName);
             if ($startDate) {
-                $sheetMap[$normStudent . '|' . $startDate] = [
-                    'status' => $targetStatus,
-                    'raw_status' => $rawStatus,
-                    'start_date' => $startDate,
-                ];
+                $sheetMap[$normStudent . '|' . $startDate] = $rowData;
             }
             if (!empty($partnerName)) {
                 $normPartner = $this->normalizeName($partnerName);
                 if ($startDate) {
-                    $sheetMap[$normPartner . '|' . $startDate] = [
-                        'status' => $targetStatus,
-                        'raw_status' => $rawStatus,
-                        'start_date' => $startDate,
-                    ];
+                    $sheetMap[$normPartner . '|' . $startDate] = $rowData;
                 }
             }
         }
@@ -110,6 +114,10 @@ class SyncCourseStatuses extends Command
         unlink($tempFile);
 
         $this->info("Indexed {$sheetRowsCount} rows from Google Sheet.\n");
+
+        // Pre-fetch all trainers and trainer users
+        $allTrainers = Trainer::with('user')->get();
+        $allTrainerUsers = User::where('role', 'trainer')->with('trainer')->get();
 
         // Pre-fetch all students with all their courses to check renewals & subsequent courses
         $allStudents = Student::with(['courses' => function ($q) {
@@ -123,7 +131,7 @@ class SyncCourseStatuses extends Command
         }
 
         // Now inspect all courses in Database
-        $courses = Course::with(['students', 'lectures'])->get();
+        $courses = Course::with(['students', 'lectures', 'trainer.user'])->get();
         $this->info("Total Courses in Database: " . $courses->count() . "\n");
 
         $stats = [
@@ -132,6 +140,7 @@ class SyncCourseStatuses extends Command
             'fallback_date' => 0,
             'superceded_renewal' => 0,
             'completed_lectures' => 0,
+            'trainers_linked' => 0,
             'to_active' => 0,
             'to_finished' => 0,
             'to_paused' => 0,
@@ -148,6 +157,7 @@ class SyncCourseStatuses extends Command
                 $courseStartDate = $course->start_date ? $course->start_date->format('Y-m-d') : null;
                 $targetStatus = null;
                 $matchedSource = null;
+                $matchedSheetRow = null;
 
                 // 1. Try to find in sheetMap by students
                 foreach ($course->students as $student) {
@@ -155,8 +165,9 @@ class SyncCourseStatuses extends Command
                     
                     // Exact date match
                     if ($courseStartDate && isset($sheetMap[$normName . '|' . $courseStartDate])) {
-                        $targetStatus = $sheetMap[$normName . '|' . $courseStartDate]['status'];
-                        $matchedSource = "Sheet match ({$student->name}, date: {$courseStartDate}, raw: '{$sheetMap[$normName . '|' . $courseStartDate]['raw_status']}')";
+                        $matchedSheetRow = $sheetMap[$normName . '|' . $courseStartDate];
+                        $targetStatus = $matchedSheetRow['status'];
+                        $matchedSource = "Sheet match ({$student->name}, date: {$courseStartDate}, raw: '{$matchedSheetRow['raw_status']}')";
                         break;
                     }
 
@@ -166,8 +177,9 @@ class SyncCourseStatuses extends Command
                         for ($d = -7; $d <= 7; $d++) {
                             $checkDate = $cDate->copy()->addDays($d)->format('Y-m-d');
                             if (isset($sheetMap[$normName . '|' . $checkDate])) {
-                                $targetStatus = $sheetMap[$normName . '|' . $checkDate]['status'];
-                                $matchedSource = "Sheet window match ({$student->name}, date: {$checkDate}, raw: '{$sheetMap[$normName . '|' . $checkDate]['raw_status']}')";
+                                $matchedSheetRow = $sheetMap[$normName . '|' . $checkDate];
+                                $targetStatus = $matchedSheetRow['status'];
+                                $matchedSource = "Sheet window match ({$student->name}, date: {$checkDate}, raw: '{$matchedSheetRow['raw_status']}')";
                                 break 2;
                             }
                         }
@@ -180,6 +192,19 @@ class SyncCourseStatuses extends Command
                     $stats['fallback_date']++;
                     $targetStatus = $this->determineStatus($course->status, $courseStartDate);
                     $matchedSource = "Date-based rule (start: {$courseStartDate}, current: '{$course->status}')";
+                }
+
+                // Trainer Linking & Association fix
+                $sheetTrainer = $matchedSheetRow['normalized_trainer'] ?? $matchedSheetRow['raw_trainer'] ?? $course->trainer_name;
+                if (!empty($sheetTrainer) && mb_strpos($sheetTrainer, 'بانتظار') === false && mb_strpos($sheetTrainer, 'waiting') === false) {
+                    $foundTrainer = $this->findTrainer($sheetTrainer, $allTrainers, $allTrainerUsers);
+                    if ($foundTrainer && $course->trainer_id !== $foundTrainer->id) {
+                        if ($isLive) {
+                            $course->trainer_id = $foundTrainer->id;
+                            $course->trainer_name = $foundTrainer->name ?: ($foundTrainer->user->name ?? $sheetTrainer);
+                        }
+                        $stats['trainers_linked']++;
+                    }
                 }
 
                 // 2. Intelligent Rule A: If student has a newer course that started after this course, this older course is finished!
@@ -247,6 +272,18 @@ class SyncCourseStatuses extends Command
                         $course->finished_at = null;
                         $course->save();
 
+                        // Ensure trainer is active
+                        if ($course->trainer) {
+                            if ($course->trainer->status !== 'active') {
+                                $course->trainer->status = 'active';
+                                $course->trainer->save();
+                            }
+                            if ($course->trainer->user && $course->trainer->user->status !== 'active') {
+                                $course->trainer->user->status = 'active';
+                                $course->trainer->user->save();
+                            }
+                        }
+
                         // For active courses, ensure future lectures are not erroneously marked as paid/present if not attended
                         $today = now()->toDateString();
                         foreach ($course->lectures as $lec) {
@@ -286,6 +323,7 @@ class SyncCourseStatuses extends Command
         $this->info("Fallback to Date Rules:            {$stats['fallback_date']}");
         $this->info("Older Courses Ended by Renewal:    {$stats['superceded_renewal']}");
         $this->info("Ended by Complete Lectures:        {$stats['completed_lectures']}");
+        $this->info("Trainers Re-linked/Fixed:          {$stats['trainers_linked']}");
         $this->info("Resulting Active Courses:          {$stats['to_active']}");
         $this->info("Resulting Finished Courses:        {$stats['to_finished']}");
         $this->info("Resulting Paused Courses:          {$stats['to_paused']}");
@@ -296,6 +334,107 @@ class SyncCourseStatuses extends Command
         $this->info("====================================================");
 
         return 0;
+    }
+
+    /**
+     * Find trainer by name in existing trainers & users
+     */
+    protected function findTrainer(string $name, $allTrainers, $allTrainerUsers): ?Trainer
+    {
+        $cleanSearch = $this->normalizeName($name);
+
+        // 1. Direct trainer name match
+        foreach ($allTrainers as $t) {
+            if ($this->normalizeName($t->name) === $cleanSearch) {
+                return $t;
+            }
+            if ($t->user && $this->normalizeName($t->user->name) === $cleanSearch) {
+                return $t;
+            }
+        }
+
+        // 2. Trainer user match
+        foreach ($allTrainerUsers as $u) {
+            if ($this->normalizeName($u->name) === $cleanSearch) {
+                if ($u->trainer) {
+                    return $u->trainer;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalize trainer names mapping Arabic <-> English
+     */
+    protected function normalizeTrainerName(string $name): string
+    {
+        $name = trim($name);
+        $map = [
+            'آمنة رباح محمود' => 'Amina Rabah',
+            'امنة رباح محمود' => 'Amina Rabah',
+            'آمنة رباح' => 'Amina Rabah',
+            'امنة رباح' => 'Amina Rabah',
+            'آمنة' => 'Amina Rabah',
+            'امنة' => 'Amina Rabah',
+            'أمينة' => 'Amina Rabah',
+            'امينة' => 'Amina Rabah',
+            'amina' => 'Amina Rabah',
+            'amina rabah' => 'Amina Rabah',
+            'فرح' => 'Farah',
+            'بتول' => 'Batool',
+            'وسام' => 'Wisam',
+            'رغد' => 'Raghad',
+            'اسراء' => 'Israa',
+            'إسراء' => 'Israa',
+            'زهور' => 'Zhoor',
+            'مصطفى' => 'Mustafa',
+            'حسن' => 'Hasan',
+            'براء' => 'Baraa',
+            'ابتسام' => 'Ibtisam',
+            'نوران' => 'Noran',
+            'ميس' => 'Mais',
+            'عائشة' => 'Aisha',
+            'بنين' => 'Baneen H',
+            'منار' => 'Manar Drgham',
+            'حسين' => 'Hussein',
+            'حيدر' => 'Haider',
+            'أريج' => 'Areej',
+            'طه' => 'Taha',
+            'داليا' => 'Dalia',
+            'تبارك' => 'Tabark',
+            'نور' => 'Noor',
+            'رند' => 'Rand',
+            'انعام' => 'Anaam',
+            'أنعام' => 'Anaam',
+            'ابتهال' => 'Ibtihal',
+            'غدير' => 'Ghadeer',
+            'يسر' => 'Yusur Ahmed',
+            'آية' => 'Aya Yasir',
+            'اية' => 'Aya Yasir',
+            'ضي ميثم' => 'Dhay',
+            'ضي' => 'Dhay',
+            'ايات فلاح' => 'Ayat Falah',
+            'ايات' => 'Ayat Falah',
+        ];
+
+        $clean = mb_strtolower($name);
+        $clean = str_replace(['أ', 'إ', 'آ'], 'ا', $clean);
+        $clean = str_replace('ة', 'ه', $clean);
+        $clean = str_replace('ى', 'ي', $clean);
+
+        foreach ($map as $k => $target) {
+            $ck = mb_strtolower($k);
+            $ck = str_replace(['أ', 'إ', 'آ'], 'ا', $ck);
+            $ck = str_replace('ة', 'ه', $ck);
+            $ck = str_replace('ى', 'ي', $ck);
+            if ($clean === $ck) {
+                return $target;
+            }
+        }
+
+        return $name;
     }
 
     /**
