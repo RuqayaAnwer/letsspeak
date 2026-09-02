@@ -365,17 +365,7 @@ class SyncCourseStatuses extends Command
                     }
                 }
 
-                // 3. Intelligent Rule B: If all lectures are already present/completed, course is finished!
-                if ($targetStatus === 'active') {
-                    $completedLecCount = $course->lectures->whereIn('attendance', ['present', 'partially', 'absent'])->count();
-                    if ($course->lectures_count > 0 && $completedLecCount >= $course->lectures_count) {
-                        $targetStatus = 'finished';
-                        $matchedSource = "Auto-finished (All {$completedLecCount}/{$course->lectures_count} lectures completed)";
-                        $stats['completed_lectures']++;
-                    }
-                }
-
-                // 4. Intelligent Rule C: If course start date is > 100 days in the past, course is finished
+                // 3. Intelligent Rule C: If course start date is > 100 days in the past, course is finished
                 if ($targetStatus === 'active' && $courseStartDate) {
                     $hundredDaysAgo = Carbon::now()->subDays(100)->toDateString();
                     if ($courseStartDate < $hundredDaysAgo) {
@@ -413,13 +403,15 @@ class SyncCourseStatuses extends Command
                     } elseif ($targetStatus === 'active') {
                         $course->status = 'active';
                         $course->finished_at = null;
+                        $course->trainer_payment_status = 'unpaid';
                         $course->save();
 
-                        // For active courses, ensure future lectures are not erroneously marked as paid/present if not attended
+                        // For active courses, ensure future lectures or all-present dummy lectures are reset
                         $today = now()->toDateString();
+                        $allPresent = $course->lectures->count() > 0 && $course->lectures->every(fn($l) => $l->attendance === 'present');
                         foreach ($course->lectures as $lec) {
                             $lecDate = $lec->date ? $lec->date->format('Y-m-d') : null;
-                            if ($lecDate && $lecDate >= $today && $lec->attendance === 'present' && $lec->trainer_payment_status === 'paid' && !$lec->notes) {
+                            if ($allPresent || ($lecDate && $lecDate >= $today && !$lec->notes)) {
                                 $lec->attendance = 'pending';
                                 $lec->trainer_payment_status = 'unpaid';
                                 $lec->save();
@@ -463,7 +455,6 @@ class SyncCourseStatuses extends Command
         $this->info("Matched from Sheet:                {$stats['matched_sheet']}");
         $this->info("Fallback to Date Rules:            {$stats['fallback_date']}");
         $this->info("Older Courses Ended by Renewal:    {$stats['superceded_renewal']}");
-        $this->info("Ended by Complete Lectures:        {$stats['completed_lectures']}");
         $this->info("Trainers Re-linked/Fixed:          {$stats['trainers_linked']}");
         $this->info("Resulting Active Courses:          {$stats['to_active']}");
         $this->info("Resulting Finished Courses:        {$stats['to_finished']}");
