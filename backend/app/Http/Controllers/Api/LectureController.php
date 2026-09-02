@@ -467,9 +467,8 @@ class LectureController extends Controller
                 return $l->is_completed || in_array($l->attendance, ['present', 'absent']);
             })->count();
 
-            if ($completedCount >= $course->lectures_count) {
-                $course->status = 'finished';
-                $course->save();
+            if ($completedCount >= $course->lectures_count && $course->lectures_count > 0) {
+                $course->markAsFinished();
                 
                 \Log::info('Course auto-finished after lecture update', [
                     'course_id' => $course->id,

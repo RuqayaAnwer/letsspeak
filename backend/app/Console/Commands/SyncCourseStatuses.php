@@ -23,7 +23,7 @@ class SyncCourseStatuses extends Command
      *
      * @var string
      */
-    protected $description = 'Synchronize course statuses and lecture completions with Excel/Google Sheet and business rules';
+    protected $description = 'Synchronize course statuses and lecture completions with Excel/Google Sheet and intelligent business rules';
 
     /**
      * Google Sheet CSV URL
@@ -38,7 +38,7 @@ class SyncCourseStatuses extends Command
         $isLive = $this->option('live');
 
         $this->info("==========================================================");
-        $this->info("Let's Speak - Course Status & Lecture Sync");
+        $this->info("Let's Speak - Smart Course Status & Lecture Sync");
         $this->info("Mode: " . ($isLive ? "LIVE (Changes will be written to DB)" : "DRY RUN (Preview only, no DB changes)"));
         $this->info("==========================================================\n");
 
@@ -111,6 +111,17 @@ class SyncCourseStatuses extends Command
 
         $this->info("Indexed {$sheetRowsCount} rows from Google Sheet.\n");
 
+        // Pre-fetch all students with all their courses to check renewals & subsequent courses
+        $allStudents = Student::with(['courses' => function ($q) {
+            $q->orderBy('start_date', 'asc');
+        }])->get();
+
+        // Build student max start_dates map to detect subsequent renewal courses
+        $studentCoursesTimeline = [];
+        foreach ($allStudents as $st) {
+            $studentCoursesTimeline[$st->id] = $st->courses->sortBy('start_date')->values();
+        }
+
         // Now inspect all courses in Database
         $courses = Course::with(['students', 'lectures'])->get();
         $this->info("Total Courses in Database: " . $courses->count() . "\n");
@@ -119,6 +130,8 @@ class SyncCourseStatuses extends Command
             'total' => $courses->count(),
             'matched_sheet' => 0,
             'fallback_date' => 0,
+            'superceded_renewal' => 0,
+            'completed_lectures' => 0,
             'to_active' => 0,
             'to_finished' => 0,
             'to_paused' => 0,
@@ -136,7 +149,7 @@ class SyncCourseStatuses extends Command
                 $targetStatus = null;
                 $matchedSource = null;
 
-                // Try to find in sheetMap by students
+                // 1. Try to find in sheetMap by students
                 foreach ($course->students as $student) {
                     $normName = $this->normalizeName($student->name);
                     
@@ -164,10 +177,47 @@ class SyncCourseStatuses extends Command
                 if ($targetStatus) {
                     $stats['matched_sheet']++;
                 } else {
-                    // Fallback to date rule
                     $stats['fallback_date']++;
                     $targetStatus = $this->determineStatus($course->status, $courseStartDate);
                     $matchedSource = "Date-based rule (start: {$courseStartDate}, current: '{$course->status}')";
+                }
+
+                // 2. Intelligent Rule A: If student has a newer course that started after this course, this older course is finished!
+                if ($targetStatus === 'active' && $courseStartDate) {
+                    foreach ($course->students as $student) {
+                        if (isset($studentCoursesTimeline[$student->id])) {
+                            $newerCourses = $studentCoursesTimeline[$student->id]->filter(function ($c) use ($course, $courseStartDate) {
+                                $cStart = $c->start_date ? $c->start_date->format('Y-m-d') : null;
+                                return $c->id !== $course->id && $cStart && $cStart > $courseStartDate;
+                            });
+
+                            if ($newerCourses->count() > 0) {
+                                $targetStatus = 'finished';
+                                $matchedSource = "Auto-finished (Student {$student->name} has newer subsequent course starting {$newerCourses->first()->start_date->format('Y-m-d')})";
+                                $stats['superceded_renewal']++;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // 3. Intelligent Rule B: If all lectures are already present/completed, course is finished!
+                if ($targetStatus === 'active') {
+                    $completedLecCount = $course->lectures->whereIn('attendance', ['present', 'partially', 'absent'])->count();
+                    if ($course->lectures_count > 0 && $completedLecCount >= $course->lectures_count) {
+                        $targetStatus = 'finished';
+                        $matchedSource = "Auto-finished (All {$completedLecCount}/{$course->lectures_count} lectures completed)";
+                        $stats['completed_lectures']++;
+                    }
+                }
+
+                // 4. Intelligent Rule C: If course start date is > 50 days in the past, course is finished
+                if ($targetStatus === 'active' && $courseStartDate) {
+                    $fiftyDaysAgo = Carbon::now()->subDays(50)->toDateString();
+                    if ($courseStartDate < $fiftyDaysAgo) {
+                        $targetStatus = 'finished';
+                        $matchedSource = "Auto-finished (Course started {$courseStartDate} > 50 days ago)";
+                    }
                 }
 
                 // Count target status transitions
@@ -231,15 +281,17 @@ class SyncCourseStatuses extends Command
         }
 
         $this->info("\n=================== SYNC SUMMARY ===================");
-        $this->info("Total Courses Checked:       {$stats['total']}");
-        $this->info("Matched from Sheet:          {$stats['matched_sheet']}");
-        $this->info("Fallback to Date Rules:      {$stats['fallback_date']}");
-        $this->info("Resulting Active Courses:    {$stats['to_active']}");
-        $this->info("Resulting Finished Courses:  {$stats['to_finished']}");
-        $this->info("Resulting Paused Courses:    {$stats['to_paused']}");
-        $this->info("Resulting Cancelled Courses: {$stats['to_cancelled']}");
+        $this->info("Total Courses Checked:             {$stats['total']}");
+        $this->info("Matched from Sheet:                {$stats['matched_sheet']}");
+        $this->info("Fallback to Date Rules:            {$stats['fallback_date']}");
+        $this->info("Older Courses Ended by Renewal:    {$stats['superceded_renewal']}");
+        $this->info("Ended by Complete Lectures:        {$stats['completed_lectures']}");
+        $this->info("Resulting Active Courses:          {$stats['to_active']}");
+        $this->info("Resulting Finished Courses:        {$stats['to_finished']}");
+        $this->info("Resulting Paused Courses:          {$stats['to_paused']}");
+        $this->info("Resulting Cancelled Courses:       {$stats['to_cancelled']}");
         if ($isLive) {
-            $this->info("Lectures Updated:            {$stats['lectures_updated']}");
+            $this->info("Lectures Updated:                  {$stats['lectures_updated']}");
         }
         $this->info("====================================================");
 
@@ -287,7 +339,7 @@ class SyncCourseStatuses extends Command
 
         // Unrecorded / 'Paid' historical status -> Rely on start date
         if ($startDate) {
-            $thresholdDate = Carbon::now()->subDays(60)->toDateString();
+            $thresholdDate = Carbon::now()->subDays(50)->toDateString();
             if ($startDate < $thresholdDate) {
                 return 'finished';
             }

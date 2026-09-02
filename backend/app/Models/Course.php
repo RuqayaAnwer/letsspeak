@@ -434,6 +434,29 @@ class Course extends Model
         ]);
     }
 
+    /**
+     * Check if all required lectures are completed, and if so, automatically mark the course as finished.
+     */
+    public function checkAndAutoComplete(): bool
+    {
+        if ($this->status !== 'active') {
+            return false;
+        }
+
+        $completedCount = $this->lectures()
+            ->whereIn('attendance', ['present', 'partially', 'absent'])
+            ->count();
+
+        $totalRequired = $this->lectures_count > 0 ? $this->lectures_count : $this->lectures()->count();
+
+        if ($totalRequired > 0 && $completedCount >= $totalRequired) {
+            $this->markAsFinished();
+            return true;
+        }
+
+        return false;
+    }
+
     public static function closePastCourses()
     {
         $today = now()->toDateString();
